@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width,
+                   initial-scale=1.0,
+                   user-scalable=no">
+
+    <title>阿策構圖助手</title>
+
+    <style>
+        body {
+            margin: 0;
+            background: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        h2 {
+            margin: 12px 0;
+        }
+
+        #cameraBox {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin: auto;
+            overflow: hidden;
+            background: #111;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+        }
+
+        .vline {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 2px;
+            background: rgba(255,255,255,0.8);
+            pointer-events: none;
+        }
+
+        .v1 {
+            left: 33.33%;
+        }
+
+        .v2 {
+            left: 66.66%;
+        }
+
+        .hline {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(255,255,255,0.8);
+            pointer-events: none;
+        }
+
+        .h1 {
+            top: 33.33%;
+        }
+
+        .h2 {
+            top: 66.66%;
+        }
+
+        button {
+            font-size: 20px;
+            padding: 12px 24px;
+            margin: 18px 8px;
+            border-radius: 10px;
+            border: none;
+        }
+
+        #status {
+            font-size: 18px;
+            margin: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>📷 阿策構圖助手</h2>
+
+<div id="status">
+    尚未開啟相機
+</div>
+
+<div id="cameraBox">
+
+    <video id="camera"
+           autoplay
+           playsinline
+           muted>
+    </video>
+
+    <div class="vline v1"></div>
+    <div class="vline v2"></div>
+
+    <div class="hline h1"></div>
+    <div class="hline h2"></div>
+
+</div>
+
+<button onclick="startCamera()">
+    開啟後鏡頭
+</button>
+
+<button onclick="stopCamera()">
+    關閉相機
+</button>
+
+<script>
+
+let stream = null;
+
+async function startCamera() {
+
+    const status = document.getElementById("status");
+    const video = document.getElementById("camera");
+
+    try {
+
+        if (!navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia) {
+
+            status.innerText =
+                "這個瀏覽器目前不能使用相機功能";
+
+            return;
+        }
+
+        stream =
+            await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: {
+                        ideal: "environment"
+                    }
+                },
+                audio: false
+            });
+
+        video.srcObject = stream;
+
+        status.innerText =
+            "相機已開啟";
+
+    }
+
+    catch(error) {
+
+        status.innerText =
+            "無法開啟相機：" + error.message;
+
+    }
+}
+
+
+function stopCamera() {
+
+    const status = document.getElementById("status");
+    const video = document.getElementById("camera");
+
+    if (stream) {
+
+        stream.getTracks().forEach(
+            track => track.stop()
+        );
+
+        stream = null;
+
+        video.srcObject = null;
+
+        status.innerText =
+            "相機已關閉";
+    }
+}
+
+</script>
+
+</body>
+</html>
