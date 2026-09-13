@@ -1,7 +1,1336 @@
-function drawResult(result) {
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1.0,
+               user-scalable=no">
+
+<title>阿策智慧構圖助手 V3.3</title>
+
+<style>
+
+body {
+    margin: 0;
+    background: black;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h2 {
+    margin: 8px 0;
+    font-size: 21px;
+}
+
+#status {
+    font-size: 14px;
+    margin: 5px;
+    color: #cccccc;
+}
+
+#guideInfo {
+    font-size: 24px;
+    font-weight: bold;
+    min-height: 34px;
+    margin: 7px 4px;
+}
+
+#scoreInfo {
+    font-size: 19px;
+    min-height: 26px;
+    margin: 5px;
+}
+
+#cameraBox {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    margin: auto;
+    background: #111;
+    overflow: hidden;
+}
+
+#camera {
+    width: 100%;
+    display: block;
+}
+
+#overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+
+/* 三分線 */
+
+.guideLine {
+    position: absolute;
+    background: rgba(255,255,255,0.48);
+    pointer-events: none;
+}
+
+.vline {
+    top: 0;
+    width: 1px;
+    height: 100%;
+}
+
+.v1 {
+    left: 33.33%;
+}
+
+.v2 {
+    left: 66.66%;
+}
+
+.hline {
+    left: 0;
+    width: 100%;
+    height: 1px;
+}
+
+.h1 {
+    top: 33.33%;
+}
+
+.h2 {
+    top: 66.66%;
+}
+
+
+/* 控制區 */
+
+#controls {
+    padding: 9px 4px;
+}
+
+button {
+    font-size: 17px;
+    padding: 11px 15px;
+    margin: 4px 2px;
+    border: none;
+    border-radius: 10px;
+}
+
+.cameraButton {
+    min-width: 125px;
+}
+
+#shutterButton {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    font-size: 28px;
+    margin-top: 8px;
+}
+
+
+/* 拍照預覽 */
+
+#photoArea {
+    padding: 8px 0 25px 0;
+}
+
+#photoTitle {
+    font-size: 15px;
+    color: #cccccc;
+}
+
+#photoPreview {
+    width: 180px;
+    max-width: 46%;
+    display: none;
+    margin-top: 8px;
+    border-radius: 10px;
+    border: 2px solid white;
+}
+
+#photoCanvas,
+#analysisCanvas {
+    display: none;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<h2>📷 智慧構圖助手 V3.3</h2>
+
+<div id="status">
+    AI 載入中...
+</div>
+
+<div id="guideInfo"></div>
+
+<div id="scoreInfo"></div>
+
+
+<div id="cameraBox">
+
+    <video
+        id="camera"
+        autoplay
+        playsinline
+        muted>
+    </video>
+
+    <canvas id="overlay"></canvas>
+
+    <div class="guideLine vline v1"></div>
+    <div class="guideLine vline v2"></div>
+
+    <div class="guideLine hline h1"></div>
+    <div class="guideLine hline h2"></div>
+
+</div>
+
+
+<div id="controls">
+
+    <button
+        class="cameraButton"
+        onclick="openFrontCamera()">
+        🤳 前鏡頭
+    </button>
+
+    <button
+        class="cameraButton"
+        onclick="openRearCamera()">
+        📷 後鏡頭
+    </button>
+
+    <br>
+
+    <button
+        id="shutterButton"
+        onclick="takePhoto()">
+        📸
+    </button>
+
+    <button onclick="stopCamera()">
+        關閉
+    </button>
+
+</div>
+
+
+<div id="photoArea">
+
+    <div id="photoTitle">
+        拍照預覽
+    </div>
+
+    <img id="photoPreview">
+
+</div>
+
+
+<canvas id="photoCanvas"></canvas>
+
+<canvas id="analysisCanvas"></canvas>
+
+
+<script type="module">
+
+import {
+    FaceDetector,
+    FilesetResolver
+}
+from "https://unpkg.com/@mediapipe/tasks-vision@0.10.35/vision_bundle.mjs";
+
+
+/* =====================================================
+   全域變數
+===================================================== */
+
+let detector = null;
+
+let stream = null;
+
+let cameraRunning = false;
+
+
+/*
+user = 前鏡頭
+environment = 後鏡頭
+*/
+let currentMode = "user";
+
+
+/*
+真正找到的裝置 ID
+*/
+let frontDeviceId = "";
+
+let rearDeviceId = "";
+
+
+/*
+避免切換鏡頭後，
+產生兩個偵測迴圈同時跑
+*/
+let cameraSession = 0;
+
+
+/*
+人像
+*/
+let lastVideoTime = -1;
+
+let smoothScore = 0;
+
+let okCounter = 0;
+
+let faceMissingFrames = 0;
+
+
+/*
+風景
+*/
+let lastLandscapeAnalysis = 0;
+
+let smoothHorizonY = null;
+
+
+/* =====================================================
+   HTML 元件
+===================================================== */
+
+const video =
+    document.getElementById("camera");
+
+const overlay =
+    document.getElementById("overlay");
+
+const ctx =
+    overlay.getContext("2d");
+
+
+const statusText =
+    document.getElementById("status");
+
+const guideInfo =
+    document.getElementById("guideInfo");
+
+const scoreInfo =
+    document.getElementById("scoreInfo");
+
+
+const photoCanvas =
+    document.getElementById("photoCanvas");
+
+const photoCtx =
+    photoCanvas.getContext("2d");
+
+const photoPreview =
+    document.getElementById("photoPreview");
+
+
+const analysisCanvas =
+    document.getElementById("analysisCanvas");
+
+const analysisCtx =
+    analysisCanvas.getContext(
+        "2d",
+        {
+            willReadFrequently: true
+        }
+    );
+
+
+/* =====================================================
+   載入 MediaPipe
+===================================================== */
+
+async function loadAI() {
+
+    try {
+
+        statusText.innerText =
+            "正在載入 AI...";
+
+
+        const resolver =
+            await FilesetResolver.forVisionTasks(
+
+                "https://unpkg.com/@mediapipe/tasks-vision@0.10.35/wasm"
+
+            );
+
+
+        detector =
+            await FaceDetector.createFromOptions(
+
+                resolver,
+
+                {
+
+                    baseOptions: {
+
+                        modelAssetPath:
+
+                        "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
+
+                    },
+
+                    runningMode:
+                        "VIDEO",
+
+                    minDetectionConfidence:
+                        0.55
+
+                }
+
+            );
+
+
+        statusText.innerText =
+            "✅ AI 已準備完成";
+
+    }
+
+    catch(error) {
+
+        statusText.innerText =
+            "❌ AI 載入失敗：" +
+            error.message;
+
+    }
+
+}
+
+
+/* =====================================================
+   第一次取得相機權限
+
+   同時偷偷取得手機有哪些鏡頭
+
+   使用者不會再看到 Camera 1、2、3...
+===================================================== */
+
+async function prepareCameraDevices() {
+
+    try {
+
+        /*
+        Safari 必須先給相機權限，
+        才比較容易取得鏡頭名稱
+        */
+
+        const tempStream =
+            await navigator.mediaDevices
+                .getUserMedia({
+
+                    video: true,
+
+                    audio: false
+
+                });
+
+
+        tempStream
+            .getTracks()
+            .forEach(
+
+                track =>
+                    track.stop()
+
+            );
+
+
+        const devices =
+            await navigator.mediaDevices
+                .enumerateDevices();
+
+
+        const cameras =
+            devices.filter(
+
+                device =>
+                    device.kind ===
+                    "videoinput"
+
+            );
+
+
+        frontDeviceId = "";
+        rearDeviceId = "";
+
+
+        /*
+        先根據名稱判斷
+        */
+
+        for (
+            const camera
+            of cameras
+        ) {
+
+            const name =
+                (
+                    camera.label ||
+                    ""
+                )
+                .toLowerCase();
+
+
+            /*
+            前鏡頭
+            */
+
+            if (
+                !frontDeviceId
+                &&
+                (
+                    name.includes("front")
+                    ||
+                    name.includes("user")
+                    ||
+                    name.includes("前")
+                )
+            ) {
+
+                frontDeviceId =
+                    camera.deviceId;
+
+            }
+
+
+            /*
+            優先找一般後鏡頭
+
+            如果名稱有 ultra / tele
+            先不要選它
+            */
+
+            const isBack =
+
+                name.includes("back")
+
+                ||
+
+                name.includes("rear")
+
+                ||
+
+                name.includes("environment")
+
+                ||
+
+                name.includes("後");
+
+
+            const specialLens =
+
+                name.includes("ultra")
+
+                ||
+
+                name.includes("tele")
+
+                ||
+
+                name.includes("zoom");
+
+
+            if (
+                !rearDeviceId
+                &&
+                isBack
+                &&
+                !specialLens
+            ) {
+
+                rearDeviceId =
+                    camera.deviceId;
+
+            }
+
+        }
+
+
+        /*
+        如果後鏡頭只有特殊名稱，
+        再找任何 Back / Rear
+        */
+
+        if (
+            !rearDeviceId
+        ) {
+
+            for (
+                const camera
+                of cameras
+            ) {
+
+                const name =
+                    (
+                        camera.label ||
+                        ""
+                    )
+                    .toLowerCase();
+
+
+                if (
+                    name.includes("back")
+                    ||
+                    name.includes("rear")
+                    ||
+                    name.includes("後")
+                ) {
+
+                    rearDeviceId =
+                        camera.deviceId;
+
+                    break;
+
+                }
+
+            }
+
+        }
+
+    }
+
+    catch(error) {
+
+        console.log(
+            "取得鏡頭清單失敗：",
+            error
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   前鏡頭
+===================================================== */
+
+async function openFrontCamera() {
+
+    currentMode =
+        "user";
+
+
+    await openCamera(
+        "user"
+    );
+
+}
+
+
+/* =====================================================
+   後鏡頭
+===================================================== */
+
+async function openRearCamera() {
+
+    currentMode =
+        "environment";
+
+
+    await openCamera(
+        "environment"
+    );
+
+}
+
+
+/* =====================================================
+   開啟相機
+===================================================== */
+
+async function openCamera(mode) {
+
+    if (!detector) {
+
+        alert(
+            "AI 還在載入，請稍等一下"
+        );
+
+        return;
+
+    }
+
+
+    /*
+    第一次使用時，
+    取得鏡頭清單
+    */
+
+    if (
+        !frontDeviceId
+        &&
+        !rearDeviceId
+    ) {
+
+        statusText.innerText =
+            "正在取得相機權限...";
+
+
+        await prepareCameraDevices();
+
+    }
+
+
+    /*
+    讓舊的動畫迴圈失效
+    */
+
+    cameraSession++;
+
+    const mySession =
+        cameraSession;
+
+
+    cameraRunning =
+        false;
+
+
+    stopCurrentStream();
+
+
+    try {
+
+        let constraints;
+
+
+        /*
+        有找到真正的 deviceId，
+        就直接用 deviceId。
+
+        這就是之前你測試成功的方法。
+        */
+
+        if (
+            mode === "user"
+            &&
+            frontDeviceId
+        ) {
+
+            constraints = {
+
+                video: {
+
+                    deviceId: {
+
+                        exact:
+                            frontDeviceId
+
+                    }
+
+                },
+
+                audio: false
+
+            };
+
+        }
+
+        else if (
+            mode === "environment"
+            &&
+            rearDeviceId
+        ) {
+
+            constraints = {
+
+                video: {
+
+                    deviceId: {
+
+                        exact:
+                            rearDeviceId
+
+                    }
+
+                },
+
+                audio: false
+
+            };
+
+        }
+
+        else {
+
+            /*
+            找不到 ID 時才退回 facingMode
+            */
+
+            constraints = {
+
+                video: {
+
+                    facingMode: {
+
+                        exact:
+                            mode
+
+                    }
+
+                },
+
+                audio: false
+
+            };
+
+        }
+
+
+        stream =
+            await navigator.mediaDevices
+                .getUserMedia(
+                    constraints
+                );
+
+    }
+
+    catch(error) {
+
+        /*
+        exact 不成功時再退回一般模式
+        */
+
+        try {
+
+            stream =
+                await navigator.mediaDevices
+                    .getUserMedia({
+
+                        video: {
+
+                            facingMode:
+                                mode
+
+                        },
+
+                        audio: false
+
+                    });
+
+        }
+
+        catch(error2) {
+
+            statusText.innerText =
+                "❌ 無法開啟相機：" +
+                error2.message;
+
+            return;
+
+        }
+
+    }
+
+
+    video.srcObject =
+        stream;
+
+
+    await video.play();
+
+
+    currentMode =
+        mode;
+
+
+    cameraRunning =
+        true;
+
+
+    lastVideoTime =
+        -1;
+
+
+    smoothScore =
+        0;
+
+
+    okCounter =
+        0;
+
+
+    faceMissingFrames =
+        0;
+
+
+    smoothHorizonY =
+        null;
+
+
+    lastLandscapeAnalysis =
+        0;
+
+
+    /*
+    開啟後直接清空舊資訊
+    */
+
+    guideInfo.innerText =
+        "";
+
+
+    scoreInfo.innerText =
+        "";
+
+
+    if (
+        currentMode ===
+        "user"
+    ) {
+
+        statusText.innerText =
+            "🤳 前鏡頭";
+
+    }
+
+    else {
+
+        statusText.innerText =
+            "📷 後鏡頭";
+
+    }
+
+
+    requestAnimationFrame(
+
+        () =>
+            detectLoop(
+                mySession
+            )
+
+    );
+
+}
+
+
+/* =====================================================
+   停止串流
+===================================================== */
+
+function stopCurrentStream() {
+
+    if (stream) {
+
+        stream
+            .getTracks()
+            .forEach(
+
+                track =>
+                    track.stop()
+
+            );
+
+
+        stream =
+            null;
+
+    }
+
+}
+
+
+/* =====================================================
+   關閉相機
+===================================================== */
+
+function stopCamera() {
+
+    cameraSession++;
+
+    cameraRunning =
+        false;
+
+
+    stopCurrentStream();
+
+
+    video.srcObject =
+        null;
+
+
+    ctx.clearRect(
+        0,
+        0,
+        overlay.width,
+        overlay.height
+    );
+
+
+    statusText.innerText =
+        "相機已關閉";
+
+
+    guideInfo.innerText =
+        "";
+
+
+    scoreInfo.innerText =
+        "";
+
+}
+
+
+/* =====================================================
+   拍照
+===================================================== */
+
+function takePhoto() {
+
+    if (
+        !cameraRunning
+        ||
+        video.videoWidth === 0
+    ) {
+
+        alert(
+            "請先開啟相機"
+        );
+
+        return;
+
+    }
+
+
+    photoCanvas.width =
+        video.videoWidth;
+
+
+    photoCanvas.height =
+        video.videoHeight;
+
+
+    /*
+    拍乾淨原圖。
+
+    不把綠框、黃線、
+    三分線拍進照片。
+    */
+
+    photoCtx.drawImage(
+
+        video,
+
+        0,
+        0,
+
+        photoCanvas.width,
+        photoCanvas.height
+
+    );
+
+
+    const imageData =
+        photoCanvas.toDataURL(
+            "image/jpeg",
+            0.94
+        );
+
+
+    photoPreview.src =
+        imageData;
+
+
+    photoPreview.style.display =
+        "inline-block";
+
+
+    statusText.innerText =
+        "📸 拍照完成";
+
+}
+
+
+/* =====================================================
+   主循環
+
+   前鏡頭：
+   執行人臉 AI
+
+   後鏡頭：
+   不跑人臉 AI
+   直接執行風景構圖
+
+   所以不會再互相亂切
+===================================================== */
+
+function detectLoop(
+    session
+) {
+
+    /*
+    如果已經切換相機，
+    舊迴圈直接停止
+    */
+
+    if (
+        session !==
+        cameraSession
+    ) {
+
+        return;
+
+    }
+
+
+    if (!cameraRunning) {
+
+        return;
+
+    }
+
+
+    if (
+        video.readyState >= 2
+        &&
+        video.videoWidth > 0
+        &&
+        video.videoHeight > 0
+    ) {
+
+        /*
+        ==========================
+        後鏡頭 = 風景
+        ==========================
+        */
+
+        if (
+            currentMode ===
+            "environment"
+        ) {
+
+            drawLandscape();
+
+        }
+
+
+        /*
+        ==========================
+        前鏡頭 = 人像
+        ==========================
+        */
+
+        else {
+
+            if (
+                video.currentTime !==
+                lastVideoTime
+            ) {
+
+                lastVideoTime =
+                    video.currentTime;
+
+
+                try {
+
+                    const result =
+                        detector.detectForVideo(
+
+                            video,
+
+                            performance.now()
+
+                        );
+
+
+                    drawPeopleResult(
+                        result
+                    );
+
+                }
+
+                catch(error) {
+
+                    console.log(
+                        error
+                    );
+
+                }
+
+            }
+
+        }
+
+    }
+
+
+    requestAnimationFrame(
+
+        () =>
+            detectLoop(
+                session
+            )
+
+    );
+
+}
+
+
+/* =====================================================
+   距離
+===================================================== */
+
+function getDistance(
+    x1,
+    y1,
+    x2,
+    y2
+) {
+
+    const dx =
+        x2 - x1;
+
+
+    const dy =
+        y2 - y1;
+
+
+    return Math.sqrt(
+        dx * dx +
+        dy * dy
+    );
+
+}
+
+
+/* =====================================================
+   平滑分數
+===================================================== */
+
+function updateSmoothScore(
+    score
+) {
+
+    if (
+        smoothScore === 0
+    ) {
+
+        smoothScore =
+            score;
+
+    }
+
+    else {
+
+        smoothScore =
+
+            smoothScore *
+            0.85
+
+            +
+
+            score *
+            0.15;
+
+    }
+
+
+    return Math.round(
+        smoothScore
+    );
+
+}
+
+
+/* =====================================================
+   移動方向
+===================================================== */
+
+function getDirectionText(
+    dx,
+    dy,
+    toleranceX,
+    toleranceY
+) {
+
+    let horizontal =
+        "";
+
+    let vertical =
+        "";
+
+
+    if (
+        Math.abs(dx) >
+        toleranceX
+    ) {
+
+        horizontal =
+
+            dx > 0
+
+            ? "往右"
+
+            : "往左";
+
+    }
+
+
+    if (
+        Math.abs(dy) >
+        toleranceY
+    ) {
+
+        vertical =
+
+            dy > 0
+
+            ? "往下"
+
+            : "往上";
+
+    }
+
+
+    if (
+        horizontal
+        &&
+        vertical
+    ) {
+
+        return (
+            horizontal +
+            "、" +
+            vertical
+        );
+
+    }
+
+
+    return (
+        horizontal ||
+        vertical
+    );
+
+}
+
+
+/* =====================================================
+   前鏡頭人物分析
+===================================================== */
+
+function drawPeopleResult(
+    result
+) {
 
     const width =
         video.clientWidth;
+
 
     const height =
         video.clientHeight;
@@ -9,6 +1338,7 @@ function drawResult(result) {
 
     overlay.width =
         width;
+
 
     overlay.height =
         height;
@@ -22,58 +1352,23 @@ function drawResult(result) {
     );
 
 
-    /*
-    =====================================
-    後鏡頭
-    永遠使用智慧風景構圖
-
-    不做人臉判斷
-    不會再跳成人像模式
-    =====================================
-    */
-
-    if (
-        currentFacingMode ===
-        "environment"
-    ) {
-
-        faceInfo.innerText =
-            "";
-
-        modeInfo.innerText =
-            "";
-
-        drawLandscapeComposition(
-            width,
-            height
-        );
-
-        return;
-
-    }
-
-
-    /*
-    =====================================
-    前鏡頭
-    才做人臉偵測
-    =====================================
-    */
-
     const scaleX =
         width /
         video.videoWidth;
+
 
     const scaleY =
         height /
         video.videoHeight;
 
 
-    const validFaces =
+    const faces =
         [];
 
 
-    if (result.detections) {
+    if (
+        result.detections
+    ) {
 
         for (
             const detection
@@ -88,27 +1383,32 @@ function drawResult(result) {
                 box.originX *
                 scaleX;
 
+
             const y =
                 box.originY *
                 scaleY;
 
+
             const w =
                 box.width *
                 scaleX;
+
 
             const h =
                 box.height *
                 scaleY;
 
 
+            /*
+            過小的人臉忽略
+            */
+
             if (
                 w <
-                width * 0.10
-
+                width * 0.08
                 ||
-
                 h <
-                height * 0.10
+                height * 0.08
             ) {
 
                 continue;
@@ -116,7 +1416,7 @@ function drawResult(result) {
             }
 
 
-            validFaces.push({
+            faces.push({
 
                 x,
                 y,
@@ -137,40 +1437,1383 @@ function drawResult(result) {
 
 
     /*
-    前鏡頭有人
+    沒抓到人時不要馬上閃掉。
+
+    連續一段時間沒抓到，
+    才顯示簡單提示。
     */
 
     if (
-        validFaces.length > 0
+        faces.length === 0
     ) {
 
-        drawPeopleComposition(
-            validFaces,
+        faceMissingFrames++;
+
+
+        if (
+            faceMissingFrames >
+            15
+        ) {
+
+            guideInfo.innerText =
+                "請將人物放入畫面";
+
+
+            scoreInfo.innerText =
+                "";
+
+        }
+
+
+        return;
+
+    }
+
+
+    faceMissingFrames =
+        0;
+
+
+    drawPeopleComposition(
+
+        faces,
+
+        width,
+
+        height
+
+    );
+
+}
+
+
+/* =====================================================
+   人物構圖
+===================================================== */
+
+function drawPeopleComposition(
+    faces,
+    width,
+    height
+) {
+
+    /*
+    所有人臉畫綠框
+
+    不再顯示
+    「偵測到人物：1人」
+    */
+
+    for (
+        const face
+        of faces
+    ) {
+
+        ctx.strokeStyle =
+            "lime";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        ctx.strokeRect(
+
+            face.x,
+            face.y,
+            face.w,
+            face.h
+
+        );
+
+    }
+
+
+    /*
+    =================================================
+    單人
+    =================================================
+    */
+
+    if (
+        faces.length === 1
+    ) {
+
+        const face =
+            faces[0];
+
+
+        /*
+        四個三分交叉點
+        */
+
+        const points = [
+
+            {
+                x: width / 3,
+                y: height / 3
+            },
+
+            {
+                x: width * 2 / 3,
+                y: height / 3
+            },
+
+            {
+                x: width / 3,
+                y: height * 2 / 3
+            },
+
+            {
+                x: width * 2 / 3,
+                y: height * 2 / 3
+            }
+
+        ];
+
+
+        /*
+        找最近三分點
+        */
+
+        let target =
+            points[0];
+
+
+        let distance =
+            getDistance(
+
+                face.centerX,
+                face.centerY,
+
+                target.x,
+                target.y
+
+            );
+
+
+        for (
+            const point
+            of points
+        ) {
+
+            const d =
+                getDistance(
+
+                    face.centerX,
+                    face.centerY,
+
+                    point.x,
+                    point.y
+
+                );
+
+
+            if (
+                d <
+                distance
+            ) {
+
+                distance =
+                    d;
+
+
+                target =
+                    point;
+
+            }
+
+        }
+
+
+        /*
+        紅點 = 人臉中心
+        */
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+
+            face.centerX,
+            face.centerY,
+
+            7,
+
+            0,
+            Math.PI * 2
+
+        );
+
+
+        ctx.fillStyle =
+            "red";
+
+
+        ctx.fill();
+
+
+        /*
+        藍點 = 建議三分點
+        */
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+
+            target.x,
+            target.y,
+
+            7,
+
+            0,
+            Math.PI * 2
+
+        );
+
+
+        ctx.fillStyle =
+            "deepskyblue";
+
+
+        ctx.fill();
+
+
+        /*
+        黃線 = 從現在位置
+        指向建議位置
+        */
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+
+            face.centerX,
+            face.centerY
+
+        );
+
+
+        ctx.lineTo(
+
+            target.x,
+            target.y
+
+        );
+
+
+        ctx.strokeStyle =
+            "yellow";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        ctx.stroke();
+
+
+        const okDistance =
+
+            Math.min(
+                width,
+                height
+            )
+            *
+            0.18;
+
+
+        const nearDistance =
+
+            Math.min(
+                width,
+                height
+            )
+            *
+            0.28;
+
+
+        const dx =
+            target.x -
+            face.centerX;
+
+
+        const dy =
+            target.y -
+            face.centerY;
+
+
+        const direction =
+            getDirectionText(
+
+                dx,
+                dy,
+
+                width * 0.10,
+
+                height * 0.10
+
+            );
+
+
+        let rawScore =
+
+            100
+
+            -
+
+            (
+                distance
+
+                /
+
+                (
+                    Math.sqrt(
+
+                        width * width
+
+                        +
+
+                        height * height
+
+                    )
+
+                    *
+
+                    0.45
+                )
+            )
+
+            *
+
+            100;
+
+
+        rawScore =
+            Math.max(
+
+                0,
+
+                Math.min(
+                    100,
+                    rawScore
+                )
+
+            );
+
+
+        const score =
+            updateSmoothScore(
+                rawScore
+            );
+
+
+        if (
+            distance <=
+            okDistance
+        ) {
+
+            okCounter++;
+
+        }
+
+        else {
+
+            okCounter =
+                Math.max(
+                    0,
+                    okCounter - 1
+                );
+
+        }
+
+
+        if (
+            okCounter >= 4
+        ) {
+
+            guideInfo.innerText =
+                "✅ 構圖 OK";
+
+        }
+
+        else if (
+            distance <=
+            nearDistance
+        ) {
+
+            guideInfo.innerText =
+                "👍 快到了";
+
+        }
+
+        else if (
+            direction
+        ) {
+
+            guideInfo.innerText =
+                "建議：" +
+                direction;
+
+        }
+
+        else {
+
+            guideInfo.innerText =
+                "👍 快到了";
+
+        }
+
+
+        scoreInfo.innerText =
+            "構圖分數：" +
+            score +
+            " 分";
+
+
+        return;
+
+    }
+
+
+    /*
+    =================================================
+    多人
+    =================================================
+    */
+
+    let totalX =
+        0;
+
+
+    let totalY =
+        0;
+
+
+    let minX =
+        Infinity;
+
+
+    let minY =
+        Infinity;
+
+
+    let maxX =
+        -Infinity;
+
+
+    let maxY =
+        -Infinity;
+
+
+    for (
+        const face
+        of faces
+    ) {
+
+        totalX +=
+            face.centerX;
+
+
+        totalY +=
+            face.centerY;
+
+
+        minX =
+            Math.min(
+                minX,
+                face.x
+            );
+
+
+        minY =
+            Math.min(
+                minY,
+                face.y
+            );
+
+
+        maxX =
+            Math.max(
+
+                maxX,
+
+                face.x +
+                face.w
+
+            );
+
+
+        maxY =
+            Math.max(
+
+                maxY,
+
+                face.y +
+                face.h
+
+            );
+
+    }
+
+
+    const groupX =
+        totalX /
+        faces.length;
+
+
+    const groupY =
+        totalY /
+        faces.length;
+
+
+    const targetX =
+        width *
+        0.50;
+
+
+    const targetY =
+        height *
+        0.43;
+
+
+    /*
+    多人外框
+    */
+
+    ctx.strokeStyle =
+        "orange";
+
+
+    ctx.lineWidth =
+        4;
+
+
+    ctx.strokeRect(
+
+        minX,
+        minY,
+
+        maxX - minX,
+        maxY - minY
+
+    );
+
+
+    /*
+    多人中心
+    */
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+
+        groupX,
+        groupY,
+
+        8,
+
+        0,
+        Math.PI * 2
+
+    );
+
+
+    ctx.fillStyle =
+        "magenta";
+
+
+    ctx.fill();
+
+
+    /*
+    目標
+    */
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+
+        targetX,
+        targetY,
+
+        8,
+
+        0,
+        Math.PI * 2
+
+    );
+
+
+    ctx.fillStyle =
+        "cyan";
+
+
+    ctx.fill();
+
+
+    /*
+    黃色引導線
+    */
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        groupX,
+        groupY
+    );
+
+
+    ctx.lineTo(
+        targetX,
+        targetY
+    );
+
+
+    ctx.strokeStyle =
+        "yellow";
+
+
+    ctx.lineWidth =
+        3;
+
+
+    ctx.stroke();
+
+
+    const distance =
+        getDistance(
+
+            groupX,
+            groupY,
+
+            targetX,
+            targetY
+
+        );
+
+
+    const okDistance =
+
+        Math.min(
             width,
             height
+        )
+
+        *
+
+        0.20;
+
+
+    const dx =
+        targetX -
+        groupX;
+
+
+    const dy =
+        targetY -
+        groupY;
+
+
+    const direction =
+        getDirectionText(
+
+            dx,
+            dy,
+
+            width * 0.08,
+
+            height * 0.08
+
         );
+
+
+    let rawScore =
+
+        100
+
+        -
+
+        distance
+
+        /
+
+        (
+            Math.sqrt(
+
+                width * width
+
+                +
+
+                height * height
+
+            )
+
+            *
+
+            0.50
+        )
+
+        *
+
+        100;
+
+
+    rawScore =
+        Math.max(
+
+            0,
+
+            Math.min(
+                100,
+                rawScore
+            )
+
+        );
+
+
+    const score =
+        updateSmoothScore(
+            rawScore
+        );
+
+
+    if (
+        distance <=
+        okDistance
+    ) {
+
+        guideInfo.innerText =
+            "✅ 構圖 OK";
+
+    }
+
+    else if (
+        direction
+    ) {
+
+        guideInfo.innerText =
+            "建議：" +
+            direction;
 
     }
 
     else {
 
-        /*
-        前鏡頭暫時沒偵測到人
-        不顯示「找不到人臉」
-        */
+        guideInfo.innerText =
+            "👍 快到了";
 
-        faceInfo.innerText =
-            "";
+    }
 
-        modeInfo.innerText =
-            "";
+
+    scoreInfo.innerText =
+        "構圖分數：" +
+        score +
+        " 分";
+
+}
+
+
+/* =====================================================
+   後鏡頭風景構圖
+===================================================== */
+
+function drawLandscape() {
+
+    const width =
+        video.clientWidth;
+
+
+    const height =
+        video.clientHeight;
+
+
+    overlay.width =
+        width;
+
+
+    overlay.height =
+        height;
+
+
+    ctx.clearRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    const now =
+        performance.now();
+
+
+    /*
+    每 250ms 做一次風景分析
+    */
+
+    if (
+        now -
+        lastLandscapeAnalysis
+        >
+        250
+    ) {
+
+        lastLandscapeAnalysis =
+            now;
+
+
+        const result =
+            detectHorizon();
+
+
+        if (result) {
+
+            if (
+                smoothHorizonY ===
+                null
+            ) {
+
+                smoothHorizonY =
+                    result.y;
+
+            }
+
+            else {
+
+                smoothHorizonY =
+
+                    smoothHorizonY *
+                    0.82
+
+                    +
+
+                    result.y *
+                    0.18;
+
+            }
+
+        }
+
+    }
+
+
+    if (
+        smoothHorizonY ===
+        null
+    ) {
 
         guideInfo.innerText =
-            "";
+            "正在分析畫面...";
+
 
         scoreInfo.innerText =
             "";
 
+
+        return;
+
     }
 
+
+    /*
+    轉換到畫面座標
+    */
+
+    const horizonY =
+
+        (
+            smoothHorizonY
+
+            /
+
+            analysisCanvas.height
+        )
+
+        *
+
+        height;
+
+
+    /*
+    青色線
+    =
+    程式認為的主要水平分界
+    */
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        0,
+        horizonY
+    );
+
+
+    ctx.lineTo(
+        width,
+        horizonY
+    );
+
+
+    ctx.strokeStyle =
+        "cyan";
+
+
+    ctx.lineWidth =
+        4;
+
+
+    ctx.stroke();
+
+
+    const upperThird =
+        height /
+        3;
+
+
+    const lowerThird =
+        height *
+        2 /
+        3;
+
+
+    /*
+    找距離最近的三分線
+    */
+
+    const targetY =
+
+        Math.abs(
+            horizonY -
+            upperThird
+        )
+
+        <
+
+        Math.abs(
+            horizonY -
+            lowerThird
+        )
+
+        ?
+
+        upperThird
+
+        :
+
+        lowerThird;
+
+
+    /*
+    黃色線
+    =
+    建議的位置
+    */
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        0,
+        targetY
+    );
+
+
+    ctx.lineTo(
+        width,
+        targetY
+    );
+
+
+    ctx.strokeStyle =
+        "yellow";
+
+
+    ctx.lineWidth =
+        3;
+
+
+    ctx.stroke();
+
+
+    const distance =
+        Math.abs(
+            horizonY -
+            targetY
+        );
+
+
+    const okDistance =
+        height *
+        0.07;
+
+
+    const nearDistance =
+        height *
+        0.14;
+
+
+    let rawScore =
+
+        100
+
+        -
+
+        distance
+
+        /
+
+        (
+            height *
+            0.40
+        )
+
+        *
+
+        100;
+
+
+    rawScore =
+        Math.max(
+
+            0,
+
+            Math.min(
+                100,
+                rawScore
+            )
+
+        );
+
+
+    const score =
+        updateSmoothScore(
+            rawScore
+        );
+
+
+    if (
+        distance <=
+        okDistance
+    ) {
+
+        okCounter++;
+
+    }
+
+    else {
+
+        okCounter =
+            Math.max(
+
+                0,
+
+                okCounter - 1
+
+            );
+
+    }
+
+
+    if (
+        okCounter >= 4
+    ) {
+
+        guideInfo.innerText =
+            "✅ 構圖 OK";
+
+    }
+
+    else if (
+        distance <=
+        nearDistance
+    ) {
+
+        guideInfo.innerText =
+            "👍 快到了";
+
+    }
+
+    else if (
+        horizonY >
+        targetY
+    ) {
+
+        guideInfo.innerText =
+            "建議：鏡頭稍微往下";
+
+    }
+
+    else {
+
+        guideInfo.innerText =
+            "建議：鏡頭稍微往上";
+
+    }
+
+
+    scoreInfo.innerText =
+        "構圖分數：" +
+        score +
+        " 分";
+
 }
+
+
+/* =====================================================
+   水平分界偵測
+
+   注意：
+   現在仍屬於基礎風景分析。
+
+   它不是在「理解」
+   山、樹、房子是什麼，
+
+   而是在畫面裡找
+   比較強的水平分界。
+===================================================== */
+
+function detectHorizon() {
+
+    if (
+        video.videoWidth === 0
+        ||
+        video.videoHeight === 0
+    ) {
+
+        return null;
+
+    }
+
+
+    const w =
+        160;
+
+
+    const h =
+        90;
+
+
+    analysisCanvas.width =
+        w;
+
+
+    analysisCanvas.height =
+        h;
+
+
+    analysisCtx.drawImage(
+
+        video,
+
+        0,
+        0,
+
+        w,
+        h
+
+    );
+
+
+    const image =
+        analysisCtx.getImageData(
+
+            0,
+            0,
+
+            w,
+            h
+
+        );
+
+
+    const data =
+        image.data;
+
+
+    const gray =
+        new Float32Array(
+            w * h
+        );
+
+
+    /*
+    RGB → 灰階
+    */
+
+    for (
+        let y = 0;
+        y < h;
+        y++
+    ) {
+
+        for (
+            let x = 0;
+            x < w;
+            x++
+        ) {
+
+            const i =
+                (
+                    y * w +
+                    x
+                )
+                *
+                4;
+
+
+            gray[
+                y * w +
+                x
+            ] =
+
+                data[i] *
+                0.299
+
+                +
+
+                data[i + 1] *
+                0.587
+
+                +
+
+                data[i + 2] *
+                0.114;
+
+        }
+
+    }
+
+
+    let bestY =
+        h / 2;
+
+
+    let bestScore =
+        -1;
+
+
+    /*
+    避開最頂部及最底部
+    */
+
+    const startY =
+        Math.floor(
+            h * 0.18
+        );
+
+
+    const endY =
+        Math.floor(
+            h * 0.82
+        );
+
+
+    for (
+        let y = startY;
+        y < endY;
+        y++
+    ) {
+
+        let score =
+            0;
+
+
+        for (
+            let x = 4;
+            x < w - 4;
+            x += 2
+        ) {
+
+            const above =
+                gray[
+                    (y - 2) *
+                    w +
+                    x
+                ];
+
+
+            const below =
+                gray[
+                    (y + 2) *
+                    w +
+                    x
+                ];
+
+
+            score +=
+                Math.abs(
+                    below -
+                    above
+                );
+
+        }
+
+
+        if (
+            score >
+            bestScore
+        ) {
+
+            bestScore =
+                score;
+
+
+            bestY =
+                y;
+
+        }
+
+    }
+
+
+    return {
+
+        y:
+            bestY,
+
+        strength:
+            bestScore
+
+    };
+
+}
+
+
+/* =====================================================
+   讓 HTML 按鈕可以呼叫
+===================================================== */
+
+window.openFrontCamera =
+    openFrontCamera;
+
+
+window.openRearCamera =
+    openRearCamera;
+
+
+window.takePhoto =
+    takePhoto;
+
+
+window.stopCamera =
+    stopCamera;
+
+
+/* =====================================================
+   開始載入 AI
+===================================================== */
+
+loadAI();
+
+</script>
+
+</body>
+
+</html>
