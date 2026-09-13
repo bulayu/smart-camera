@@ -10,7 +10,7 @@
                initial-scale=1.0,
                user-scalable=no">
 
-<title>阿策智慧構圖助手 V3.1</title>
+<title>阿策智慧構圖助手 V3.2</title>
 
 <style>
 
@@ -38,8 +38,9 @@ h2 {
 }
 
 #modeInfo {
-    font-size: 18px;
+    font-size: 19px;
     margin: 5px;
+    font-weight: bold;
 }
 
 #guideInfo {
@@ -80,7 +81,7 @@ h2 {
 
 .guideLine {
     position: absolute;
-    background: rgba(255,255,255,0.60);
+    background: rgba(255,255,255,0.6);
     pointer-events: none;
 }
 
@@ -124,13 +125,8 @@ button {
     border-radius: 10px;
 }
 
-select {
-    font-size: 16px;
-    padding: 10px;
-    width: 92%;
-    max-width: 500px;
-    margin: 5px;
-    border-radius: 8px;
+.cameraButton {
+    min-width: 120px;
 }
 
 #shutterButton {
@@ -164,7 +160,7 @@ select {
 
 <body>
 
-<h2>📷 阿策智慧構圖助手 V3.1</h2>
+<h2>📷 阿策智慧構圖助手 V3.2</h2>
 
 <div id="status">
     AI 模型載入中...
@@ -201,21 +197,17 @@ select {
 
 <div id="controls">
 
-    <button onclick="startCamera()">
-        開啟相機
+    <button
+        class="cameraButton"
+        onclick="openFrontCamera()">
+        🤳 前鏡頭
     </button>
 
-    <br>
-
-    <select
-        id="cameraSelect"
-        onchange="changeCamera()">
-
-        <option value="">
-            尚未取得鏡頭
-        </option>
-
-    </select>
+    <button
+        class="cameraButton"
+        onclick="openRearCamera()">
+        📷 後鏡頭
+    </button>
 
     <br>
 
@@ -259,9 +251,9 @@ import {
 from "https://unpkg.com/@mediapipe/tasks-vision@0.10.35/vision_bundle.mjs";
 
 
-/* =====================================================
+/* =========================
    全域變數
-===================================================== */
+========================= */
 
 let detector = null;
 
@@ -275,20 +267,19 @@ let smoothScore = 0;
 
 let okCounter = 0;
 
-let currentDeviceId = "";
-
-let currentCameraLabel = "";
-
-let isRearCamera = false;
+let smoothHorizonY = null;
 
 let lastLandscapeAnalysis = 0;
 
-let smoothHorizonY = null;
 
+/*
+user = 前鏡頭
+environment = 後鏡頭
 
-/* =====================================================
-   HTML 元件
-===================================================== */
+這次不再看鏡頭名稱
+*/
+let currentFacingMode = "user";
+
 
 const video =
     document.getElementById("camera");
@@ -299,13 +290,11 @@ const overlay =
 const ctx =
     overlay.getContext("2d");
 
-
 const photoCanvas =
     document.getElementById("photoCanvas");
 
 const photoCtx =
     photoCanvas.getContext("2d");
-
 
 const analysisCanvas =
     document.getElementById("analysisCanvas");
@@ -318,38 +307,28 @@ const analysisCtx =
         }
     );
 
-
-const cameraSelect =
-    document.getElementById("cameraSelect");
-
-
 const photoPreview =
     document.getElementById("photoPreview");
-
 
 const statusText =
     document.getElementById("status");
 
-
 const faceInfo =
     document.getElementById("faceInfo");
-
 
 const modeInfo =
     document.getElementById("modeInfo");
 
-
 const guideInfo =
     document.getElementById("guideInfo");
-
 
 const scoreInfo =
     document.getElementById("scoreInfo");
 
 
-/* =====================================================
-   載入 MediaPipe
-===================================================== */
+/* =========================
+   載入 AI
+========================= */
 
 async function loadAI() {
 
@@ -365,10 +344,6 @@ async function loadAI() {
                 "https://unpkg.com/@mediapipe/tasks-vision@0.10.35/wasm"
 
             );
-
-
-        statusText.innerText =
-            "正在載入人臉模型...";
 
 
         detector =
@@ -389,8 +364,12 @@ async function loadAI() {
                     runningMode:
                         "VIDEO",
 
+                    /*
+                    提高一點，
+                    減少風景被誤認成人臉
+                    */
                     minDetectionConfidence:
-                        0.4
+                        0.60
 
                 }
 
@@ -405,7 +384,7 @@ async function loadAI() {
     catch(error) {
 
         statusText.innerText =
-            "❌ AI 模型載入失敗";
+            "❌ AI 載入失敗";
 
         faceInfo.innerText =
             error.message;
@@ -415,219 +394,64 @@ async function loadAI() {
 }
 
 
-/* =====================================================
-   第一次開啟相機
-===================================================== */
+/* =========================
+   前鏡頭
+========================= */
 
-async function startCamera() {
+async function openFrontCamera() {
 
-    try {
-
-        if (!detector) {
-
-            alert(
-                "AI 還在載入，請稍等一下"
-            );
-
-            return;
-
-        }
+    currentFacingMode =
+        "user";
 
 
-        stopCurrentStream();
-
-
-        /*
-        第一次先用 video:true
-        取得 Safari 相機權限
-        */
-
-        stream =
-            await navigator.mediaDevices
-                .getUserMedia({
-
-                    video: true,
-
-                    audio: false
-
-                });
-
-
-        video.srcObject =
-            stream;
-
-
-        await video.play();
-
-
-        cameraRunning =
-            true;
-
-
-        lastVideoTime =
-            -1;
-
-
-        smoothScore =
-            0;
-
-
-        okCounter =
-            0;
-
-
-        smoothHorizonY =
-            null;
-
-
-        statusText.innerText =
-            "📷 相機已開啟";
-
-
-        await loadCameraList();
-
-
-        updateCurrentCameraInfo();
-
-
-        requestAnimationFrame(
-            detectLoop
-        );
-
-    }
-
-    catch(error) {
-
-        statusText.innerText =
-            "❌ 相機開啟失敗";
-
-        faceInfo.innerText =
-            error.name +
-            "：" +
-            error.message;
-
-    }
+    await openCamera();
 
 }
 
 
-/* =====================================================
-   取得手機所有攝影機
-===================================================== */
+/* =========================
+   後鏡頭
+========================= */
 
-async function loadCameraList() {
+async function openRearCamera() {
 
-    try {
-
-        const devices =
-            await navigator.mediaDevices
-                .enumerateDevices();
+    currentFacingMode =
+        "environment";
 
 
-        const cameras =
-            devices.filter(
-
-                device =>
-                    device.kind ===
-                    "videoinput"
-
-            );
-
-
-        cameraSelect.innerHTML =
-            "";
-
-
-        cameras.forEach(
-
-            (camera, index) => {
-
-                const option =
-                    document.createElement(
-                        "option"
-                    );
-
-
-                option.value =
-                    camera.deviceId;
-
-
-                option.text =
-                    camera.label ||
-                    "Camera " +
-                    (index + 1);
-
-
-                cameraSelect.appendChild(
-                    option
-                );
-
-            }
-
-        );
-
-
-        const track =
-            stream
-                .getVideoTracks()[0];
-
-
-        const settings =
-            track.getSettings();
-
-
-        if (settings.deviceId) {
-
-            currentDeviceId =
-                settings.deviceId;
-
-
-            cameraSelect.value =
-                settings.deviceId;
-
-        }
-
-
-        updateCurrentCameraInfo();
-
-    }
-
-    catch(error) {
-
-        statusText.innerText =
-            "取得鏡頭清單失敗：" +
-            error.message;
-
-    }
+    await openCamera();
 
 }
 
 
-/* =====================================================
-   使用者選擇真正的攝影鏡頭
-===================================================== */
+/* =========================
+   開啟指定鏡頭
+========================= */
 
-async function changeCamera() {
+async function openCamera() {
 
-    const deviceId =
-        cameraSelect.value;
+    if (!detector) {
 
-
-    if (!deviceId) {
+        alert(
+            "AI 還在載入，請稍等一下"
+        );
 
         return;
 
     }
 
 
+    stopCurrentStream();
+
+
     try {
 
-        cameraRunning =
-            false;
+        /*
+        先用 exact
 
-
-        stopCurrentStream();
-
+        要求 Safari
+        一定使用前或後鏡頭
+        */
 
         stream =
             await navigator.mediaDevices
@@ -635,10 +459,10 @@ async function changeCamera() {
 
                     video: {
 
-                        deviceId: {
+                        facingMode: {
 
                             exact:
-                                deviceId
+                                currentFacingMode
 
                         }
 
@@ -649,165 +473,142 @@ async function changeCamera() {
 
                 });
 
-
-        video.srcObject =
-            stream;
-
-
-        await video.play();
-
-
-        currentDeviceId =
-            deviceId;
-
-
-        cameraRunning =
-            true;
-
-
-        lastVideoTime =
-            -1;
-
-
-        smoothScore =
-            0;
-
-
-        okCounter =
-            0;
-
-
-        smoothHorizonY =
-            null;
-
-
-        updateCurrentCameraInfo();
-
-
-        statusText.innerText =
-            "📷 使用：" +
-            currentCameraLabel;
-
-
-        requestAnimationFrame(
-            detectLoop
-        );
-
     }
 
     catch(error) {
 
-        statusText.innerText =
-            "❌ 切換鏡頭失敗：" +
-            error.message;
+        /*
+        如果某些 iPhone
+        不接受 exact，
+
+        再退回 ideal
+        */
+
+        try {
+
+            stream =
+                await navigator.mediaDevices
+                    .getUserMedia({
+
+                        video: {
+
+                            facingMode:
+
+                                currentFacingMode
+
+                        },
+
+                        audio:
+                            false
+
+                    });
+
+        }
+
+        catch(error2) {
+
+            statusText.innerText =
+                "❌ 無法開啟相機：" +
+                error2.message;
+
+            return;
+
+        }
 
     }
 
-}
+
+    video.srcObject =
+        stream;
 
 
-/* =====================================================
-   判斷目前是前鏡頭還是後鏡頭
-===================================================== */
+    await video.play();
 
-function updateCurrentCameraInfo() {
 
-    const index =
-        cameraSelect.selectedIndex;
+    cameraRunning =
+        true;
+
+
+    lastVideoTime =
+        -1;
+
+
+    smoothScore =
+        0;
+
+
+    okCounter =
+        0;
+
+
+    smoothHorizonY =
+        null;
 
 
     if (
-        index >= 0 &&
-        cameraSelect.options[index]
+        currentFacingMode ===
+        "environment"
     ) {
 
-        currentCameraLabel =
-            cameraSelect
-                .options[index]
-                .text;
+        statusText.innerText =
+            "📷 後鏡頭已開啟";
+
+
+        /*
+        後鏡頭一開啟，
+        先直接顯示風景模式。
+
+        如果之後真的偵測到人，
+        程式會自動切成人像模式。
+        */
+
+        faceInfo.innerText =
+            "";
+
+
+        modeInfo.innerText =
+            "🏞️ 智慧風景構圖";
+
+
+        guideInfo.innerText =
+            "正在分析畫面...";
+
+
+        scoreInfo.innerText =
+            "";
+
+    }
+
+    else {
+
+        statusText.innerText =
+            "🤳 前鏡頭已開啟";
+
+
+        modeInfo.innerText =
+            "👤 人像構圖模式";
+
+
+        guideInfo.innerText =
+            "等待人物進入畫面";
+
+
+        scoreInfo.innerText =
+            "";
 
     }
 
 
-    const lower =
-        currentCameraLabel
-            .toLowerCase();
-
-
-    /*
-    iPhone Safari 通常會提供類似：
-
-    Front Camera
-    Back Camera
-    Back Dual Wide Camera
-    */
-
-    isRearCamera =
-
-        lower.includes("back")
-
-        ||
-
-        lower.includes("rear")
-
-        ||
-
-        lower.includes("environment")
-
-        ||
-
-        lower.includes("後");
-
-
-    /*
-    名稱真的判斷不到時，
-    使用 track facingMode
-    */
-
-    try {
-
-        const track =
-            stream
-                .getVideoTracks()[0];
-
-
-        const settings =
-            track.getSettings();
-
-
-        if (
-            settings.facingMode ===
-            "environment"
-        ) {
-
-            isRearCamera =
-                true;
-
-        }
-
-
-        if (
-            settings.facingMode ===
-            "user"
-        ) {
-
-            isRearCamera =
-                false;
-
-        }
-
-    }
-
-    catch(e) {
-
-    }
+    requestAnimationFrame(
+        detectLoop
+    );
 
 }
 
 
-/* =====================================================
-   關閉目前串流
-===================================================== */
+/* =========================
+   關閉目前鏡頭
+========================= */
 
 function stopCurrentStream() {
 
@@ -816,10 +617,8 @@ function stopCurrentStream() {
         stream
             .getTracks()
             .forEach(
-
                 track =>
                     track.stop()
-
             );
 
         stream =
@@ -830,9 +629,9 @@ function stopCurrentStream() {
 }
 
 
-/* =====================================================
+/* =========================
    關閉相機
-===================================================== */
+========================= */
 
 function stopCamera() {
 
@@ -877,12 +676,9 @@ function stopCamera() {
 }
 
 
-/* =====================================================
+/* =========================
    拍照
-
-   拍的是乾淨照片，
-   不會把綠框和構圖線拍進去
-===================================================== */
+========================= */
 
 function takePhoto() {
 
@@ -942,9 +738,9 @@ function takePhoto() {
 }
 
 
-/* =====================================================
-   AI 即時循環
-===================================================== */
+/* =========================
+   即時偵測
+========================= */
 
 function detectLoop() {
 
@@ -990,9 +786,7 @@ function detectLoop() {
 
             catch(error) {
 
-                console.log(
-                    error
-                );
+                console.log(error);
 
             }
 
@@ -1008,9 +802,9 @@ function detectLoop() {
 }
 
 
-/* =====================================================
+/* =========================
    距離
-===================================================== */
+========================= */
 
 function getDistance(
     x1,
@@ -1021,7 +815,6 @@ function getDistance(
 
     const dx =
         x2 - x1;
-
 
     const dy =
         y2 - y1;
@@ -1035,13 +828,11 @@ function getDistance(
 }
 
 
-/* =====================================================
-   平滑分數
-===================================================== */
+/* =========================
+   分數平滑
+========================= */
 
-function updateSmoothScore(
-    score
-) {
+function updateSmoothScore(score) {
 
     if (
         smoothScore === 0
@@ -1068,9 +859,9 @@ function updateSmoothScore(
 }
 
 
-/* =====================================================
-   移動方向
-===================================================== */
+/* =========================
+   方向
+========================= */
 
 function getDirectionText(
     dx,
@@ -1079,12 +870,9 @@ function getDirectionText(
     toleranceY
 ) {
 
-    let horizontal =
-        "";
+    let horizontal = "";
 
-
-    let vertical =
-        "";
+    let vertical = "";
 
 
     if (
@@ -1135,49 +923,45 @@ function getDirectionText(
 }
 
 
-/* =====================================================
+/* =========================
    主畫面處理
-===================================================== */
+========================= */
 
 function drawResult(result) {
 
-    const displayWidth =
+    const width =
         video.clientWidth;
 
 
-    const displayHeight =
+    const height =
         video.clientHeight;
 
 
     overlay.width =
-        displayWidth;
+        width;
 
 
     overlay.height =
-        displayHeight;
+        height;
 
 
     ctx.clearRect(
         0,
         0,
-        displayWidth,
-        displayHeight
+        width,
+        height
     );
 
 
     const scaleX =
-        displayWidth /
+        width /
         video.videoWidth;
 
 
     const scaleY =
-        displayHeight /
+        height /
         video.videoHeight;
 
-
-    /*
-    整理有效人臉
-    */
 
     const validFaces =
         [];
@@ -1215,17 +999,18 @@ function drawResult(result) {
 
 
             /*
-            太小的誤判先忽略
+            比之前更嚴格，
+            避免戶外物件被當成臉
             */
 
             if (
                 w <
-                displayWidth * 0.08
+                width * 0.10
 
                 ||
 
                 h <
-                displayHeight * 0.08
+                height * 0.10
             ) {
 
                 continue;
@@ -1254,7 +1039,7 @@ function drawResult(result) {
 
 
     /*
-    有人物
+    有真的偵測到人物
     */
 
     if (
@@ -1265,9 +1050,9 @@ function drawResult(result) {
 
             validFaces,
 
-            displayWidth,
+            width,
 
-            displayHeight
+            height
 
         );
 
@@ -1277,18 +1062,20 @@ function drawResult(result) {
 
 
     /*
-    沒人物 + 後鏡頭
-    ↓
-    自動風景構圖
+    後鏡頭沒有人物
+
+    一律進入風景模式
     */
 
-    if (isRearCamera) {
+    if (
+        currentFacingMode ===
+        "environment"
+    ) {
 
         drawLandscapeComposition(
 
-            displayWidth,
-
-            displayHeight
+            width,
+            height
 
         );
 
@@ -1319,9 +1106,9 @@ function drawResult(result) {
 }
 
 
-/* =====================================================
-   人像 / 多人構圖
-===================================================== */
+/* =========================
+   人像構圖
+========================= */
 
 function drawPeopleComposition(
     faces,
@@ -1334,10 +1121,6 @@ function drawPeopleComposition(
         faces.length +
         " 人";
 
-
-    /*
-    每張臉綠框
-    */
 
     for (
         const face
@@ -1363,9 +1146,7 @@ function drawPeopleComposition(
 
 
     /*
-    =================================
     單人
-    =================================
     */
 
     if (
@@ -1442,12 +1223,9 @@ function drawPeopleComposition(
                 d < distance
             ) {
 
-                distance =
-                    d;
+                distance = d;
 
-
-                target =
-                    point;
+                target = point;
 
             }
 
@@ -1455,7 +1233,6 @@ function drawPeopleComposition(
 
 
         ctx.beginPath();
-
 
         ctx.arc(
             target.x,
@@ -1465,16 +1242,13 @@ function drawPeopleComposition(
             Math.PI * 2
         );
 
-
         ctx.fillStyle =
             "deepskyblue";
-
 
         ctx.fill();
 
 
         ctx.beginPath();
-
 
         ctx.arc(
             face.centerX,
@@ -1484,36 +1258,29 @@ function drawPeopleComposition(
             Math.PI * 2
         );
 
-
         ctx.fillStyle =
             "red";
-
 
         ctx.fill();
 
 
         ctx.beginPath();
 
-
         ctx.moveTo(
             face.centerX,
             face.centerY
         );
-
 
         ctx.lineTo(
             target.x,
             target.y
         );
 
-
         ctx.strokeStyle =
             "yellow";
 
-
         ctx.lineWidth =
             3;
-
 
         ctx.stroke();
 
@@ -1631,8 +1398,7 @@ function drawPeopleComposition(
 
             guideInfo.innerText =
                 direction
-                ? "建議：" +
-                  direction
+                ? "建議：" + direction
                 : "👍 快到了";
 
         }
@@ -1650,9 +1416,7 @@ function drawPeopleComposition(
 
 
     /*
-    =================================
     多人
-    =================================
     */
 
     modeInfo.innerText =
@@ -1661,28 +1425,9 @@ function drawPeopleComposition(
         " 人";
 
 
-    let totalX =
-        0;
+    let totalX = 0;
 
-
-    let totalY =
-        0;
-
-
-    let minX =
-        Infinity;
-
-
-    let minY =
-        Infinity;
-
-
-    let maxX =
-        -Infinity;
-
-
-    let maxY =
-        -Infinity;
+    let totalY = 0;
 
 
     for (
@@ -1693,39 +1438,8 @@ function drawPeopleComposition(
         totalX +=
             face.centerX;
 
-
         totalY +=
             face.centerY;
-
-
-        minX =
-            Math.min(
-                minX,
-                face.x
-            );
-
-
-        minY =
-            Math.min(
-                minY,
-                face.y
-            );
-
-
-        maxX =
-            Math.max(
-                maxX,
-                face.x +
-                face.w
-            );
-
-
-        maxY =
-            Math.max(
-                maxY,
-                face.y +
-                face.h
-            );
 
     }
 
@@ -1741,37 +1455,14 @@ function drawPeopleComposition(
 
 
     const targetX =
-        width *
-        0.50;
+        width * 0.50;
 
 
     const targetY =
-        height *
-        0.43;
-
-
-    ctx.strokeStyle =
-        "orange";
-
-
-    ctx.lineWidth =
-        4;
-
-
-    ctx.strokeRect(
-
-        minX,
-        minY,
-
-        maxX - minX,
-
-        maxY - minY
-
-    );
+        height * 0.43;
 
 
     ctx.beginPath();
-
 
     ctx.arc(
         groupX,
@@ -1781,16 +1472,13 @@ function drawPeopleComposition(
         Math.PI * 2
     );
 
-
     ctx.fillStyle =
         "magenta";
-
 
     ctx.fill();
 
 
     ctx.beginPath();
-
 
     ctx.arc(
         targetX,
@@ -1800,36 +1488,29 @@ function drawPeopleComposition(
         Math.PI * 2
     );
 
-
     ctx.fillStyle =
         "cyan";
-
 
     ctx.fill();
 
 
     ctx.beginPath();
 
-
     ctx.moveTo(
         groupX,
         groupY
     );
-
 
     ctx.lineTo(
         targetX,
         targetY
     );
 
-
     ctx.strokeStyle =
         "yellow";
 
-
     ctx.lineWidth =
         3;
-
 
     ctx.stroke();
 
@@ -1850,83 +1531,20 @@ function drawPeopleComposition(
         Math.min(
             width,
             height
-        ) *
-        0.20;
-
-
-    const nearDistance =
-        Math.min(
-            width,
-            height
-        ) *
-        0.32;
-
-
-    const edgeMargin =
-        width *
-        0.05;
-
-
-    const touchesEdge =
-
-        minX <
-        edgeMargin
-
-        ||
-
-        maxX >
-        width -
-        edgeMargin;
-
-
-    const dx =
-        targetX -
-        groupX;
-
-
-    const dy =
-        targetY -
-        groupY;
-
-
-    const direction =
-        getDirectionText(
-
-            dx,
-            dy,
-
-            width * 0.08,
-
-            height * 0.08
-
-        );
+        ) * 0.20;
 
 
     let rawScore =
         100 -
+        distance /
         (
-            distance /
-            (
-                Math.sqrt(
-                    width * width +
-                    height * height
-                )
-                *
-                0.50
-            )
-        )
-        *
+            Math.sqrt(
+                width * width +
+                height * height
+            ) *
+            0.50
+        ) *
         100;
-
-
-    if (
-        touchesEdge
-    ) {
-
-        rawScore -=
-            10;
-
-    }
 
 
     rawScore =
@@ -1948,36 +1566,6 @@ function drawPeopleComposition(
     if (
         distance <=
         okDistance
-        &&
-        !touchesEdge
-    ) {
-
-        okCounter++;
-
-    }
-
-    else {
-
-        okCounter =
-            Math.max(
-                0,
-                okCounter - 1
-            );
-
-    }
-
-
-    if (
-        touchesEdge
-    ) {
-
-        guideInfo.innerText =
-            "⚠️ 人物太靠近畫面邊緣";
-
-    }
-
-    else if (
-        okCounter >= 4
     ) {
 
         guideInfo.innerText =
@@ -1985,23 +1573,27 @@ function drawPeopleComposition(
 
     }
 
-    else if (
-        distance <=
-        nearDistance
-    ) {
-
-        guideInfo.innerText =
-            "👍 快到了";
-
-    }
-
     else {
 
+        const direction =
+            getDirectionText(
+
+                targetX -
+                groupX,
+
+                targetY -
+                groupY,
+
+                width * 0.08,
+
+                height * 0.08
+
+            );
+
+
         guideInfo.innerText =
-            direction
-            ? "建議：" +
-              direction
-            : "👍 快到了";
+            "建議：" +
+            direction;
 
     }
 
@@ -2014,9 +1606,9 @@ function drawPeopleComposition(
 }
 
 
-/* =====================================================
+/* =========================
    風景構圖
-===================================================== */
+========================= */
 
 function drawLandscapeComposition(
     width,
@@ -2027,16 +1619,13 @@ function drawLandscapeComposition(
         "";
 
 
+    /*
+    這行現在一定會出現
+    */
+
     modeInfo.innerText =
         "🏞️ 智慧風景構圖";
 
-
-    /*
-    不需要每一個 frame
-    都分析風景。
-
-    每 250ms 分析一次即可。
-    */
 
     const now =
         performance.now();
@@ -2044,8 +1633,7 @@ function drawLandscapeComposition(
 
     if (
         now -
-        lastLandscapeAnalysis
-        >
+        lastLandscapeAnalysis >
         250
     ) {
 
@@ -2072,12 +1660,9 @@ function drawLandscapeComposition(
             else {
 
                 smoothHorizonY =
-
                     smoothHorizonY *
                     0.80
-
                     +
-
                     result.y *
                     0.20;
 
@@ -2105,121 +1690,93 @@ function drawLandscapeComposition(
     }
 
 
-    /*
-    原始分析 Canvas
-    是 90 像素高。
-
-    換算成手機畫面座標。
-    */
-
     const horizonY =
         (
             smoothHorizonY /
             analysisCanvas.height
-        )
-        *
+        ) *
         height;
 
 
     /*
-    畫偵測到的地平線
+    青色：
+    程式判斷的水平分界
     */
 
     ctx.beginPath();
-
 
     ctx.moveTo(
         0,
         horizonY
     );
 
-
     ctx.lineTo(
         width,
         horizonY
     );
 
-
     ctx.strokeStyle =
-        "#00ffff";
-
+        "cyan";
 
     ctx.lineWidth =
         4;
 
-
     ctx.stroke();
 
 
-    /*
-    找最接近的上下三分線
-    */
-
     const upperThird =
-        height /
-        3;
+        height / 3;
 
 
     const lowerThird =
-        height *
-        2 /
-        3;
+        height * 2 / 3;
 
 
-    let targetY;
+    const targetY =
 
-
-    if (
         Math.abs(
             horizonY -
             upperThird
         )
+
         <
+
         Math.abs(
             horizonY -
             lowerThird
         )
-    ) {
 
-        targetY =
-            upperThird;
+        ?
 
-    }
+        upperThird
 
-    else {
+        :
 
-        targetY =
-            lowerThird;
-
-    }
+        lowerThird;
 
 
     /*
-    目標線
+    黃色：
+    建議三分線
     */
 
     ctx.beginPath();
-
 
     ctx.moveTo(
         0,
         targetY
     );
 
-
     ctx.lineTo(
         width,
         targetY
     );
 
-
     ctx.strokeStyle =
         "yellow";
 
-
     ctx.lineWidth =
         3;
-
 
     ctx.stroke();
 
@@ -2241,20 +1798,13 @@ function drawLandscapeComposition(
         0.14;
 
 
-    /*
-    分數
-    */
-
     let rawScore =
         100 -
+        distance /
         (
-            distance /
-            (
-                height *
-                0.40
-            )
-        )
-        *
+            height *
+            0.40
+        ) *
         100;
 
 
@@ -2273,17 +1823,6 @@ function drawLandscapeComposition(
             rawScore
         );
 
-
-    /*
-    注意：
-
-    如果地平線太下面，
-    為了把地平線往上移，
-    相機應往下壓。
-
-    如果地平線太上面，
-    相機應往上抬。
-    */
 
     if (
         distance <=
@@ -2350,17 +1889,9 @@ function drawLandscapeComposition(
 }
 
 
-/* =====================================================
-   偵測風景水平線 / 地平線
-
-   原理：
-   將相機畫面縮小，
-   比較每一列上下亮度差異。
-
-   差異最大的水平區域，
-   很可能是天空 / 山 / 海 /
-   建築與背景的交界。
-===================================================== */
+/* =========================
+   找水平分界
+========================= */
 
 function detectHorizon() {
 
@@ -2373,10 +1904,6 @@ function detectHorizon() {
 
     }
 
-
-    /*
-    小尺寸分析可以大幅降低手機負擔
-    */
 
     const w =
         160;
@@ -2407,12 +1934,11 @@ function detectHorizon() {
     );
 
 
-    const imageData =
+    const image =
         analysisCtx.getImageData(
 
             0,
             0,
-
             w,
             h
 
@@ -2420,7 +1946,7 @@ function detectHorizon() {
 
 
     const data =
-        imageData.data;
+        image.data;
 
 
     const gray =
@@ -2428,10 +1954,6 @@ function detectHorizon() {
             w * h
         );
 
-
-    /*
-    RGB → 灰階
-    */
 
     for (
         let y = 0;
@@ -2445,41 +1967,29 @@ function detectHorizon() {
             x++
         ) {
 
-            const index =
+            const i =
                 (
                     y * w +
                     x
-                )
-                *
-                4;
-
-
-            const r =
-                data[index];
-
-
-            const g =
-                data[index + 1];
-
-
-            const b =
-                data[index + 2];
+                ) * 4;
 
 
             gray[
-                y * w +
-                x
+                y * w + x
             ] =
 
-                r * 0.299
+                data[i] *
+                0.299
 
                 +
 
-                g * 0.587
+                data[i + 1] *
+                0.587
 
                 +
 
-                b * 0.114;
+                data[i + 2] *
+                0.114;
 
         }
 
@@ -2493,11 +2003,6 @@ function detectHorizon() {
     let bestScore =
         -1;
 
-
-    /*
-    不檢查最上面和最下面，
-    避免邊框誤判。
-    */
 
     const startY =
         Math.floor(
@@ -2520,11 +2025,6 @@ function detectHorizon() {
         let score =
             0;
 
-
-        /*
-        每隔兩個像素取樣，
-        降低 CPU 負擔
-        */
 
         for (
             let x = 4;
@@ -2557,53 +2057,6 @@ function detectHorizon() {
         }
 
 
-        /*
-        稍微偏好接近三分線的位置，
-        避免小物件誤判。
-        */
-
-        const upperThird =
-            h /
-            3;
-
-
-        const lowerThird =
-            h *
-            2 /
-            3;
-
-
-        const distThird =
-            Math.min(
-
-                Math.abs(
-                    y -
-                    upperThird
-                ),
-
-                Math.abs(
-                    y -
-                    lowerThird
-                )
-
-            );
-
-
-        const bonus =
-            1 +
-            (
-                1 -
-                distThird /
-                h
-            )
-            *
-            0.15;
-
-
-        score *=
-            bonus;
-
-
         if (
             score >
             bestScore
@@ -2624,26 +2077,23 @@ function detectHorizon() {
     return {
 
         y:
-            bestY,
-
-        strength:
-            bestScore
+            bestY
 
     };
 
 }
 
 
-/* =====================================================
-   HTML 可以呼叫的 function
-===================================================== */
+/* =========================
+   HTML 按鈕
+========================= */
 
-window.startCamera =
-    startCamera;
+window.openFrontCamera =
+    openFrontCamera;
 
 
-window.changeCamera =
-    changeCamera;
+window.openRearCamera =
+    openRearCamera;
 
 
 window.takePhoto =
@@ -2654,9 +2104,9 @@ window.stopCamera =
     stopCamera;
 
 
-/* =====================================================
+/* =========================
    啟動
-===================================================== */
+========================= */
 
 loadAI();
 
