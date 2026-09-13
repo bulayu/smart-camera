@@ -11,7 +11,7 @@
                user-scalable=no,
                viewport-fit=cover">
 
-<title>智慧構圖助手 V4.1</title>
+<title>智慧構圖助手 V4.2</title>
 
 <style>
 
@@ -23,8 +23,10 @@ html,
 body {
     margin: 0;
     padding: 0;
+
     background: black;
     color: white;
+
     font-family:
         -apple-system,
         BlinkMacSystemFont,
@@ -35,6 +37,7 @@ body {
 }
 
 #topBar {
+
     padding-top:
         max(
             8px,
@@ -45,21 +48,26 @@ body {
 }
 
 #title {
+
     font-size: 19px;
     font-weight: 600;
 }
 
 #status {
+
     min-height: 18px;
+
     margin-top: 4px;
+
     font-size: 13px;
+
     color: #aaaaaa;
 }
 
 
-/* =========================
+/* ======================
    相機
-========================= */
+====================== */
 
 #cameraBox {
 
@@ -97,9 +105,9 @@ body {
 }
 
 
-/* =========================
-   按鈕
-========================= */
+/* ======================
+   控制
+====================== */
 
 #controls {
 
@@ -119,18 +127,18 @@ button {
 
     border-radius: 12px;
 
-    margin: 4px;
-
     padding: 11px 15px;
+
+    margin: 4px;
 
     font-size: 16px;
 
     background: #292929;
-
     color: white;
 }
 
 .cameraButton {
+
     min-width: 118px;
 }
 
@@ -139,23 +147,23 @@ button {
     width: 72px;
     height: 72px;
 
+    border-radius: 50%;
+
     padding: 0;
 
     margin: 9px 12px;
 
-    border-radius: 50%;
-
     border: 4px solid white;
 
-    background: #222;
-
     font-size: 29px;
+
+    background: #222;
 }
 
 
-/* =========================
-   照片預覽
-========================= */
+/* ======================
+   照片
+====================== */
 
 #photoPreview {
 
@@ -166,11 +174,9 @@ button {
 
     margin-bottom: 20px;
 
-    border:
-
-        2px solid white;
-
     border-radius: 10px;
+
+    border: 2px solid white;
 }
 
 #photoCanvas,
@@ -284,15 +290,8 @@ let stream = null;
 
 let cameraRunning = false;
 
-
-/*
-user = 前鏡頭
-
-environment = 後鏡頭
-*/
 let currentMode =
     "environment";
-
 
 let frontDeviceId =
     "";
@@ -300,56 +299,26 @@ let frontDeviceId =
 let rearDeviceId =
     "";
 
-
-/*
-避免切換鏡頭後
-舊程式還繼續跑
-*/
 let cameraSession =
     0;
 
 
 /* =====================================================
-   AI 分析
+   分析時間
 ===================================================== */
 
 let lastVideoTime =
     -1;
 
-
-let lastObjectDetectTime =
+let lastObjectTime =
     0;
 
-
-let lastSceneAnalysisTime =
+let lastSceneTime =
     0;
 
 
 /* =====================================================
-   AI 鎖定
-
-   防止推薦位置一直跳
-===================================================== */
-
-let lockedType =
-    "";
-
-let lockedTargetXRatio =
-    null;
-
-let lockedTargetYRatio =
-    null;
-
-let lockUntil =
-    0;
-
-
-const LOCK_TIME =
-    3000;
-
-
-/* =====================================================
-   主體位置平滑
+   AI 主體
 ===================================================== */
 
 let smoothSubjectX =
@@ -360,29 +329,53 @@ let smoothSubjectY =
 
 
 /* =====================================================
-   手機導航圖示位置
+   推薦構圖位置
 ===================================================== */
 
-let navPhoneX =
-    null;
+let desiredXRatio =
+    0.5;
 
-let navPhoneY =
-    null;
-
-
-let smoothNavPhoneX =
-    null;
-
-let smoothNavPhoneY =
-    null;
+let desiredYRatio =
+    0.45;
 
 
 /*
-連續幾次符合，
-才變綠色。
+推薦位置鎖定
 
-避免一下白一下綠。
+避免一下左邊
+一下右邊
 */
+let lockedType =
+    "";
+
+let lockUntil =
+    0;
+
+const LOCK_TIME =
+    3500;
+
+
+/* =====================================================
+   導航手機
+===================================================== */
+
+let navX =
+    null;
+
+let navY =
+    null;
+
+let smoothNavX =
+    null;
+
+let smoothNavY =
+    null;
+
+
+/* =====================================================
+   OK
+===================================================== */
+
 let okCounter =
     0;
 
@@ -399,48 +392,40 @@ const video =
         "camera"
     );
 
-
 const overlay =
     document.getElementById(
         "overlay"
     );
-
 
 const ctx =
     overlay.getContext(
         "2d"
     );
 
-
 const statusText =
     document.getElementById(
         "status"
     );
-
 
 const photoCanvas =
     document.getElementById(
         "photoCanvas"
     );
 
-
 const photoCtx =
     photoCanvas.getContext(
         "2d"
     );
-
 
 const photoPreview =
     document.getElementById(
         "photoPreview"
     );
 
-
 const analysisCanvas =
     document.getElementById(
         "analysisCanvas"
     );
-
 
 const analysisCtx =
     analysisCanvas.getContext(
@@ -456,7 +441,7 @@ const analysisCtx =
 
 
 /* =====================================================
-   載入 AI
+   AI 載入
 ===================================================== */
 
 async function loadAI() {
@@ -477,8 +462,7 @@ async function loadAI() {
 
 
         /*
-        前鏡頭：
-        人臉
+        人臉 AI
         */
 
         faceDetector =
@@ -509,8 +493,7 @@ async function loadAI() {
 
 
         /*
-        後鏡頭：
-        常見物件辨識
+        物件 AI
         */
 
         objectDetector =
@@ -568,16 +551,12 @@ async function loadAI() {
 
 
 /* =====================================================
-   取得真正的前後鏡頭
+   找前後鏡頭
 ===================================================== */
 
 async function prepareCameraDevices() {
 
     try {
-
-        /*
-        Safari 先要求一次權限
-        */
 
         const tempStream =
             await navigator.mediaDevices
@@ -622,10 +601,6 @@ async function prepareCameraDevices() {
             "";
 
 
-        /*
-        找前後鏡頭
-        */
-
         for (
             const camera
             of cameras
@@ -639,29 +614,15 @@ async function prepareCameraDevices() {
                 .toLowerCase();
 
 
-            /*
-            前鏡頭
-            */
-
             if (
                 !frontDeviceId
                 &&
                 (
-                    name.includes(
-                        "front"
-                    )
-
+                    name.includes("front")
                     ||
-
-                    name.includes(
-                        "user"
-                    )
-
+                    name.includes("user")
                     ||
-
-                    name.includes(
-                        "前"
-                    )
+                    name.includes("前")
                 )
             ) {
 
@@ -671,57 +632,34 @@ async function prepareCameraDevices() {
             }
 
 
-            /*
-            後鏡頭
-            */
-
             const isRear =
 
-                name.includes(
-                    "back"
-                )
+                name.includes("back")
 
                 ||
 
-                name.includes(
-                    "rear"
-                )
+                name.includes("rear")
 
                 ||
 
-                name.includes(
-                    "environment"
-                )
+                name.includes("environment")
 
                 ||
 
-                name.includes(
-                    "後"
-                );
+                name.includes("後");
 
-
-            /*
-            不優先選
-            超廣角 / 望遠
-            */
 
             const specialLens =
 
-                name.includes(
-                    "ultra"
-                )
+                name.includes("ultra")
 
                 ||
 
-                name.includes(
-                    "tele"
-                )
+                name.includes("tele")
 
                 ||
 
-                name.includes(
-                    "zoom"
-                );
+                name.includes("zoom");
 
 
             if (
@@ -741,8 +679,8 @@ async function prepareCameraDevices() {
 
 
         /*
-        找不到普通後鏡頭時，
-        找任何後鏡頭
+        找不到普通後鏡頭
+        就選任何後鏡頭
         */
 
         if (
@@ -763,21 +701,11 @@ async function prepareCameraDevices() {
 
 
                 if (
-                    name.includes(
-                        "back"
-                    )
-
+                    name.includes("back")
                     ||
-
-                    name.includes(
-                        "rear"
-                    )
-
+                    name.includes("rear")
                     ||
-
-                    name.includes(
-                        "後"
-                    )
+                    name.includes("後")
                 ) {
 
                     rearDeviceId =
@@ -849,10 +777,6 @@ async function openCamera(
     }
 
 
-    /*
-    第一次取得鏡頭清單
-    */
-
     if (
         !frontDeviceId
         &&
@@ -887,13 +811,8 @@ async function openCamera(
         let constraints;
 
 
-        /*
-        前鏡頭
-        */
-
         if (
-            mode ===
-            "user"
+            mode === "user"
             &&
             frontDeviceId
         ) {
@@ -911,20 +830,16 @@ async function openCamera(
 
                 },
 
-                audio: false
+                audio:
+                    false
 
             };
 
         }
 
 
-        /*
-        後鏡頭
-        */
-
         else if (
-            mode ===
-            "environment"
+            mode === "environment"
             &&
             rearDeviceId
         ) {
@@ -942,7 +857,8 @@ async function openCamera(
 
                 },
 
-                audio: false
+                audio:
+                    false
 
             };
 
@@ -964,7 +880,8 @@ async function openCamera(
 
                 },
 
-                audio: false
+                audio:
+                    false
 
             };
 
@@ -980,11 +897,6 @@ async function openCamera(
     }
 
     catch(error) {
-
-        /*
-        exact 失敗
-        改一般 facingMode
-        */
 
         try {
 
@@ -1033,17 +945,12 @@ async function openCamera(
         true;
 
 
-    /*
-    重設 AI 狀態
-    */
-
     resetNavigation();
 
 
     statusText.innerText =
 
-        mode ===
-        "user"
+        mode === "user"
 
         ?
 
@@ -1067,7 +974,7 @@ async function openCamera(
 
 
 /* =====================================================
-   重設導航
+   重設
 ===================================================== */
 
 function resetNavigation() {
@@ -1076,27 +983,11 @@ function resetNavigation() {
         -1;
 
 
-    lastObjectDetectTime =
+    lastObjectTime =
         0;
 
 
-    lastSceneAnalysisTime =
-        0;
-
-
-    lockedType =
-        "";
-
-
-    lockedTargetXRatio =
-        null;
-
-
-    lockedTargetYRatio =
-        null;
-
-
-    lockUntil =
+    lastSceneTime =
         0;
 
 
@@ -1108,20 +999,28 @@ function resetNavigation() {
         null;
 
 
-    navPhoneX =
+    navX =
         null;
 
 
-    navPhoneY =
+    navY =
         null;
 
 
-    smoothNavPhoneX =
+    smoothNavX =
         null;
 
 
-    smoothNavPhoneY =
+    smoothNavY =
         null;
+
+
+    lockedType =
+        "";
+
+
+    lockUntil =
+        0;
 
 
     okCounter =
@@ -1135,7 +1034,7 @@ function resetNavigation() {
 
 
 /* =====================================================
-   停止串流
+   關閉串流
 ===================================================== */
 
 function stopCurrentStream() {
@@ -1161,7 +1060,7 @@ function stopCurrentStream() {
 
 
 /* =====================================================
-   關閉相機
+   關閉
 ===================================================== */
 
 function stopCamera() {
@@ -1208,11 +1107,6 @@ function cameraLoop(
     session
 ) {
 
-    /*
-    切換鏡頭後，
-    舊循環停止
-    */
-
     if (
         session !==
         cameraSession
@@ -1238,37 +1132,23 @@ function cameraLoop(
         video.videoHeight > 0
     ) {
 
-        /*
-        前鏡頭
-        */
-
         if (
             currentMode ===
             "user"
         ) {
 
-            processFrontCamera();
+            processFront();
 
         }
 
-
-        /*
-        後鏡頭
-        */
-
         else {
 
-            processRearCamera();
+            processRear();
 
         }
 
     }
 
-
-    /*
-    不論 AI 是否正在分析，
-    每一 frame 都把導航畫好
-    */
 
     drawNavigation();
 
@@ -1286,10 +1166,10 @@ function cameraLoop(
 
 
 /* =====================================================
-   前鏡頭人物構圖
+   前鏡頭
 ===================================================== */
 
-function processFrontCamera() {
+function processFront() {
 
     if (
         video.currentTime ===
@@ -1311,8 +1191,7 @@ function processFrontCamera() {
     try {
 
         result =
-            faceDetector
-                .detectForVideo(
+            faceDetector.detectForVideo(
 
                 video,
 
@@ -1332,8 +1211,7 @@ function processFrontCamera() {
     if (
         !result.detections
         ||
-        result.detections.length ===
-        0
+        result.detections.length === 0
     ) {
 
         return;
@@ -1342,12 +1220,11 @@ function processFrontCamera() {
 
 
     /*
-    找最大的人臉
+    最大臉
     */
 
-    let bestFace =
+    let best =
         null;
-
 
     let bestArea =
         0;
@@ -1376,7 +1253,7 @@ function processFrontCamera() {
                 area;
 
 
-            bestFace =
+            best =
                 box;
 
         }
@@ -1384,7 +1261,7 @@ function processFrontCamera() {
     }
 
 
-    if (!bestFace) {
+    if (!best) {
 
         return;
 
@@ -1399,12 +1276,12 @@ function processFrontCamera() {
         video.clientHeight;
 
 
-    const scaleX =
+    const sx =
         width /
         video.videoWidth;
 
 
-    const scaleY =
+    const sy =
         height /
         video.videoHeight;
 
@@ -1412,32 +1289,26 @@ function processFrontCamera() {
     const subjectX =
 
         (
-            bestFace.originX
-            +
-            bestFace.width / 2
+            best.originX +
+            best.width / 2
         )
 
         *
-        scaleX;
+        sx;
 
 
     const subjectY =
 
         (
-            bestFace.originY
-            +
-            bestFace.height / 2
+            best.originY +
+            best.height / 2
         )
 
         *
-        scaleY;
+        sy;
 
 
-    /*
-    鎖定人物推薦構圖點
-    */
-
-    ensureCompositionTarget(
+    setTarget(
 
         "person",
 
@@ -1467,20 +1338,15 @@ function processFrontCamera() {
    後鏡頭
 ===================================================== */
 
-function processRearCamera() {
+function processRear() {
 
     const now =
         performance.now();
 
 
-    /*
-    每 300ms
-    做一次物件辨識
-    */
-
     if (
         now -
-        lastObjectDetectTime
+        lastObjectTime
         <
         300
     ) {
@@ -1490,7 +1356,7 @@ function processRearCamera() {
     }
 
 
-    lastObjectDetectTime =
+    lastObjectTime =
         now;
 
 
@@ -1501,8 +1367,7 @@ function processRearCamera() {
     try {
 
         result =
-            objectDetector
-                .detectForVideo(
+            objectDetector.detectForVideo(
 
                 video,
                 now
@@ -1520,10 +1385,6 @@ function processRearCamera() {
     }
 
 
-    /*
-    選主要拍攝主體
-    */
-
     const subject =
         chooseMainSubject(
             result
@@ -1532,7 +1393,7 @@ function processRearCamera() {
 
     if (subject) {
 
-        processObjectSubject(
+        processObject(
             subject
         );
 
@@ -1541,18 +1402,13 @@ function processRearCamera() {
     }
 
 
-    /*
-    找不到常見物件，
-    用畫面視覺重心判斷
-    */
-
     analyzeScene();
 
 }
 
 
 /* =====================================================
-   選主要物件
+   選主體
 ===================================================== */
 
 function chooseMainSubject(
@@ -1564,8 +1420,7 @@ function chooseMainSubject(
         ||
         !result.detections
         ||
-        result.detections.length ===
-        0
+        result.detections.length === 0
     ) {
 
         return null;
@@ -1605,30 +1460,24 @@ function chooseMainSubject(
 
 
         const category =
-            detection
-                .categories?.[0];
+            detection.categories?.[0];
 
 
         const confidence =
             category?.score || 0;
 
 
-        const area =
-
-            box.width
-            *
-            box.height;
-
-
         const areaRatio =
 
-            area /
+            (
+                box.width *
+                box.height
+            )
+
+            /
+
             frameArea;
 
-
-        /*
-        太小的東西不當主角
-        */
 
         if (
             areaRatio <
@@ -1642,15 +1491,13 @@ function chooseMainSubject(
 
         const cx =
 
-            box.originX
-            +
+            box.originX +
             box.width / 2;
 
 
         const cy =
 
-            box.originY
-            +
+            box.originY +
             box.height / 2;
 
 
@@ -1666,7 +1513,7 @@ function chooseMainSubject(
             video.videoHeight;
 
 
-        const centerDistance =
+        const distance =
 
             Math.hypot(
 
@@ -1677,19 +1524,10 @@ function chooseMainSubject(
             );
 
 
-        /*
-        評分：
-        大物件
-        高信心
-        靠近中心
-
-        比較容易成為主體
-        */
-
         const score =
 
             areaRatio *
-            3.2
+            3
 
             +
 
@@ -1697,8 +1535,8 @@ function chooseMainSubject(
 
             -
 
-            centerDistance *
-            0.28;
+            distance *
+            0.25;
 
 
         if (
@@ -1716,10 +1554,7 @@ function chooseMainSubject(
                     box,
 
                 category:
-                    category
-                        ?.categoryName
-                    ||
-                    ""
+                    category?.categoryName || ""
 
             };
 
@@ -1734,10 +1569,10 @@ function chooseMainSubject(
 
 
 /* =====================================================
-   處理物件主體
+   物件
 ===================================================== */
 
-function processObjectSubject(
+function processObject(
     subject
 ) {
 
@@ -1749,12 +1584,12 @@ function processObjectSubject(
         video.clientHeight;
 
 
-    const scaleX =
+    const sx =
         width /
         video.videoWidth;
 
 
-    const scaleY =
+    const sy =
         height /
         video.videoHeight;
 
@@ -1766,28 +1601,26 @@ function processObjectSubject(
     const subjectX =
 
         (
-            box.originX
-            +
+            box.originX +
             box.width / 2
         )
 
         *
-        scaleX;
+        sx;
 
 
     const subjectY =
 
         (
-            box.originY
-            +
+            box.originY +
             box.height / 2
         )
 
         *
-        scaleY;
+        sy;
 
 
-    ensureCompositionTarget(
+    setTarget(
 
         subject.category,
 
@@ -1814,14 +1647,10 @@ function processObjectSubject(
 
 
 /* =====================================================
-   鎖定 AI 推薦構圖位置
-
-   這就是 V4.1 最重要的地方。
-
-   選定之後不會每一幀亂換。
+   選最佳構圖點
 ===================================================== */
 
-function ensureCompositionTarget(
+function setTarget(
 
     type,
 
@@ -1838,13 +1667,12 @@ function ensureCompositionTarget(
 
 
     /*
-    同一類主體，
-    保持鎖定
+    還在鎖定期間
+    不亂改
     */
 
     if (
-        lockedType ===
-        type
+        lockedType === type
         &&
         now <
         lockUntil
@@ -1854,10 +1682,6 @@ function ensureCompositionTarget(
 
     }
 
-
-    /*
-    新的構圖目標
-    */
 
     lockedType =
         type;
@@ -1869,15 +1693,9 @@ function ensureCompositionTarget(
 
 
     /*
-    =============================
-    水平位置
-    =============================
-
-    主體在哪一側，
-    就使用最近的三分位置。
-
-    這樣不會叫你
-    從左邊大幅移到右邊。
+    水平：
+    左邊主體 → 左三分
+    右邊主體 → 右三分
     */
 
     if (
@@ -1885,26 +1703,27 @@ function ensureCompositionTarget(
         width / 2
     ) {
 
-        lockedTargetXRatio =
+        desiredXRatio =
             0.34;
 
     }
 
     else {
 
-        lockedTargetXRatio =
+        desiredXRatio =
             0.66;
 
     }
 
 
     /*
-    =============================
-    垂直位置
-    =============================
+    垂直不要太激進。
+
+    這版全部控制在
+    畫面中央附近。
     */
 
-    const upperSubjects = [
+    const portraitTypes = [
 
         "person",
         "dog",
@@ -1918,29 +1737,19 @@ function ensureCompositionTarget(
 
 
     if (
-        upperSubjects.includes(
+        portraitTypes.includes(
             type
         )
     ) {
 
-        /*
-        人與動物
-        主體稍高
-        */
-
-        lockedTargetYRatio =
-            0.36;
+        desiredYRatio =
+            0.42;
 
     }
 
     else {
 
-        /*
-        汽車、物品等
-        靠近中央
-        */
-
-        lockedTargetYRatio =
+        desiredYRatio =
             0.50;
 
     }
@@ -1949,17 +1758,15 @@ function ensureCompositionTarget(
 
 
 /* =====================================================
-   計算「手機圖示」應該在哪裡
+   V4.2 核心導航
 
-   核心概念：
+   注意：
 
-   subjectX - targetX
+   這裡算的是
+   「手機應該往哪個方向微調」
 
-   代表目前相機
-   與最佳構圖之間的差距。
-
-   我們把這個差距
-   轉成手機圖示的位置。
+   不是把主體位置
+   直接搬成手機位置。
 ===================================================== */
 
 function updateNavigation(
@@ -1973,12 +1780,11 @@ function updateNavigation(
 ) {
 
     /*
-    平滑主體位置
+    平滑 AI 主體
     */
 
     if (
-        smoothSubjectX ===
-        null
+        smoothSubjectX === null
     ) {
 
         smoothSubjectX =
@@ -1995,182 +1801,277 @@ function updateNavigation(
         smoothSubjectX =
 
             smoothSubjectX *
-            0.72
+            0.75
 
             +
 
             subjectX *
-            0.28;
+            0.25;
 
 
         smoothSubjectY =
 
             smoothSubjectY *
-            0.72
+            0.75
 
             +
 
             subjectY *
-            0.28;
+            0.25;
 
     }
 
 
     /*
-    AI 要主體最後位於哪裡
+    AI 希望主體最後在哪
     */
 
-    const desiredSubjectX =
+    const desiredX =
 
         width *
-        lockedTargetXRatio;
+        desiredXRatio;
 
 
-    const desiredSubjectY =
+    const desiredY =
 
         height *
-        lockedTargetYRatio;
+        desiredYRatio;
 
 
     /*
-    主體目前與最佳構圖
-    差多少
+    主體誤差
     */
 
     const errorX =
 
-        smoothSubjectX
-        -
-        desiredSubjectX;
+        smoothSubjectX -
+        desiredX;
 
 
     const errorY =
 
-        smoothSubjectY
-        -
-        desiredSubjectY;
+        smoothSubjectY -
+        desiredY;
 
 
     /*
-    目標框固定在畫面上方中央。
+    導航目標框
+    永遠固定畫面中央偏上。
 
-    小手機圖示
-    圍繞它移動。
+    使用者不用追著框跑。
     */
 
-    const targetBoxX =
+    const centerX =
+        width * 0.50;
+
+
+    const centerY =
+        height * 0.32;
+
+
+    /*
+    =================================================
+    水平導航
+
+    主體在建議位置右邊 →
+    手機應往右轉 / 右移。
+
+    所以直接使用 errorX。
+    =================================================
+    */
+
+    const maxHorizontal =
+
         width *
-        0.50;
+        0.30;
 
 
-    const targetBoxY =
-        height *
-        0.27;
+    let guideX =
+        errorX *
+        0.85;
+
+
+    guideX =
+        Math.max(
+
+            -maxHorizontal,
+
+            Math.min(
+
+                maxHorizontal,
+
+                guideX
+
+            )
+
+        );
 
 
     /*
-    放大導引距離。
+    =================================================
+    垂直導航
 
-    主體差一點，
-    手機圖示會明顯看得出方向。
+    這就是 V4.2 最大改變。
+
+    垂直最大只允許畫面高度 6%。
+
+    就算 AI 認為差很多，
+    也不會叫你大幅低頭拍地板。
+    =================================================
     */
 
-    const navigationGain =
-        1.15;
+    const maxVertical =
 
-
-    navPhoneX =
-
-        targetBoxX
-
-        +
-
-        errorX *
-        navigationGain;
-
-
-    navPhoneY =
-
-        targetBoxY
-
-        +
-
-        errorY *
-        navigationGain;
+        height *
+        0.06;
 
 
     /*
-    手機圖示做平滑
+    小誤差才給垂直提示。
+
+    如果垂直差距太大，
+    視為拍攝場景本身不同，
+    不強迫使用者猛抬 / 猛低鏡頭。
+    */
+
+    let guideY =
+        0;
+
+
+    const verticalDeadZone =
+
+        height *
+        0.06;
+
+
+    const verticalLimit =
+
+        height *
+        0.20;
+
+
+    if (
+        Math.abs(errorY)
+        >
+        verticalDeadZone
+
+        &&
+
+        Math.abs(errorY)
+        <
+        verticalLimit
+    ) {
+
+        guideY =
+            errorY *
+            0.25;
+
+    }
+
+
+    guideY =
+        Math.max(
+
+            -maxVertical,
+
+            Math.min(
+
+                maxVertical,
+
+                guideY
+
+            )
+
+        );
+
+
+    /*
+    最終手機圖示位置
+    */
+
+    navX =
+
+        centerX +
+        guideX;
+
+
+    navY =
+
+        centerY +
+        guideY;
+
+
+    /*
+    平滑
     */
 
     if (
-        smoothNavPhoneX ===
-        null
+        smoothNavX === null
     ) {
 
-        smoothNavPhoneX =
-            navPhoneX;
+        smoothNavX =
+            navX;
 
 
-        smoothNavPhoneY =
-            navPhoneY;
+        smoothNavY =
+            navY;
 
     }
 
     else {
 
-        smoothNavPhoneX =
+        smoothNavX =
 
-            smoothNavPhoneX *
-            0.72
-
-            +
-
-            navPhoneX *
-            0.28;
-
-
-        smoothNavPhoneY =
-
-            smoothNavPhoneY *
-            0.72
+            smoothNavX *
+            0.70
 
             +
 
-            navPhoneY *
-            0.28;
+            navX *
+            0.30;
+
+
+        smoothNavY =
+
+            smoothNavY *
+            0.70
+
+            +
+
+            navY *
+            0.30;
 
     }
 
 
     /*
-    判斷是不是已經構圖成功
+    ============================
+    OK 判斷
+
+    水平比較重要。
+
+    垂直放寬很多。
+    ============================
     */
 
-    const errorDistance =
+    const horizontalOK =
 
-        Math.hypot(
-
-            errorX,
-            errorY
-
-        );
+        Math.abs(errorX)
+        <
+        width * 0.09;
 
 
-    const tolerance =
+    const verticalOK =
 
-        Math.min(
-            width,
-            height
-        )
-
-        *
-        0.10;
+        Math.abs(errorY)
+        <
+        height * 0.18;
 
 
     if (
-        errorDistance <
-        tolerance
+        horizontalOK
+        &&
+        verticalOK
     ) {
 
         okCounter++;
@@ -2191,21 +2092,16 @@ function updateNavigation(
     }
 
 
-    /*
-    連續符合 4 次才算 OK
-    */
-
     compositionOK =
 
-        okCounter >=
-        4;
+        okCounter >= 4;
 
 }
 
 
 /* =====================================================
-   找不到物件時：
-   自動尋找畫面的主要視覺區域
+   無物件時：
+   風景視覺重心
 ===================================================== */
 
 function analyzeScene() {
@@ -2216,7 +2112,7 @@ function analyzeScene() {
 
     if (
         now -
-        lastSceneAnalysisTime
+        lastSceneTime
         <
         500
     ) {
@@ -2226,16 +2122,14 @@ function analyzeScene() {
     }
 
 
-    lastSceneAnalysisTime =
+    lastSceneTime =
         now;
 
 
     if (
-        video.videoWidth ===
-        0
+        video.videoWidth === 0
         ||
-        video.videoHeight ===
-        0
+        video.videoHeight === 0
     ) {
 
         return;
@@ -2273,8 +2167,7 @@ function analyzeScene() {
 
 
     const image =
-        analysisCtx
-            .getImageData(
+        analysisCtx.getImageData(
 
             0,
             0,
@@ -2294,10 +2187,6 @@ function analyzeScene() {
             w * h
         );
 
-
-    /*
-    RGB → 灰階
-    */
 
     for (
         let y = 0;
@@ -2346,15 +2235,11 @@ function analyzeScene() {
 
 
     /*
-    5 × 5 區塊
-
-    比之前 3 × 3
-    更精細一點
+    找畫面細節最明顯區
     */
 
     const cols =
         5;
-
 
     const rows =
         5;
@@ -2363,10 +2248,8 @@ function analyzeScene() {
     let bestCol =
         2;
 
-
     let bestRow =
         2;
-
 
     let bestEnergy =
         -1;
@@ -2385,46 +2268,26 @@ function analyzeScene() {
         ) {
 
             const startX =
-
                 Math.floor(
-
-                    col *
-                    w /
-                    cols
-
+                    col * w / cols
                 );
 
 
             const endX =
-
                 Math.floor(
-
-                    (col + 1) *
-                    w /
-                    cols
-
+                    (col + 1) * w / cols
                 );
 
 
             const startY =
-
                 Math.floor(
-
-                    row *
-                    h /
-                    rows
-
+                    row * h / rows
                 );
 
 
             const endY =
-
                 Math.floor(
-
-                    (row + 1) *
-                    h /
-                    rows
-
+                    (row + 1) * h / rows
                 );
 
 
@@ -2433,77 +2296,51 @@ function analyzeScene() {
 
 
             for (
-                let y =
-                    startY + 1;
-
-                y <
-                endY - 1;
-
+                let y = startY + 1;
+                y < endY - 1;
                 y += 2
             ) {
 
                 for (
-                    let x =
-                        startX + 1;
-
-                    x <
-                    endX - 1;
-
+                    let x = startX + 1;
+                    x < endX - 1;
                     x += 2
                 ) {
 
                     const center =
-
                         gray[
-                            y * w +
-                            x
+                            y * w + x
                         ];
 
 
                     const right =
-
                         gray[
-                            y * w +
-                            x + 1
+                            y * w + x + 1
                         ];
 
 
                     const below =
-
                         gray[
-                            (y + 1) *
-                            w +
-                            x
+                            (y + 1) * w + x
                         ];
 
 
                     energy +=
 
                         Math.abs(
-
-                            center -
-                            right
-
+                            center - right
                         )
 
                         +
 
                         Math.abs(
-
-                            center -
-                            below
-
+                            center - below
                         );
 
                 }
 
             }
 
-
-            /*
-            中央區稍微降低權重，
-            鼓勵構圖不要全部正中央
-            */
 
             if (
                 col === 2
@@ -2548,17 +2385,12 @@ function analyzeScene() {
         video.clientHeight;
 
 
-    /*
-    畫面主要視覺區的中心
-    */
-
     const subjectX =
 
         width *
 
         (
-            bestCol +
-            0.5
+            bestCol + 0.5
         )
 
         /
@@ -2570,8 +2402,7 @@ function analyzeScene() {
         height *
 
         (
-            bestRow +
-            0.5
+            bestRow + 0.5
         )
 
         /
@@ -2579,8 +2410,11 @@ function analyzeScene() {
 
 
     /*
-    風景也鎖定 3 秒，
-    不讓目標一直跳。
+    風景導航：
+    主要以左右為主。
+
+    垂直直接靠近中央，
+    不叫使用者往地板拍。
     */
 
     const now2 =
@@ -2588,13 +2422,9 @@ function analyzeScene() {
 
 
     if (
-        lockedType !==
-        "scene"
-
+        lockedType !== "scene"
         ||
-
-        now2 >=
-        lockUntil
+        now2 >= lockUntil
     ) {
 
         lockedType =
@@ -2606,41 +2436,26 @@ function analyzeScene() {
             LOCK_TIME;
 
 
-        lockedTargetXRatio =
-
+        if (
             subjectX <
             width / 2
-
-            ?
-
-            0.34
-
-            :
-
-            0.66;
-
-
-        /*
-        風景主視覺
-        先使用較自然的中間位置
-        */
-
-        if (
-            subjectY <
-            height / 2
         ) {
 
-            lockedTargetYRatio =
-                0.36;
+            desiredXRatio =
+                0.34;
 
         }
 
         else {
 
-            lockedTargetYRatio =
-                0.64;
+            desiredXRatio =
+                0.66;
 
         }
+
+
+        desiredYRatio =
+            0.50;
 
     }
 
@@ -2659,14 +2474,7 @@ function analyzeScene() {
 
 
 /* =====================================================
-   畫 AI 導航
-
-   畫面上只會有：
-
-   ① 目標長方框
-   ② 小手機圖示
-
-   不畫其他任何輔助線。
+   畫導航
 ===================================================== */
 
 function drawNavigation() {
@@ -2698,17 +2506,10 @@ function drawNavigation() {
     );
 
 
-    /*
-    還沒有分析到東西時
-    不亂畫
-    */
-
     if (
-        smoothNavPhoneX ===
-        null
+        smoothNavX === null
         ||
-        smoothNavPhoneY ===
-        null
+        smoothNavY === null
     ) {
 
         return;
@@ -2717,40 +2518,40 @@ function drawNavigation() {
 
 
     /*
-    ===========================
-    AI 最佳位置框
-    ===========================
+    ======================
+    固定目標框
+    ======================
     */
 
     const targetX =
-        width *
-        0.50;
+        width * 0.50;
 
 
     const targetY =
-        height *
-        0.27;
+        height * 0.32;
 
 
     const boxWidth =
 
         Math.max(
 
-            64,
+            72,
 
             Math.min(
                 width,
                 height
             )
+
             *
-            0.18
+            0.20
 
         );
 
 
     const boxHeight =
+
         boxWidth *
-        1.35;
+        1.30;
 
 
     const boxLeft =
@@ -2765,32 +2566,21 @@ function drawNavigation() {
         boxHeight / 2;
 
 
-    /*
-    構圖成功：
-    綠色。
+    ctx.strokeStyle =
 
-    尚未成功：
-    白色。
-    */
-
-    if (
         compositionOK
-    ) {
 
-        ctx.strokeStyle =
-            "#43ff6b";
+        ?
 
-    }
+        "#48ff70"
 
-    else {
+        :
 
-        ctx.strokeStyle =
-            "rgba(255,255,255,0.95)";
-
-    }
+        "rgba(255,255,255,0.95)";
 
 
     ctx.lineWidth =
+
         compositionOK
         ? 5
         : 4;
@@ -2814,7 +2604,7 @@ function drawNavigation() {
         boxWidth,
         boxHeight,
 
-        10
+        11
 
     );
 
@@ -2823,9 +2613,9 @@ function drawNavigation() {
 
 
     /*
-    ===========================
-    現在的手機位置
-    ===========================
+    ======================
+    黃色手機
+    ======================
     */
 
     const phoneWidth =
@@ -2838,6 +2628,7 @@ function drawNavigation() {
                 width,
                 height
             )
+
             *
             0.075
 
@@ -2845,58 +2636,56 @@ function drawNavigation() {
 
 
     const phoneHeight =
+
         phoneWidth *
         1.65;
 
 
+    let px =
+        smoothNavX;
+
+
+    let py =
+        smoothNavY;
+
+
     /*
-    避免手機圖示跑出螢幕
+    不讓圖示跑出去
     */
 
-    const margin =
-        phoneWidth;
-
-
-    let phoneX =
-
+    px =
         Math.max(
 
-            margin,
+            phoneWidth,
 
             Math.min(
 
                 width -
-                margin,
+                phoneWidth,
 
-                smoothNavPhoneX
+                px
 
             )
 
         );
 
 
-    let phoneY =
-
+    py =
         Math.max(
 
-            margin,
+            phoneHeight,
 
             Math.min(
 
                 height -
-                margin,
+                phoneHeight,
 
-                smoothNavPhoneY
+                py
 
             )
 
         );
 
-
-    /*
-    構圖成功後，
-    手機圖示也變綠
-    */
 
     ctx.strokeStyle =
 
@@ -2904,7 +2693,7 @@ function drawNavigation() {
 
         ?
 
-        "#43ff6b"
+        "#48ff70"
 
         :
 
@@ -2915,28 +2704,24 @@ function drawNavigation() {
         4;
 
 
-    const phoneLeft =
+    const left =
 
-        phoneX -
+        px -
         phoneWidth / 2;
 
 
-    const phoneTop =
+    const top =
 
-        phoneY -
+        py -
         phoneHeight / 2;
 
-
-    /*
-    手機外框
-    */
 
     roundRect(
 
         ctx,
 
-        phoneLeft,
-        phoneTop,
+        left,
+        top,
 
         phoneWidth,
         phoneHeight,
@@ -2951,7 +2736,7 @@ function drawNavigation() {
 
 
     /*
-    手機上方聽筒
+    聽筒
     */
 
     ctx.beginPath();
@@ -2959,26 +2744,22 @@ function drawNavigation() {
 
     ctx.moveTo(
 
-        phoneLeft +
-        phoneWidth *
-        0.32,
+        left +
+        phoneWidth * 0.32,
 
-        phoneTop +
-        phoneHeight *
-        0.10
+        top +
+        phoneHeight * 0.10
 
     );
 
 
     ctx.lineTo(
 
-        phoneLeft +
-        phoneWidth *
-        0.68,
+        left +
+        phoneWidth * 0.68,
 
-        phoneTop +
-        phoneHeight *
-        0.10
+        top +
+        phoneHeight * 0.10
 
     );
 
@@ -2991,7 +2772,7 @@ function drawNavigation() {
 
 
     /*
-    手機下面圓鈕
+    Home 圓圈
     */
 
     ctx.beginPath();
@@ -2999,14 +2780,12 @@ function drawNavigation() {
 
     ctx.arc(
 
-        phoneX,
+        px,
 
-        phoneTop +
-        phoneHeight *
-        0.89,
+        top +
+        phoneHeight * 0.89,
 
-        phoneWidth *
-        0.07,
+        phoneWidth * 0.07,
 
         0,
 
@@ -3062,18 +2841,14 @@ function roundRect(
 
 
     context.moveTo(
-
         x + radius,
         y
-
     );
 
 
     context.lineTo(
-
         x + width - radius,
         y
-
     );
 
 
@@ -3089,10 +2864,8 @@ function roundRect(
 
 
     context.lineTo(
-
         x + width,
         y + height - radius
-
     );
 
 
@@ -3108,10 +2881,8 @@ function roundRect(
 
 
     context.lineTo(
-
         x + radius,
         y + height
-
     );
 
 
@@ -3127,10 +2898,8 @@ function roundRect(
 
 
     context.lineTo(
-
         x,
         y + radius
-
     );
 
 
@@ -3159,8 +2928,7 @@ function takePhoto() {
     if (
         !cameraRunning
         ||
-        video.videoWidth ===
-        0
+        video.videoWidth === 0
     ) {
 
         alert(
@@ -3179,13 +2947,6 @@ function takePhoto() {
     photoCanvas.height =
         video.videoHeight;
 
-
-    /*
-    只拍原始畫面。
-
-    長方框與手機圖示
-    不會拍進照片。
-    */
 
     photoCtx.drawImage(
 
@@ -3225,7 +2986,7 @@ function takePhoto() {
 
 
 /* =====================================================
-   HTML 按鈕
+   HTML
 ===================================================== */
 
 window.openFrontCamera =
@@ -3245,7 +3006,7 @@ window.stopCamera =
 
 
 /* =====================================================
-   開始
+   啟動
 ===================================================== */
 
 loadAI();
