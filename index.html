@@ -9,7 +9,7 @@
                    initial-scale=1.0,
                    user-scalable=no">
 
-    <title>阿策智慧構圖助手 V2</title>
+    <title>阿策智慧構圖助手 V2.1</title>
 
     <style>
 
@@ -26,20 +26,20 @@
         }
 
         #status {
-            font-size: 17px;
+            font-size: 16px;
             margin: 6px;
         }
 
         #faceInfo {
-            font-size: 18px;
+            font-size: 17px;
             margin: 6px;
         }
 
         #guideInfo {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: bold;
             margin: 8px;
-            min-height: 32px;
+            min-height: 36px;
         }
 
         #scoreInfo {
@@ -71,7 +71,6 @@
             pointer-events: none;
         }
 
-        /* 三分法直線 */
         .vline {
             position: absolute;
             top: 0;
@@ -89,7 +88,6 @@
             left: 66.66%;
         }
 
-        /* 三分法橫線 */
         .hline {
             position: absolute;
             left: 0;
@@ -121,7 +119,7 @@
 
 <body>
 
-<h2>📷 阿策智慧構圖助手 V2</h2>
+<h2>📷 阿策智慧構圖助手 V2.1</h2>
 
 <div id="status">
     AI 模型載入中...
@@ -183,6 +181,17 @@ let cameraRunning = false;
 
 let lastVideoTime = -1;
 
+/*
+分數平滑用
+*/
+let smoothScore = 0;
+
+/*
+連續進入 OK 區幾次之後，
+才顯示構圖成功
+*/
+let okCounter = 0;
+
 
 const video =
     document.getElementById("camera");
@@ -207,7 +216,7 @@ const scoreInfo =
 
 
 /* =========================
-   載入 AI 模型
+   載入 AI
 ========================= */
 
 async function loadAI() {
@@ -338,6 +347,14 @@ async function startCamera() {
             -1;
 
 
+        smoothScore =
+            0;
+
+
+        okCounter =
+            0;
+
+
         statusText.innerText =
             "📷 相機已開啟";
 
@@ -413,6 +430,10 @@ function stopCamera() {
 
     scoreInfo.innerText =
         "";
+
+
+    okCounter =
+        0;
 
 }
 
@@ -510,7 +531,7 @@ function getDistance(
 
 
 /* =========================
-   畫畫面與智慧構圖
+   畫面與構圖判定
 ========================= */
 
 function drawResult(result) {
@@ -592,7 +613,9 @@ function drawResult(result) {
     ];
 
 
-    /* 畫四個目標點 */
+    /* =========================
+       畫藍色目標點
+    ========================= */
 
     for (
         const point
@@ -604,7 +627,7 @@ function drawResult(result) {
         ctx.arc(
             point.x,
             point.y,
-            7,
+            8,
             0,
             Math.PI * 2
         );
@@ -618,7 +641,7 @@ function drawResult(result) {
 
 
     /* =========================
-       沒找到人臉
+       沒找到臉
     ========================= */
 
     if (
@@ -635,6 +658,9 @@ function drawResult(result) {
         scoreInfo.innerText =
             "";
 
+        okCounter =
+            0;
+
         return;
 
     }
@@ -647,9 +673,8 @@ function drawResult(result) {
 
 
     /*
-    目前先使用第一張臉
+    先使用第一張臉
     */
-
     const detection =
         result.detections[0];
 
@@ -679,7 +704,7 @@ function drawResult(result) {
 
 
     /* =========================
-       畫人臉框
+       綠色人臉框
     ========================= */
 
     ctx.strokeStyle =
@@ -776,7 +801,6 @@ function drawResult(result) {
             nearestDistance =
                 distance;
 
-
             nearestPoint =
                 point;
 
@@ -786,7 +810,57 @@ function drawResult(result) {
 
 
     /* =========================
-       黃線連接目標
+       畫目標區域
+    ========================= */
+
+    /*
+    舒適版重點：
+    OK 範圍放大成畫面短邊 18%
+    */
+
+    const okDistance =
+        Math.min(
+            displayWidth,
+            displayHeight
+        ) * 0.18;
+
+
+    /*
+    快到了的範圍
+    */
+
+    const nearDistance =
+        Math.min(
+            displayWidth,
+            displayHeight
+        ) * 0.28;
+
+
+    /*
+    畫出 OK 圈
+    */
+
+    ctx.beginPath();
+
+    ctx.arc(
+        nearestPoint.x,
+        nearestPoint.y,
+        okDistance,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.strokeStyle =
+        "rgba(0,255,255,0.6)";
+
+    ctx.lineWidth =
+        3;
+
+    ctx.stroke();
+
+
+    /* =========================
+       畫引導線
     ========================= */
 
     ctx.beginPath();
@@ -811,7 +885,7 @@ function drawResult(result) {
 
 
     /* =========================
-       計算移動方向
+       X / Y 差距
     ========================= */
 
     const dx =
@@ -825,18 +899,18 @@ function drawResult(result) {
 
 
     /*
-    容許範圍：
-    畫面寬高的約 6%
+    舒適版方向提示：
+    要偏比較多才提示
     */
 
-    const toleranceX =
+    const directionToleranceX =
         displayWidth *
-        0.06;
+        0.10;
 
 
-    const toleranceY =
+    const directionToleranceY =
         displayHeight *
-        0.06;
+        0.10;
 
 
     let horizontal =
@@ -849,7 +923,7 @@ function drawResult(result) {
 
     if (
         Math.abs(dx) >
-        toleranceX
+        directionToleranceX
     ) {
 
         if (
@@ -857,14 +931,14 @@ function drawResult(result) {
         ) {
 
             horizontal =
-                "往右移";
+                "往右";
 
         }
 
         else {
 
             horizontal =
-                "往左移";
+                "往左";
 
         }
 
@@ -873,7 +947,7 @@ function drawResult(result) {
 
     if (
         Math.abs(dy) >
-        toleranceY
+        directionToleranceY
     ) {
 
         if (
@@ -881,14 +955,14 @@ function drawResult(result) {
         ) {
 
             vertical =
-                "往下移";
+                "往下";
 
         }
 
         else {
 
             vertical =
-                "往上移";
+                "往上";
 
         }
 
@@ -898,11 +972,6 @@ function drawResult(result) {
     /* =========================
        構圖分數
     ========================= */
-
-    /*
-    以畫面對角線的一部分
-    當作最大有效距離
-    */
 
     const maxDistance =
         Math.sqrt(
@@ -917,7 +986,7 @@ function drawResult(result) {
         0.45;
 
 
-    let score =
+    let rawScore =
         100 -
         (
             nearestDistance /
@@ -927,40 +996,108 @@ function drawResult(result) {
 
 
     if (
-        score < 0
+        rawScore < 0
     ) {
 
-        score = 0;
+        rawScore =
+            0;
 
     }
 
 
     if (
-        score > 100
+        rawScore > 100
     ) {
 
-        score = 100;
+        rawScore =
+            100;
 
     }
 
 
-    score =
+    /*
+    分數平滑
+    85% 使用舊值
+    15% 使用新值
+    */
+
+    if (
+        smoothScore === 0
+    ) {
+
+        smoothScore =
+            rawScore;
+
+    }
+
+    else {
+
+        smoothScore =
+            smoothScore * 0.85 +
+            rawScore * 0.15;
+
+    }
+
+
+    const finalScore =
         Math.round(
-            score
+            smoothScore
         );
 
 
     /* =========================
-       顯示結果
+       舒適版狀態判定
     ========================= */
 
     if (
-        horizontal === "" &&
-        vertical === ""
+        nearestDistance <=
+        okDistance
+    ) {
+
+        /*
+        連續幾次都在 OK 區
+        才真正顯示 OK
+        */
+
+        okCounter++;
+
+    }
+
+    else {
+
+        /*
+        不要一出去就瞬間歸零
+        */
+
+        okCounter =
+            Math.max(
+                0,
+                okCounter - 1
+            );
+
+    }
+
+
+    /*
+    只要累積 4 次，就算成功
+    */
+
+    if (
+        okCounter >= 4
     ) {
 
         guideInfo.innerText =
             "✅ 構圖 OK";
+
+    }
+
+    else if (
+        nearestDistance <=
+        nearDistance
+    ) {
+
+        guideInfo.innerText =
+            "👍 快到了";
 
     }
 
@@ -1000,16 +1137,34 @@ function drawResult(result) {
         }
 
 
-        guideInfo.innerText =
-            "建議：" +
-            message;
+        /*
+        如果其實方向差異已經很小，
+        就直接顯示快到了
+        */
+
+        if (
+            message === ""
+        ) {
+
+            guideInfo.innerText =
+                "👍 快到了";
+
+        }
+
+        else {
+
+            guideInfo.innerText =
+                "建議：" +
+                message;
+
+        }
 
     }
 
 
     scoreInfo.innerText =
         "構圖分數：" +
-        score +
+        finalScore +
         " 分";
 
 }
@@ -1028,7 +1183,7 @@ window.stopCamera =
 
 
 /* =========================
-   開始載入 AI
+   載入 AI
 ========================= */
 
 loadAI();
