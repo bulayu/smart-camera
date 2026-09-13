@@ -9,7 +9,7 @@
                    initial-scale=1.0,
                    user-scalable=no">
 
-    <title>阿策智慧構圖助手 V2.3</title>
+    <title>阿策智慧構圖助手 V3</title>
 
     <style>
 
@@ -41,16 +41,16 @@
         }
 
         #guideInfo {
-            font-size: 26px;
+            font-size: 25px;
             font-weight: bold;
             margin: 8px;
-            min-height: 36px;
+            min-height: 34px;
         }
 
         #scoreInfo {
-            font-size: 22px;
+            font-size: 21px;
             margin: 8px;
-            min-height: 30px;
+            min-height: 28px;
         }
 
         #cameraBox {
@@ -82,7 +82,6 @@
             height: 100%;
             width: 2px;
             background: rgba(255,255,255,0.65);
-            pointer-events: none;
         }
 
         .v1 {
@@ -99,7 +98,6 @@
             width: 100%;
             height: 2px;
             background: rgba(255,255,255,0.65);
-            pointer-events: none;
         }
 
         .h1 {
@@ -110,12 +108,44 @@
             top: 66.66%;
         }
 
+        #controls {
+            margin: 12px 0;
+        }
+
         button {
             font-size: 18px;
-            padding: 12px 18px;
-            margin: 10px 4px;
+            padding: 12px 16px;
+            margin: 5px 3px;
             border: none;
             border-radius: 10px;
+        }
+
+        #shutterButton {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            font-size: 28px;
+        }
+
+        #photoArea {
+            margin-top: 14px;
+            padding-bottom: 25px;
+        }
+
+        #photoTitle {
+            margin-bottom: 8px;
+        }
+
+        #photoPreview {
+            width: 180px;
+            max-width: 45%;
+            border-radius: 10px;
+            display: none;
+            border: 2px solid white;
+        }
+
+        #photoCanvas {
+            display: none;
         }
 
     </style>
@@ -124,7 +154,7 @@
 
 <body>
 
-<h2>📷 阿策智慧構圖助手 V2.3</h2>
+<h2>📷 阿策智慧構圖助手 V3</h2>
 
 <div id="status">
     AI 模型載入中...
@@ -134,14 +164,11 @@
     尚未偵測
 </div>
 
-<div id="modeInfo">
-</div>
+<div id="modeInfo"></div>
 
-<div id="guideInfo">
-</div>
+<div id="guideInfo"></div>
 
-<div id="scoreInfo">
-</div>
+<div id="scoreInfo"></div>
 
 
 <div id="cameraBox">
@@ -163,13 +190,40 @@
 </div>
 
 
-<button onclick="startCamera()">
-    開啟前鏡頭
-</button>
+<div id="controls">
 
-<button onclick="stopCamera()">
-    關閉相機
-</button>
+    <button onclick="startCamera()">
+        開啟相機
+    </button>
+
+    <button onclick="switchCamera()">
+        🔄 切換鏡頭
+    </button>
+
+    <button id="shutterButton"
+            onclick="takePhoto()">
+        📸
+    </button>
+
+    <button onclick="stopCamera()">
+        關閉
+    </button>
+
+</div>
+
+
+<div id="photoArea">
+
+    <div id="photoTitle">
+        拍照預覽
+    </div>
+
+    <img id="photoPreview">
+
+</div>
+
+
+<canvas id="photoCanvas"></canvas>
 
 
 <script type="module">
@@ -193,6 +247,15 @@ let smoothScore = 0;
 
 let okCounter = 0;
 
+/*
+目前鏡頭
+
+user = 前鏡頭
+environment = 後鏡頭
+*/
+let currentFacingMode =
+    "user";
+
 
 const video =
     document.getElementById("camera");
@@ -202,6 +265,18 @@ const canvas =
 
 const ctx =
     canvas.getContext("2d");
+
+
+const photoCanvas =
+    document.getElementById("photoCanvas");
+
+const photoCtx =
+    photoCanvas.getContext("2d");
+
+
+const photoPreview =
+    document.getElementById("photoPreview");
+
 
 const statusText =
     document.getElementById("status");
@@ -295,10 +370,10 @@ async function loadAI() {
 
 async function startCamera() {
 
-    if (detector == null) {
+    if (!detector) {
 
         alert(
-            "AI 還沒準備完成，請稍等一下"
+            "AI 還沒準備完成"
         );
 
         return;
@@ -325,8 +400,10 @@ async function startCamera() {
 
                     video: {
 
-                        facingMode:
-                            "user"
+                        facingMode: {
+                            ideal:
+                                currentFacingMode
+                        }
 
                     },
 
@@ -359,8 +436,22 @@ async function startCamera() {
             0;
 
 
-        statusText.innerText =
-            "📷 相機已開啟";
+        if (
+            currentFacingMode ===
+            "user"
+        ) {
+
+            statusText.innerText =
+                "📷 前鏡頭已開啟";
+
+        }
+
+        else {
+
+            statusText.innerText =
+                "📷 後鏡頭已開啟";
+
+        }
 
 
         requestAnimationFrame(
@@ -380,6 +471,35 @@ async function startCamera() {
             error.message;
 
     }
+
+}
+
+
+/* =========================
+   切換前後鏡頭
+========================= */
+
+async function switchCamera() {
+
+    if (
+        currentFacingMode ===
+        "user"
+    ) {
+
+        currentFacingMode =
+            "environment";
+
+    }
+
+    else {
+
+        currentFacingMode =
+            "user";
+
+    }
+
+
+    await startCamera();
 
 }
 
@@ -439,15 +559,76 @@ function stopCamera() {
     scoreInfo.innerText =
         "";
 
+}
 
-    okCounter =
-        0;
+
+/* =========================
+   拍照
+========================= */
+
+function takePhoto() {
+
+    if (
+        !cameraRunning ||
+        video.videoWidth === 0
+    ) {
+
+        alert(
+            "請先開啟相機"
+        );
+
+        return;
+
+    }
+
+
+    photoCanvas.width =
+        video.videoWidth;
+
+
+    photoCanvas.height =
+        video.videoHeight;
+
+
+    /*
+    只拍原始相機畫面
+
+    不會把綠框、三分線
+    一起拍進照片
+    */
+
+    photoCtx.drawImage(
+        video,
+        0,
+        0,
+        photoCanvas.width,
+        photoCanvas.height
+    );
+
+
+    const imageData =
+        photoCanvas.toDataURL(
+            "image/jpeg",
+            0.92
+        );
+
+
+    photoPreview.src =
+        imageData;
+
+
+    photoPreview.style.display =
+        "inline-block";
+
+
+    statusText.innerText =
+        "📸 拍照完成";
 
 }
 
 
 /* =========================
-   AI 偵測循環
+   AI 偵測
 ========================= */
 
 function detectLoop() {
@@ -513,7 +694,7 @@ function detectLoop() {
 
 
 /* =========================
-   距離計算
+   距離
 ========================= */
 
 function getDistance(
@@ -539,7 +720,7 @@ function getDistance(
 
 
 /* =========================
-   分數平滑
+   平滑分數
 ========================= */
 
 function updateSmoothScore(
@@ -572,7 +753,7 @@ function updateSmoothScore(
 
 
 /* =========================
-   方向文字
+   方向提示
 ========================= */
 
 function getDirectionText(
@@ -616,47 +797,30 @@ function getDirectionText(
     }
 
 
-    let message =
-        "";
-
-
     if (
-        horizontal !== ""
-    ) {
-
-        message +=
-            horizontal;
-
-    }
-
-
-    if (
+        horizontal !== "" &&
         vertical !== ""
     ) {
 
-        if (
-            message !== ""
-        ) {
-
-            message +=
-                "、";
-
-        }
-
-
-        message +=
-            vertical;
+        return (
+            horizontal +
+            "、" +
+            vertical
+        );
 
     }
 
 
-    return message;
+    return (
+        horizontal ||
+        vertical
+    );
 
 }
 
 
 /* =========================
-   畫面處理
+   畫構圖
 ========================= */
 
 function drawResult(result) {
@@ -708,10 +872,6 @@ function drawResult(result) {
         video.videoHeight;
 
 
-    /* =========================
-       四個三分點
-    ========================= */
-
     const x1 =
         displayWidth / 3;
 
@@ -761,10 +921,6 @@ function drawResult(result) {
     }
 
 
-    /* =========================
-       沒有人臉
-    ========================= */
-
     if (
         !result.detections ||
         result.detections.length === 0
@@ -789,10 +945,6 @@ function drawResult(result) {
 
     }
 
-
-    /* =========================
-       整理有效人臉
-    ========================= */
 
     const validFaces =
         [];
@@ -827,10 +979,6 @@ function drawResult(result) {
             scaleY;
 
 
-        /*
-        過小人臉過濾
-        */
-
         if (
             w <
             displayWidth * 0.08
@@ -846,16 +994,10 @@ function drawResult(result) {
 
         validFaces.push({
 
-            x: x,
-
-            y: y,
-
-            w: w,
-
-            h: h,
-
-            area:
-                w * h,
+            x,
+            y,
+            w,
+            h,
 
             centerX:
                 x + w / 2,
@@ -895,10 +1037,6 @@ function drawResult(result) {
         " 張";
 
 
-    /* =========================
-       所有人都畫綠框
-    ========================= */
-
     for (
         const face
         of validFaces
@@ -922,9 +1060,9 @@ function drawResult(result) {
     }
 
 
-    /* ==================================
+    /* =========================
        單人模式
-    ================================== */
+    ========================= */
 
     if (
         validFaces.length === 1
@@ -946,8 +1084,6 @@ function drawResult(result) {
             face.centerY;
 
 
-        /* 主角黃框 */
-
         ctx.strokeStyle =
             "yellow";
 
@@ -963,8 +1099,6 @@ function drawResult(result) {
             face.h
         );
 
-
-        /* 紅色中心點 */
 
         ctx.beginPath();
 
@@ -984,8 +1118,6 @@ function drawResult(result) {
 
         ctx.fill();
 
-
-        /* 找最近三分點 */
 
         let nearestPoint =
             targetPoints[0];
@@ -1051,8 +1183,6 @@ function drawResult(result) {
             ) * 0.28;
 
 
-        /* OK 圈 */
-
         ctx.beginPath();
 
 
@@ -1075,8 +1205,6 @@ function drawResult(result) {
 
         ctx.stroke();
 
-
-        /* 黃色引導線 */
 
         ctx.beginPath();
 
@@ -1118,7 +1246,6 @@ function drawResult(result) {
             getDirectionText(
 
                 dx,
-
                 dy,
 
                 displayWidth * 0.10,
@@ -1210,7 +1337,8 @@ function drawResult(result) {
             guideInfo.innerText =
                 message === ""
                 ? "👍 快到了"
-                : "建議：" + message;
+                : "建議：" +
+                  message;
 
         }
 
@@ -1226,9 +1354,9 @@ function drawResult(result) {
     }
 
 
-    /* ==================================
+    /* =========================
        多人模式
-    ================================== */
+    ========================= */
 
     modeInfo.innerText =
         "👥 多人合照模式：" +
@@ -1236,13 +1364,8 @@ function drawResult(result) {
         " 人";
 
 
-    /* =========================
-       計算整群人的中心
-    ========================= */
-
     let totalX =
         0;
-
 
     let totalY =
         0;
@@ -1255,7 +1378,6 @@ function drawResult(result) {
 
         totalX +=
             face.centerX;
-
 
         totalY +=
             face.centerY;
@@ -1272,10 +1394,6 @@ function drawResult(result) {
         totalY /
         validFaces.length;
 
-
-    /* =========================
-       畫群體中心紫色點
-    ========================= */
 
     ctx.beginPath();
 
@@ -1296,16 +1414,6 @@ function drawResult(result) {
     ctx.fill();
 
 
-    /* =========================
-       多人理想構圖位置
-
-       水平：
-       接近畫面正中央
-
-       垂直：
-       稍微高於正中央
-    ========================= */
-
     const targetX =
         displayWidth *
         0.50;
@@ -1315,10 +1423,6 @@ function drawResult(result) {
         displayHeight *
         0.43;
 
-
-    /* =========================
-       畫多人目標點
-    ========================= */
 
     ctx.beginPath();
 
@@ -1338,10 +1442,6 @@ function drawResult(result) {
 
     ctx.fill();
 
-
-    /* =========================
-       多人舒適區
-    ========================= */
 
     const groupOkDistance =
         Math.min(
@@ -1380,10 +1480,6 @@ function drawResult(result) {
     ctx.stroke();
 
 
-    /* =========================
-       群中心 → 目標點
-    ========================= */
-
     ctx.beginPath();
 
 
@@ -1409,10 +1505,6 @@ function drawResult(result) {
 
     ctx.stroke();
 
-
-    /* =========================
-       多人外框
-    ========================= */
 
     let minX =
         Infinity;
@@ -1449,14 +1541,16 @@ function drawResult(result) {
         maxX =
             Math.max(
                 maxX,
-                face.x + face.w
+                face.x +
+                face.w
             );
 
 
         maxY =
             Math.max(
                 maxY,
-                face.y + face.h
+                face.y +
+                face.h
             );
 
     }
@@ -1478,10 +1572,6 @@ function drawResult(result) {
     );
 
 
-    /* =========================
-       多人方向判定
-    ========================= */
-
     const groupDx =
         targetX -
         groupCenterX;
@@ -1496,7 +1586,6 @@ function drawResult(result) {
         getDirectionText(
 
             groupDx,
-
             groupDy,
 
             displayWidth * 0.08,
@@ -1517,10 +1606,6 @@ function drawResult(result) {
 
         );
 
-
-    /* =========================
-       多人構圖分數
-    ========================= */
 
     const groupMaxDistance =
         Math.sqrt(
@@ -1554,11 +1639,6 @@ function drawResult(result) {
         );
 
 
-    /*
-    額外檢查：
-    人群有沒有太靠邊
-    */
-
     const edgeMarginX =
         displayWidth *
         0.05;
@@ -1570,14 +1650,23 @@ function drawResult(result) {
 
 
     const touchesEdge =
-        minX < edgeMarginX
+
+        minX <
+        edgeMarginX
+
         ||
+
         maxX >
         displayWidth -
         edgeMarginX
+
         ||
-        minY < edgeMarginY
+
+        minY <
+        edgeMarginY
+
         ||
+
         maxY >
         displayHeight -
         edgeMarginY;
@@ -1606,10 +1695,6 @@ function drawResult(result) {
         );
 
 
-    /* =========================
-       多人 OK 緩衝
-    ========================= */
-
     if (
         groupDistance <=
         groupOkDistance
@@ -1631,10 +1716,6 @@ function drawResult(result) {
 
     }
 
-
-    /* =========================
-       多人提示
-    ========================= */
 
     if (
         touchesEdge
@@ -1690,6 +1771,11 @@ function drawResult(result) {
 window.startCamera =
     startCamera;
 
+window.switchCamera =
+    switchCamera;
+
+window.takePhoto =
+    takePhoto;
 
 window.stopCamera =
     stopCamera;
