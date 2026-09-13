@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
 
@@ -12,8 +13,8 @@
         body {
             background: black;
             color: white;
-            font-family: Arial;
             text-align: center;
+            font-family: Arial;
             padding-top: 50px;
         }
 
@@ -28,14 +29,8 @@
             word-break: break-all;
         }
     </style>
-
-    <script
-        type="module"
-        src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs"
-        crossorigin="anonymous">
-    </script>
-
 </head>
+
 
 <body>
 
@@ -45,8 +40,8 @@
     MediaPipe 載入中...
 </div>
 
-<div id="detail">
-</div>
+<div id="detail"></div>
+
 
 <script type="module">
 
@@ -56,20 +51,23 @@ const status =
 const detail =
     document.getElementById("detail");
 
+
 try {
 
-    const module =
+    status.innerText =
+        "正在下載 AI 模組...";
+
+    const vision =
         await import(
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs"
+            "https://unpkg.com/@mediapipe/tasks-vision@0.10.35/vision_bundle.mjs"
         );
 
     status.innerText =
-        "✅ MediaPipe 程式載入成功";
+        "✅ MediaPipe 載入成功";
 
     detail.innerText =
-        "下一步可以開始載入人臉模型";
-
-    console.log(module);
+        "FaceDetector 是否存在：" +
+        (vision.FaceDetector ? "是" : "否");
 
 }
 
@@ -79,7 +77,11 @@ catch(error) {
         "❌ MediaPipe 載入失敗";
 
     detail.innerText =
-        error.name + "：" + error.message;
+        error.name +
+        "：" +
+        error.message;
+
+    console.error(error);
 }
 
 </script>
