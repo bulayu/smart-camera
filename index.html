@@ -8,149 +8,153 @@
 <meta name="viewport"
       content="width=device-width,
                initial-scale=1.0,
-               user-scalable=no">
+               user-scalable=no,
+               viewport-fit=cover">
 
-<title>阿策智慧構圖助手 V3.3</title>
+<title>智慧構圖助手 V4.0</title>
 
 <style>
 
+* {
+    box-sizing: border-box;
+}
+
+html,
 body {
     margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
     background: black;
     color: white;
-    font-family: Arial, sans-serif;
+    font-family: -apple-system,
+                 BlinkMacSystemFont,
+                 Arial,
+                 sans-serif;
     text-align: center;
 }
 
-h2 {
-    margin: 8px 0;
-    font-size: 21px;
+body {
+    overflow-x: hidden;
+}
+
+#topBar {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: 7px;
+    background: black;
+}
+
+#title {
+    font-size: 19px;
+    font-weight: 600;
 }
 
 #status {
-    font-size: 14px;
-    margin: 5px;
-    color: #cccccc;
+    margin-top: 4px;
+    min-height: 18px;
+    font-size: 13px;
+    color: #aaaaaa;
 }
 
-#guideInfo {
-    font-size: 24px;
-    font-weight: bold;
-    min-height: 34px;
-    margin: 7px 4px;
-}
 
-#scoreInfo {
-    font-size: 19px;
-    min-height: 26px;
-    margin: 5px;
-}
+/* =========================
+   相機區
+========================= */
 
 #cameraBox {
     position: relative;
+
     width: 100%;
     max-width: 900px;
+
     margin: auto;
+
     background: #111;
+
     overflow: hidden;
 }
 
 #camera {
-    width: 100%;
     display: block;
+
+    width: 100%;
+    height: auto;
+
+    background: #111;
 }
 
 #overlay {
     position: absolute;
+
     left: 0;
     top: 0;
+
     width: 100%;
     height: 100%;
+
     pointer-events: none;
 }
 
 
-/* 三分線 */
-
-.guideLine {
-    position: absolute;
-    background: rgba(255,255,255,0.48);
-    pointer-events: none;
-}
-
-.vline {
-    top: 0;
-    width: 1px;
-    height: 100%;
-}
-
-.v1 {
-    left: 33.33%;
-}
-
-.v2 {
-    left: 66.66%;
-}
-
-.hline {
-    left: 0;
-    width: 100%;
-    height: 1px;
-}
-
-.h1 {
-    top: 33.33%;
-}
-
-.h2 {
-    top: 66.66%;
-}
-
-
-/* 控制區 */
+/* =========================
+   控制區
+========================= */
 
 #controls {
-    padding: 9px 4px;
+    padding: 10px 5px
+             calc(14px + env(safe-area-inset-bottom));
 }
 
 button {
-    font-size: 17px;
+    border: 0;
+    border-radius: 12px;
+
+    margin: 4px;
+
     padding: 11px 15px;
-    margin: 4px 2px;
-    border: none;
-    border-radius: 10px;
+
+    font-size: 16px;
+
+    background: #292929;
+    color: white;
 }
 
 .cameraButton {
-    min-width: 125px;
+    min-width: 118px;
 }
 
 #shutterButton {
-    width: 70px;
-    height: 70px;
+    width: 72px;
+    height: 72px;
+
     border-radius: 50%;
-    font-size: 28px;
-    margin-top: 8px;
+
+    padding: 0;
+
+    margin: 8px 12px;
+
+    font-size: 29px;
+
+    border: 4px solid white;
+
+    background: #222;
 }
 
 
-/* 拍照預覽 */
-
-#photoArea {
-    padding: 8px 0 25px 0;
-}
-
-#photoTitle {
-    font-size: 15px;
-    color: #cccccc;
-}
+/* =========================
+   預覽
+========================= */
 
 #photoPreview {
-    width: 180px;
-    max-width: 46%;
     display: none;
-    margin-top: 8px;
-    border-radius: 10px;
+
+    width: 160px;
+    max-width: 42%;
+
+    margin: 8px 0 18px 0;
+
+    border-radius: 9px;
+
     border: 2px solid white;
 }
 
@@ -166,15 +170,18 @@ button {
 
 <body>
 
-<h2>📷 智慧構圖助手 V3.3</h2>
 
-<div id="status">
-    AI 載入中...
+<div id="topBar">
+
+    <div id="title">
+        📷 智慧構圖助手
+    </div>
+
+    <div id="status">
+        AI 載入中...
+    </div>
+
 </div>
-
-<div id="guideInfo"></div>
-
-<div id="scoreInfo"></div>
 
 
 <div id="cameraBox">
@@ -182,17 +189,11 @@ button {
     <video
         id="camera"
         autoplay
-        playsinline
-        muted>
+        muted
+        playsinline>
     </video>
 
     <canvas id="overlay"></canvas>
-
-    <div class="guideLine vline v1"></div>
-    <div class="guideLine vline v2"></div>
-
-    <div class="guideLine hline h1"></div>
-    <div class="guideLine hline h2"></div>
 
 </div>
 
@@ -226,19 +227,10 @@ button {
 </div>
 
 
-<div id="photoArea">
-
-    <div id="photoTitle">
-        拍照預覽
-    </div>
-
-    <img id="photoPreview">
-
-</div>
+<img id="photoPreview">
 
 
 <canvas id="photoCanvas"></canvas>
-
 <canvas id="analysisCanvas"></canvas>
 
 
@@ -246,16 +238,26 @@ button {
 
 import {
     FaceDetector,
+    ObjectDetector,
     FilesetResolver
 }
 from "https://unpkg.com/@mediapipe/tasks-vision@0.10.35/vision_bundle.mjs";
 
 
 /* =====================================================
-   全域變數
+   AI
 ===================================================== */
 
-let detector = null;
+let faceDetector = null;
+
+let objectDetector = null;
+
+let aiReady = false;
+
+
+/* =====================================================
+   相機
+===================================================== */
 
 let stream = null;
 
@@ -266,53 +268,57 @@ let cameraRunning = false;
 user = 前鏡頭
 environment = 後鏡頭
 */
-let currentMode = "user";
+let currentMode = "environment";
 
 
-/*
-真正找到的裝置 ID
-*/
 let frontDeviceId = "";
-
 let rearDeviceId = "";
 
 
 /*
-避免切換鏡頭後，
-產生兩個偵測迴圈同時跑
+避免切鏡頭之後
+舊的動畫循環繼續執行
 */
 let cameraSession = 0;
 
 
-/*
-人像
-*/
+/* =====================================================
+   AI 執行控制
+===================================================== */
+
 let lastVideoTime = -1;
 
-let smoothScore = 0;
+let lastObjectDetectTime = 0;
 
-let okCounter = 0;
-
-let faceMissingFrames = 0;
+let lastSceneAnalysisTime = 0;
 
 
 /*
-風景
+手機目標框的位置
+做平滑處理，
+避免不停晃動。
 */
-let lastLandscapeAnalysis = 0;
+let smoothTargetX = null;
+let smoothTargetY = null;
 
-let smoothHorizonY = null;
+
+/*
+目前是否已接近推薦位置
+*/
+let targetOK = false;
 
 
 /* =====================================================
-   HTML 元件
+   HTML
 ===================================================== */
 
 const video =
     document.getElementById("camera");
 
+
 const overlay =
     document.getElementById("overlay");
+
 
 const ctx =
     overlay.getContext("2d");
@@ -321,18 +327,14 @@ const ctx =
 const statusText =
     document.getElementById("status");
 
-const guideInfo =
-    document.getElementById("guideInfo");
-
-const scoreInfo =
-    document.getElementById("scoreInfo");
-
 
 const photoCanvas =
     document.getElementById("photoCanvas");
 
+
 const photoCtx =
     photoCanvas.getContext("2d");
+
 
 const photoPreview =
     document.getElementById("photoPreview");
@@ -340,6 +342,7 @@ const photoPreview =
 
 const analysisCanvas =
     document.getElementById("analysisCanvas");
+
 
 const analysisCtx =
     analysisCanvas.getContext(
@@ -351,7 +354,7 @@ const analysisCtx =
 
 
 /* =====================================================
-   載入 MediaPipe
+   載入 AI
 ===================================================== */
 
 async function loadAI() {
@@ -362,7 +365,7 @@ async function loadAI() {
             "正在載入 AI...";
 
 
-        const resolver =
+        const vision =
             await FilesetResolver.forVisionTasks(
 
                 "https://unpkg.com/@mediapipe/tasks-vision@0.10.35/wasm"
@@ -370,10 +373,17 @@ async function loadAI() {
             );
 
 
-        detector =
+        /*
+        =============================
+        人臉 AI
+        前鏡頭使用
+        =============================
+        */
+
+        faceDetector =
             await FaceDetector.createFromOptions(
 
-                resolver,
+                vision,
 
                 {
 
@@ -396,6 +406,46 @@ async function loadAI() {
             );
 
 
+        /*
+        =============================
+        物件 AI
+        後鏡頭使用
+        =============================
+        */
+
+        objectDetector =
+            await ObjectDetector.createFromOptions(
+
+                vision,
+
+                {
+
+                    baseOptions: {
+
+                        modelAssetPath:
+
+                        "https://storage.googleapis.com/mediapipe-tasks/object_detector/efficientdet_lite0_uint8.tflite"
+
+                    },
+
+                    runningMode:
+                        "VIDEO",
+
+                    scoreThreshold:
+                        0.48,
+
+                    maxResults:
+                        5
+
+                }
+
+            );
+
+
+        aiReady =
+            true;
+
+
         statusText.innerText =
             "✅ AI 已準備完成";
 
@@ -403,9 +453,11 @@ async function loadAI() {
 
     catch(error) {
 
+        console.error(error);
+
+
         statusText.innerText =
-            "❌ AI 載入失敗：" +
-            error.message;
+            "❌ AI 載入失敗";
 
     }
 
@@ -413,11 +465,7 @@ async function loadAI() {
 
 
 /* =====================================================
-   第一次取得相機權限
-
-   同時偷偷取得手機有哪些鏡頭
-
-   使用者不會再看到 Camera 1、2、3...
+   取得手機真正鏡頭
 ===================================================== */
 
 async function prepareCameraDevices() {
@@ -425,8 +473,7 @@ async function prepareCameraDevices() {
     try {
 
         /*
-        Safari 必須先給相機權限，
-        才比較容易取得鏡頭名稱
+        先要求一次權限
         */
 
         const tempStream =
@@ -443,10 +490,8 @@ async function prepareCameraDevices() {
         tempStream
             .getTracks()
             .forEach(
-
                 track =>
                     track.stop()
-
             );
 
 
@@ -465,12 +510,16 @@ async function prepareCameraDevices() {
             );
 
 
-        frontDeviceId = "";
-        rearDeviceId = "";
+        frontDeviceId =
+            "";
+
+
+        rearDeviceId =
+            "";
 
 
         /*
-        先根據名稱判斷
+        先找正常前 / 後鏡頭
         */
 
         for (
@@ -485,10 +534,6 @@ async function prepareCameraDevices() {
                 )
                 .toLowerCase();
 
-
-            /*
-            前鏡頭
-            */
 
             if (
                 !frontDeviceId
@@ -508,14 +553,7 @@ async function prepareCameraDevices() {
             }
 
 
-            /*
-            優先找一般後鏡頭
-
-            如果名稱有 ultra / tele
-            先不要選它
-            */
-
-            const isBack =
+            const isRear =
 
                 name.includes("back")
 
@@ -545,10 +583,15 @@ async function prepareCameraDevices() {
                 name.includes("zoom");
 
 
+            /*
+            優先一般後鏡頭，
+            不優先超廣角 / 望遠
+            */
+
             if (
                 !rearDeviceId
                 &&
-                isBack
+                isRear
                 &&
                 !specialLens
             ) {
@@ -562,8 +605,8 @@ async function prepareCameraDevices() {
 
 
         /*
-        如果後鏡頭只有特殊名稱，
-        再找任何 Back / Rear
+        如果找不到一般後鏡頭，
+        找任意後鏡頭
         */
 
         if (
@@ -607,7 +650,6 @@ async function prepareCameraDevices() {
     catch(error) {
 
         console.log(
-            "取得鏡頭清單失敗：",
             error
         );
 
@@ -651,12 +693,12 @@ async function openRearCamera() {
 
 
 /* =====================================================
-   開啟相機
+   開相機
 ===================================================== */
 
 async function openCamera(mode) {
 
-    if (!detector) {
+    if (!aiReady) {
 
         alert(
             "AI 還在載入，請稍等一下"
@@ -666,11 +708,6 @@ async function openCamera(mode) {
 
     }
 
-
-    /*
-    第一次使用時，
-    取得鏡頭清單
-    */
 
     if (
         !frontDeviceId
@@ -688,12 +725,13 @@ async function openCamera(mode) {
 
 
     /*
-    讓舊的動畫迴圈失效
+    舊循環失效
     */
 
     cameraSession++;
 
-    const mySession =
+
+    const thisSession =
         cameraSession;
 
 
@@ -708,13 +746,6 @@ async function openCamera(mode) {
 
         let constraints;
 
-
-        /*
-        有找到真正的 deviceId，
-        就直接用 deviceId。
-
-        這就是之前你測試成功的方法。
-        */
 
         if (
             mode === "user"
@@ -735,11 +766,13 @@ async function openCamera(mode) {
 
                 },
 
-                audio: false
+                audio:
+                    false
 
             };
 
         }
+
 
         else if (
             mode === "environment"
@@ -760,17 +793,15 @@ async function openCamera(mode) {
 
                 },
 
-                audio: false
+                audio:
+                    false
 
             };
 
         }
 
-        else {
 
-            /*
-            找不到 ID 時才退回 facingMode
-            */
+        else {
 
             constraints = {
 
@@ -785,7 +816,8 @@ async function openCamera(mode) {
 
                 },
 
-                audio: false
+                audio:
+                    false
 
             };
 
@@ -803,7 +835,8 @@ async function openCamera(mode) {
     catch(error) {
 
         /*
-        exact 不成功時再退回一般模式
+        deviceId / exact 失敗時
+        自動退回 facingMode
         */
 
         try {
@@ -819,7 +852,8 @@ async function openCamera(mode) {
 
                         },
 
-                        audio: false
+                        audio:
+                            false
 
                     });
 
@@ -828,8 +862,7 @@ async function openCamera(mode) {
         catch(error2) {
 
             statusText.innerText =
-                "❌ 無法開啟相機：" +
-                error2.message;
+                "❌ 無法開啟相機";
 
             return;
 
@@ -857,61 +890,40 @@ async function openCamera(mode) {
         -1;
 
 
-    smoothScore =
+    lastObjectDetectTime =
         0;
 
 
-    okCounter =
+    lastSceneAnalysisTime =
         0;
 
 
-    faceMissingFrames =
-        0;
-
-
-    smoothHorizonY =
+    smoothTargetX =
         null;
 
 
-    lastLandscapeAnalysis =
-        0;
+    smoothTargetY =
+        null;
 
 
-    /*
-    開啟後直接清空舊資訊
-    */
-
-    guideInfo.innerText =
-        "";
+    targetOK =
+        false;
 
 
-    scoreInfo.innerText =
-        "";
+    statusText.innerText =
 
+        mode === "user"
 
-    if (
-        currentMode ===
-        "user"
-    ) {
+        ? "🤳 前鏡頭"
 
-        statusText.innerText =
-            "🤳 前鏡頭";
-
-    }
-
-    else {
-
-        statusText.innerText =
-            "📷 後鏡頭";
-
-    }
+        : "📷 後鏡頭";
 
 
     requestAnimationFrame(
 
         () =>
-            detectLoop(
-                mySession
+            cameraLoop(
+                thisSession
             )
 
     );
@@ -930,10 +942,8 @@ function stopCurrentStream() {
         stream
             .getTracks()
             .forEach(
-
                 track =>
                     track.stop()
-
             );
 
 
@@ -946,12 +956,13 @@ function stopCurrentStream() {
 
 
 /* =====================================================
-   關閉相機
+   關閉
 ===================================================== */
 
 function stopCamera() {
 
     cameraSession++;
+
 
     cameraRunning =
         false;
@@ -976,107 +987,23 @@ function stopCamera() {
         "相機已關閉";
 
 
-    guideInfo.innerText =
-        "";
+    smoothTargetX =
+        null;
 
 
-    scoreInfo.innerText =
-        "";
-
-}
-
-
-/* =====================================================
-   拍照
-===================================================== */
-
-function takePhoto() {
-
-    if (
-        !cameraRunning
-        ||
-        video.videoWidth === 0
-    ) {
-
-        alert(
-            "請先開啟相機"
-        );
-
-        return;
-
-    }
-
-
-    photoCanvas.width =
-        video.videoWidth;
-
-
-    photoCanvas.height =
-        video.videoHeight;
-
-
-    /*
-    拍乾淨原圖。
-
-    不把綠框、黃線、
-    三分線拍進照片。
-    */
-
-    photoCtx.drawImage(
-
-        video,
-
-        0,
-        0,
-
-        photoCanvas.width,
-        photoCanvas.height
-
-    );
-
-
-    const imageData =
-        photoCanvas.toDataURL(
-            "image/jpeg",
-            0.94
-        );
-
-
-    photoPreview.src =
-        imageData;
-
-
-    photoPreview.style.display =
-        "inline-block";
-
-
-    statusText.innerText =
-        "📸 拍照完成";
+    smoothTargetY =
+        null;
 
 }
 
 
 /* =====================================================
    主循環
-
-   前鏡頭：
-   執行人臉 AI
-
-   後鏡頭：
-   不跑人臉 AI
-   直接執行風景構圖
-
-   所以不會再互相亂切
 ===================================================== */
 
-function detectLoop(
+function cameraLoop(
     session
 ) {
-
-    /*
-    如果已經切換相機，
-    舊迴圈直接停止
-    */
 
     if (
         session !==
@@ -1104,75 +1031,39 @@ function detectLoop(
     ) {
 
         /*
-        ==========================
-        後鏡頭 = 風景
-        ==========================
+        前鏡頭
         */
 
         if (
             currentMode ===
-            "environment"
+            "user"
         ) {
 
-            drawLandscape();
+            processFrontCamera();
 
         }
 
 
         /*
-        ==========================
-        前鏡頭 = 人像
-        ==========================
+        後鏡頭
         */
 
         else {
 
-            if (
-                video.currentTime !==
-                lastVideoTime
-            ) {
-
-                lastVideoTime =
-                    video.currentTime;
-
-
-                try {
-
-                    const result =
-                        detector.detectForVideo(
-
-                            video,
-
-                            performance.now()
-
-                        );
-
-
-                    drawPeopleResult(
-                        result
-                    );
-
-                }
-
-                catch(error) {
-
-                    console.log(
-                        error
-                    );
-
-                }
-
-            }
+            processRearCamera();
 
         }
 
     }
 
 
+    drawTarget();
+
+
     requestAnimationFrame(
 
         () =>
-            detectLoop(
+            cameraLoop(
                 session
             )
 
@@ -1182,151 +1073,126 @@ function detectLoop(
 
 
 /* =====================================================
-   距離
+   前鏡頭
+
+   只偵測臉，
+   不畫人臉框。
+
+   AI 找到臉之後，
+   只計算推薦構圖位置。
 ===================================================== */
 
-function getDistance(
-    x1,
-    y1,
-    x2,
-    y2
-) {
-
-    const dx =
-        x2 - x1;
-
-
-    const dy =
-        y2 - y1;
-
-
-    return Math.sqrt(
-        dx * dx +
-        dy * dy
-    );
-
-}
-
-
-/* =====================================================
-   平滑分數
-===================================================== */
-
-function updateSmoothScore(
-    score
-) {
+function processFrontCamera() {
 
     if (
-        smoothScore === 0
+        video.currentTime ===
+        lastVideoTime
     ) {
 
-        smoothScore =
-            score;
-
-    }
-
-    else {
-
-        smoothScore =
-
-            smoothScore *
-            0.85
-
-            +
-
-            score *
-            0.15;
+        return;
 
     }
 
 
-    return Math.round(
-        smoothScore
-    );
-
-}
+    lastVideoTime =
+        video.currentTime;
 
 
-/* =====================================================
-   移動方向
-===================================================== */
-
-function getDirectionText(
-    dx,
-    dy,
-    toleranceX,
-    toleranceY
-) {
-
-    let horizontal =
-        "";
-
-    let vertical =
-        "";
+    let result;
 
 
-    if (
-        Math.abs(dx) >
-        toleranceX
-    ) {
+    try {
 
-        horizontal =
+        result =
+            faceDetector.detectForVideo(
 
-            dx > 0
+                video,
 
-            ? "往右"
+                performance.now()
 
-            : "往左";
+            );
+
+    }
+
+    catch(error) {
+
+        return;
 
     }
 
 
     if (
-        Math.abs(dy) >
-        toleranceY
+        !result.detections
+        ||
+        result.detections.length === 0
     ) {
 
-        vertical =
+        /*
+        沒有人時，
+        手機框先放中央偏上。
+        */
 
-            dy > 0
-
-            ? "往下"
-
-            : "往上";
-
-    }
-
-
-    if (
-        horizontal
-        &&
-        vertical
-    ) {
-
-        return (
-            horizontal +
-            "、" +
-            vertical
+        setSmoothTarget(
+            video.clientWidth * 0.50,
+            video.clientHeight * 0.38,
+            false
         );
 
+
+        return;
+
     }
 
 
-    return (
-        horizontal ||
-        vertical
-    );
+    /*
+    找最大的人臉
+    */
 
-}
+    let bestFace =
+        null;
 
 
-/* =====================================================
-   前鏡頭人物分析
-===================================================== */
+    let bestArea =
+        0;
 
-function drawPeopleResult(
-    result
-) {
+
+    for (
+        const detection
+        of result.detections
+    ) {
+
+        const box =
+            detection.boundingBox;
+
+
+        const area =
+            box.width *
+            box.height;
+
+
+        if (
+            area >
+            bestArea
+        ) {
+
+            bestArea =
+                area;
+
+
+            bestFace =
+                box;
+
+        }
+
+    }
+
+
+    if (!bestFace) {
+
+        return;
+
+    }
+
 
     const width =
         video.clientWidth;
@@ -1334,22 +1200,6 @@ function drawPeopleResult(
 
     const height =
         video.clientHeight;
-
-
-    overlay.width =
-        width;
-
-
-    overlay.height =
-        height;
-
-
-    ctx.clearRect(
-        0,
-        0,
-        width,
-        height
-    );
 
 
     const scaleX =
@@ -1362,743 +1212,76 @@ function drawPeopleResult(
         video.videoHeight;
 
 
-    const faces =
-        [];
+    const faceX =
+
+        (
+            bestFace.originX
+            +
+            bestFace.width / 2
+        )
+
+        *
+        scaleX;
 
 
-    if (
-        result.detections
-    ) {
+    const faceY =
 
-        for (
-            const detection
-            of result.detections
-        ) {
+        (
+            bestFace.originY
+            +
+            bestFace.height / 2
+        )
 
-            const box =
-                detection.boundingBox;
-
-
-            const x =
-                box.originX *
-                scaleX;
-
-
-            const y =
-                box.originY *
-                scaleY;
-
-
-            const w =
-                box.width *
-                scaleX;
-
-
-            const h =
-                box.height *
-                scaleY;
-
-
-            /*
-            過小的人臉忽略
-            */
-
-            if (
-                w <
-                width * 0.08
-                ||
-                h <
-                height * 0.08
-            ) {
-
-                continue;
-
-            }
-
-
-            faces.push({
-
-                x,
-                y,
-                w,
-                h,
-
-                centerX:
-                    x + w / 2,
-
-                centerY:
-                    y + h / 2
-
-            });
-
-        }
-
-    }
+        *
+        scaleY;
 
 
     /*
-    沒抓到人時不要馬上閃掉。
+    =============================
+    人像推薦位置
 
-    連續一段時間沒抓到，
-    才顯示簡單提示。
+    人臉靠左 → 左上三分
+    人臉靠右 → 右上三分
+    =============================
     */
-
-    if (
-        faces.length === 0
-    ) {
-
-        faceMissingFrames++;
-
-
-        if (
-            faceMissingFrames >
-            15
-        ) {
-
-            guideInfo.innerText =
-                "請將人物放入畫面";
-
-
-            scoreInfo.innerText =
-                "";
-
-        }
-
-
-        return;
-
-    }
-
-
-    faceMissingFrames =
-        0;
-
-
-    drawPeopleComposition(
-
-        faces,
-
-        width,
-
-        height
-
-    );
-
-}
-
-
-/* =====================================================
-   人物構圖
-===================================================== */
-
-function drawPeopleComposition(
-    faces,
-    width,
-    height
-) {
-
-    /*
-    所有人臉畫綠框
-
-    不再顯示
-    「偵測到人物：1人」
-    */
-
-    for (
-        const face
-        of faces
-    ) {
-
-        ctx.strokeStyle =
-            "lime";
-
-
-        ctx.lineWidth =
-            3;
-
-
-        ctx.strokeRect(
-
-            face.x,
-            face.y,
-            face.w,
-            face.h
-
-        );
-
-    }
-
-
-    /*
-    =================================================
-    單人
-    =================================================
-    */
-
-    if (
-        faces.length === 1
-    ) {
-
-        const face =
-            faces[0];
-
-
-        /*
-        四個三分交叉點
-        */
-
-        const points = [
-
-            {
-                x: width / 3,
-                y: height / 3
-            },
-
-            {
-                x: width * 2 / 3,
-                y: height / 3
-            },
-
-            {
-                x: width / 3,
-                y: height * 2 / 3
-            },
-
-            {
-                x: width * 2 / 3,
-                y: height * 2 / 3
-            }
-
-        ];
-
-
-        /*
-        找最近三分點
-        */
-
-        let target =
-            points[0];
-
-
-        let distance =
-            getDistance(
-
-                face.centerX,
-                face.centerY,
-
-                target.x,
-                target.y
-
-            );
-
-
-        for (
-            const point
-            of points
-        ) {
-
-            const d =
-                getDistance(
-
-                    face.centerX,
-                    face.centerY,
-
-                    point.x,
-                    point.y
-
-                );
-
-
-            if (
-                d <
-                distance
-            ) {
-
-                distance =
-                    d;
-
-
-                target =
-                    point;
-
-            }
-
-        }
-
-
-        /*
-        紅點 = 人臉中心
-        */
-
-        ctx.beginPath();
-
-
-        ctx.arc(
-
-            face.centerX,
-            face.centerY,
-
-            7,
-
-            0,
-            Math.PI * 2
-
-        );
-
-
-        ctx.fillStyle =
-            "red";
-
-
-        ctx.fill();
-
-
-        /*
-        藍點 = 建議三分點
-        */
-
-        ctx.beginPath();
-
-
-        ctx.arc(
-
-            target.x,
-            target.y,
-
-            7,
-
-            0,
-            Math.PI * 2
-
-        );
-
-
-        ctx.fillStyle =
-            "deepskyblue";
-
-
-        ctx.fill();
-
-
-        /*
-        黃線 = 從現在位置
-        指向建議位置
-        */
-
-        ctx.beginPath();
-
-
-        ctx.moveTo(
-
-            face.centerX,
-            face.centerY
-
-        );
-
-
-        ctx.lineTo(
-
-            target.x,
-            target.y
-
-        );
-
-
-        ctx.strokeStyle =
-            "yellow";
-
-
-        ctx.lineWidth =
-            3;
-
-
-        ctx.stroke();
-
-
-        const okDistance =
-
-            Math.min(
-                width,
-                height
-            )
-            *
-            0.18;
-
-
-        const nearDistance =
-
-            Math.min(
-                width,
-                height
-            )
-            *
-            0.28;
-
-
-        const dx =
-            target.x -
-            face.centerX;
-
-
-        const dy =
-            target.y -
-            face.centerY;
-
-
-        const direction =
-            getDirectionText(
-
-                dx,
-                dy,
-
-                width * 0.10,
-
-                height * 0.10
-
-            );
-
-
-        let rawScore =
-
-            100
-
-            -
-
-            (
-                distance
-
-                /
-
-                (
-                    Math.sqrt(
-
-                        width * width
-
-                        +
-
-                        height * height
-
-                    )
-
-                    *
-
-                    0.45
-                )
-            )
-
-            *
-
-            100;
-
-
-        rawScore =
-            Math.max(
-
-                0,
-
-                Math.min(
-                    100,
-                    rawScore
-                )
-
-            );
-
-
-        const score =
-            updateSmoothScore(
-                rawScore
-            );
-
-
-        if (
-            distance <=
-            okDistance
-        ) {
-
-            okCounter++;
-
-        }
-
-        else {
-
-            okCounter =
-                Math.max(
-                    0,
-                    okCounter - 1
-                );
-
-        }
-
-
-        if (
-            okCounter >= 4
-        ) {
-
-            guideInfo.innerText =
-                "✅ 構圖 OK";
-
-        }
-
-        else if (
-            distance <=
-            nearDistance
-        ) {
-
-            guideInfo.innerText =
-                "👍 快到了";
-
-        }
-
-        else if (
-            direction
-        ) {
-
-            guideInfo.innerText =
-                "建議：" +
-                direction;
-
-        }
-
-        else {
-
-            guideInfo.innerText =
-                "👍 快到了";
-
-        }
-
-
-        scoreInfo.innerText =
-            "構圖分數：" +
-            score +
-            " 分";
-
-
-        return;
-
-    }
-
-
-    /*
-    =================================================
-    多人
-    =================================================
-    */
-
-    let totalX =
-        0;
-
-
-    let totalY =
-        0;
-
-
-    let minX =
-        Infinity;
-
-
-    let minY =
-        Infinity;
-
-
-    let maxX =
-        -Infinity;
-
-
-    let maxY =
-        -Infinity;
-
-
-    for (
-        const face
-        of faces
-    ) {
-
-        totalX +=
-            face.centerX;
-
-
-        totalY +=
-            face.centerY;
-
-
-        minX =
-            Math.min(
-                minX,
-                face.x
-            );
-
-
-        minY =
-            Math.min(
-                minY,
-                face.y
-            );
-
-
-        maxX =
-            Math.max(
-
-                maxX,
-
-                face.x +
-                face.w
-
-            );
-
-
-        maxY =
-            Math.max(
-
-                maxY,
-
-                face.y +
-                face.h
-
-            );
-
-    }
-
-
-    const groupX =
-        totalX /
-        faces.length;
-
-
-    const groupY =
-        totalY /
-        faces.length;
-
 
     const targetX =
-        width *
-        0.50;
+
+        faceX <
+        width / 2
+
+        ?
+
+        width * 0.34
+
+        :
+
+        width * 0.66;
 
 
     const targetY =
         height *
-        0.43;
+        0.34;
 
 
     /*
-    多人外框
+    判斷人物是否已接近目標
     */
-
-    ctx.strokeStyle =
-        "orange";
-
-
-    ctx.lineWidth =
-        4;
-
-
-    ctx.strokeRect(
-
-        minX,
-        minY,
-
-        maxX - minX,
-        maxY - minY
-
-    );
-
-
-    /*
-    多人中心
-    */
-
-    ctx.beginPath();
-
-
-    ctx.arc(
-
-        groupX,
-        groupY,
-
-        8,
-
-        0,
-        Math.PI * 2
-
-    );
-
-
-    ctx.fillStyle =
-        "magenta";
-
-
-    ctx.fill();
-
-
-    /*
-    目標
-    */
-
-    ctx.beginPath();
-
-
-    ctx.arc(
-
-        targetX,
-        targetY,
-
-        8,
-
-        0,
-        Math.PI * 2
-
-    );
-
-
-    ctx.fillStyle =
-        "cyan";
-
-
-    ctx.fill();
-
-
-    /*
-    黃色引導線
-    */
-
-    ctx.beginPath();
-
-
-    ctx.moveTo(
-        groupX,
-        groupY
-    );
-
-
-    ctx.lineTo(
-        targetX,
-        targetY
-    );
-
-
-    ctx.strokeStyle =
-        "yellow";
-
-
-    ctx.lineWidth =
-        3;
-
-
-    ctx.stroke();
-
 
     const distance =
-        getDistance(
 
-            groupX,
-            groupY,
+        Math.hypot(
 
+            faceX -
             targetX,
+
+            faceY -
             targetY
 
         );
 
 
-    const okDistance =
+    const tolerance =
 
         Math.min(
             width,
@@ -2106,124 +1289,308 @@ function drawPeopleComposition(
         )
 
         *
-
-        0.20;
-
-
-    const dx =
-        targetX -
-        groupX;
+        0.14;
 
 
-    const dy =
-        targetY -
-        groupY;
+    const ok =
+        distance <
+        tolerance;
 
 
-    const direction =
-        getDirectionText(
+    setSmoothTarget(
 
-            dx,
-            dy,
+        targetX,
+        targetY,
+        ok
 
-            width * 0.08,
-
-            height * 0.08
-
-        );
-
-
-    let rawScore =
-
-        100
-
-        -
-
-        distance
-
-        /
-
-        (
-            Math.sqrt(
-
-                width * width
-
-                +
-
-                height * height
-
-            )
-
-            *
-
-            0.50
-        )
-
-        *
-
-        100;
-
-
-    rawScore =
-        Math.max(
-
-            0,
-
-            Math.min(
-                100,
-                rawScore
-            )
-
-        );
-
-
-    const score =
-        updateSmoothScore(
-            rawScore
-        );
-
-
-    if (
-        distance <=
-        okDistance
-    ) {
-
-        guideInfo.innerText =
-            "✅ 構圖 OK";
-
-    }
-
-    else if (
-        direction
-    ) {
-
-        guideInfo.innerText =
-            "建議：" +
-            direction;
-
-    }
-
-    else {
-
-        guideInfo.innerText =
-            "👍 快到了";
-
-    }
-
-
-    scoreInfo.innerText =
-        "構圖分數：" +
-        score +
-        " 分";
+    );
 
 }
 
 
 /* =====================================================
-   後鏡頭風景構圖
+   後鏡頭
+
+   1. 先找常見物件
+   2. 有物件 → 用物件構圖
+   3. 沒物件 → 自動畫面分析
 ===================================================== */
 
-function drawLandscape() {
+function processRearCamera() {
+
+    const now =
+        performance.now();
+
+
+    /*
+    Object Detector 是同步運算，
+    不需要每一 frame 都跑。
+
+    約每 300ms 一次即可。
+    */
+
+    if (
+        now -
+        lastObjectDetectTime
+        <
+        300
+    ) {
+
+        return;
+
+    }
+
+
+    lastObjectDetectTime =
+        now;
+
+
+    let result =
+        null;
+
+
+    try {
+
+        result =
+            objectDetector.detectForVideo(
+
+                video,
+
+                now
+
+            );
+
+    }
+
+    catch(error) {
+
+        console.log(error);
+
+    }
+
+
+    const subject =
+        chooseMainSubject(
+            result
+        );
+
+
+    /*
+    =============================
+    找到主要物件
+    =============================
+    */
+
+    if (subject) {
+
+        composeForObject(
+            subject
+        );
+
+
+        return;
+
+    }
+
+
+    /*
+    =============================
+    沒找到物件
+
+    改用畫面視覺分析
+    =============================
+    */
+
+    analyzeScene();
+
+}
+
+
+/* =====================================================
+   從 AI 辨識結果中
+   選一個最像「主角」的物件
+===================================================== */
+
+function chooseMainSubject(
+    result
+) {
+
+    if (
+        !result
+        ||
+        !result.detections
+        ||
+        result.detections.length === 0
+    ) {
+
+        return null;
+
+    }
+
+
+    let best =
+        null;
+
+
+    let bestScore =
+        -Infinity;
+
+
+    for (
+        const detection
+        of result.detections
+    ) {
+
+        const box =
+            detection.boundingBox;
+
+
+        if (!box) {
+
+            continue;
+
+        }
+
+
+        const category =
+            detection.categories?.[0];
+
+
+        const confidence =
+            category?.score || 0;
+
+
+        /*
+        面積越大，
+        越可能是主要拍攝主體
+        */
+
+        const area =
+            box.width *
+            box.height;
+
+
+        const frameArea =
+            video.videoWidth *
+            video.videoHeight;
+
+
+        const areaRatio =
+            area /
+            frameArea;
+
+
+        /*
+        太小的物件忽略
+        */
+
+        if (
+            areaRatio <
+            0.015
+        ) {
+
+            continue;
+
+        }
+
+
+        /*
+        距離畫面中心
+        */
+
+        const centerX =
+            box.originX +
+            box.width / 2;
+
+
+        const centerY =
+            box.originY +
+            box.height / 2;
+
+
+        const nx =
+            centerX /
+            video.videoWidth;
+
+
+        const ny =
+            centerY /
+            video.videoHeight;
+
+
+        const centerDistance =
+
+            Math.hypot(
+
+                nx - 0.5,
+
+                ny - 0.5
+
+            );
+
+
+        /*
+        主角評分：
+
+        面積
+        +
+        AI 信心
+        +
+        不要離畫面太遠
+        */
+
+        const score =
+
+            areaRatio * 3
+
+            +
+
+            confidence
+
+            -
+
+            centerDistance * 0.35;
+
+
+        if (
+            score >
+            bestScore
+        ) {
+
+            bestScore =
+                score;
+
+
+            best = {
+
+                box:
+                    box,
+
+                category:
+                    category?.categoryName || "",
+
+                confidence:
+                    confidence
+
+            };
+
+        }
+
+    }
+
+
+    return best;
+
+}
+
+
+/* =====================================================
+   物件構圖
+===================================================== */
+
+function composeForObject(
+    subject
+) {
 
     const width =
         video.clientWidth;
@@ -2233,353 +1600,191 @@ function drawLandscape() {
         video.clientHeight;
 
 
-    overlay.width =
-        width;
+    const scaleX =
+        width /
+        video.videoWidth;
 
 
-    overlay.height =
-        height;
+    const scaleY =
+        height /
+        video.videoHeight;
 
 
-    ctx.clearRect(
-        0,
-        0,
-        width,
-        height
+    const box =
+        subject.box;
+
+
+    const subjectX =
+
+        (
+            box.originX
+            +
+            box.width / 2
+        )
+
+        *
+        scaleX;
+
+
+    const subjectY =
+
+        (
+            box.originY
+            +
+            box.height / 2
+        )
+
+        *
+        scaleY;
+
+
+    /*
+    ==================================
+    推薦位置
+
+    主體目前偏左 →
+    放左三分點
+
+    主體目前偏右 →
+    放右三分點
+
+    這樣手機框不會突然跨過
+    整個畫面跑到另一側。
+    ==================================
+    */
+
+    let targetX;
+
+
+    if (
+        subjectX <
+        width / 2
+    ) {
+
+        targetX =
+            width * 0.34;
+
+    }
+
+    else {
+
+        targetX =
+            width * 0.66;
+
+    }
+
+
+    /*
+    人、動物等主體
+    稍微放高一些。
+
+    一般物件則接近中間三分區。
+    */
+
+    const upperSubjects = [
+
+        "person",
+        "dog",
+        "cat",
+        "bird",
+        "horse",
+        "sheep",
+        "cow"
+    ];
+
+
+    const targetY =
+
+        upperSubjects.includes(
+            subject.category
+        )
+
+        ?
+
+        height * 0.38
+
+        :
+
+        height * 0.50;
+
+
+    /*
+    是否已經接近 AI 推薦位置
+    */
+
+    const distance =
+
+        Math.hypot(
+
+            subjectX -
+            targetX,
+
+            subjectY -
+            targetY
+
+        );
+
+
+    const tolerance =
+
+        Math.min(
+            width,
+            height
+        )
+
+        *
+        0.15;
+
+
+    const ok =
+        distance <
+        tolerance;
+
+
+    setSmoothTarget(
+
+        targetX,
+        targetY,
+        ok
+
     );
 
+}
+
+
+/* =====================================================
+   找不到物件時：
+   自動畫面主體分析
+
+   將畫面縮小，
+   找「細節 / 明暗變化」
+   比較集中的區域。
+
+   不需要知道那是山、
+   建築還是花。
+===================================================== */
+
+function analyzeScene() {
 
     const now =
         performance.now();
 
 
-    /*
-    每 250ms 做一次風景分析
-    */
-
     if (
         now -
-        lastLandscapeAnalysis
-        >
-        250
+        lastSceneAnalysisTime
+        <
+        400
     ) {
-
-        lastLandscapeAnalysis =
-            now;
-
-
-        const result =
-            detectHorizon();
-
-
-        if (result) {
-
-            if (
-                smoothHorizonY ===
-                null
-            ) {
-
-                smoothHorizonY =
-                    result.y;
-
-            }
-
-            else {
-
-                smoothHorizonY =
-
-                    smoothHorizonY *
-                    0.82
-
-                    +
-
-                    result.y *
-                    0.18;
-
-            }
-
-        }
-
-    }
-
-
-    if (
-        smoothHorizonY ===
-        null
-    ) {
-
-        guideInfo.innerText =
-            "正在分析畫面...";
-
-
-        scoreInfo.innerText =
-            "";
-
 
         return;
 
     }
 
 
-    /*
-    轉換到畫面座標
-    */
+    lastSceneAnalysisTime =
+        now;
 
-    const horizonY =
-
-        (
-            smoothHorizonY
-
-            /
-
-            analysisCanvas.height
-        )
-
-        *
-
-        height;
-
-
-    /*
-    青色線
-    =
-    程式認為的主要水平分界
-    */
-
-    ctx.beginPath();
-
-
-    ctx.moveTo(
-        0,
-        horizonY
-    );
-
-
-    ctx.lineTo(
-        width,
-        horizonY
-    );
-
-
-    ctx.strokeStyle =
-        "cyan";
-
-
-    ctx.lineWidth =
-        4;
-
-
-    ctx.stroke();
-
-
-    const upperThird =
-        height /
-        3;
-
-
-    const lowerThird =
-        height *
-        2 /
-        3;
-
-
-    /*
-    找距離最近的三分線
-    */
-
-    const targetY =
-
-        Math.abs(
-            horizonY -
-            upperThird
-        )
-
-        <
-
-        Math.abs(
-            horizonY -
-            lowerThird
-        )
-
-        ?
-
-        upperThird
-
-        :
-
-        lowerThird;
-
-
-    /*
-    黃色線
-    =
-    建議的位置
-    */
-
-    ctx.beginPath();
-
-
-    ctx.moveTo(
-        0,
-        targetY
-    );
-
-
-    ctx.lineTo(
-        width,
-        targetY
-    );
-
-
-    ctx.strokeStyle =
-        "yellow";
-
-
-    ctx.lineWidth =
-        3;
-
-
-    ctx.stroke();
-
-
-    const distance =
-        Math.abs(
-            horizonY -
-            targetY
-        );
-
-
-    const okDistance =
-        height *
-        0.07;
-
-
-    const nearDistance =
-        height *
-        0.14;
-
-
-    let rawScore =
-
-        100
-
-        -
-
-        distance
-
-        /
-
-        (
-            height *
-            0.40
-        )
-
-        *
-
-        100;
-
-
-    rawScore =
-        Math.max(
-
-            0,
-
-            Math.min(
-                100,
-                rawScore
-            )
-
-        );
-
-
-    const score =
-        updateSmoothScore(
-            rawScore
-        );
-
-
-    if (
-        distance <=
-        okDistance
-    ) {
-
-        okCounter++;
-
-    }
-
-    else {
-
-        okCounter =
-            Math.max(
-
-                0,
-
-                okCounter - 1
-
-            );
-
-    }
-
-
-    if (
-        okCounter >= 4
-    ) {
-
-        guideInfo.innerText =
-            "✅ 構圖 OK";
-
-    }
-
-    else if (
-        distance <=
-        nearDistance
-    ) {
-
-        guideInfo.innerText =
-            "👍 快到了";
-
-    }
-
-    else if (
-        horizonY >
-        targetY
-    ) {
-
-        guideInfo.innerText =
-            "建議：鏡頭稍微往下";
-
-    }
-
-    else {
-
-        guideInfo.innerText =
-            "建議：鏡頭稍微往上";
-
-    }
-
-
-    scoreInfo.innerText =
-        "構圖分數：" +
-        score +
-        " 分";
-
-}
-
-
-/* =====================================================
-   水平分界偵測
-
-   注意：
-   現在仍屬於基礎風景分析。
-
-   它不是在「理解」
-   山、樹、房子是什麼，
-
-   而是在畫面裡找
-   比較強的水平分界。
-===================================================== */
-
-function detectHorizon() {
 
     if (
         video.videoWidth === 0
@@ -2587,17 +1792,17 @@ function detectHorizon() {
         video.videoHeight === 0
     ) {
 
-        return null;
+        return;
 
     }
 
 
     const w =
-        160;
+        120;
 
 
     const h =
-        90;
+        80;
 
 
     analysisCanvas.width =
@@ -2637,15 +1842,15 @@ function detectHorizon() {
         image.data;
 
 
+    /*
+    灰階
+    */
+
     const gray =
         new Float32Array(
             w * h
         );
 
-
-    /*
-    RGB → 灰階
-    */
 
     for (
         let y = 0;
@@ -2663,8 +1868,7 @@ function detectHorizon() {
                 (
                     y * w +
                     x
-                )
-                *
+                ) *
                 4;
 
 
@@ -2691,103 +1895,790 @@ function detectHorizon() {
     }
 
 
-    let bestY =
-        h / 2;
+    /*
+    把畫面切成 3 × 3。
+
+    找細節最多的區塊。
+    */
+
+    const cols =
+        3;
 
 
-    let bestScore =
+    const rows =
+        3;
+
+
+    let bestCol =
+        1;
+
+
+    let bestRow =
+        1;
+
+
+    let bestEnergy =
         -1;
 
 
-    /*
-    避開最頂部及最底部
-    */
-
-    const startY =
-        Math.floor(
-            h * 0.18
-        );
-
-
-    const endY =
-        Math.floor(
-            h * 0.82
-        );
-
-
     for (
-        let y = startY;
-        y < endY;
-        y++
+        let row = 0;
+        row < rows;
+        row++
     ) {
 
-        let score =
-            0;
-
-
         for (
-            let x = 4;
-            x < w - 4;
-            x += 2
+            let col = 0;
+            col < cols;
+            col++
         ) {
 
-            const above =
-                gray[
-                    (y - 2) *
-                    w +
-                    x
-                ];
-
-
-            const below =
-                gray[
-                    (y + 2) *
-                    w +
-                    x
-                ];
-
-
-            score +=
-                Math.abs(
-                    below -
-                    above
+            const startX =
+                Math.floor(
+                    col *
+                    w /
+                    cols
                 );
 
-        }
+
+            const endX =
+                Math.floor(
+                    (col + 1) *
+                    w /
+                    cols
+                );
 
 
-        if (
-            score >
-            bestScore
-        ) {
+            const startY =
+                Math.floor(
+                    row *
+                    h /
+                    rows
+                );
 
-            bestScore =
-                score;
+
+            const endY =
+                Math.floor(
+                    (row + 1) *
+                    h /
+                    rows
+                );
 
 
-            bestY =
-                y;
+            let energy =
+                0;
+
+
+            for (
+                let y = startY + 1;
+                y < endY - 1;
+                y += 2
+            ) {
+
+                for (
+                    let x = startX + 1;
+                    x < endX - 1;
+                    x += 2
+                ) {
+
+                    const center =
+                        gray[
+                            y * w +
+                            x
+                        ];
+
+
+                    const right =
+                        gray[
+                            y * w +
+                            x + 1
+                        ];
+
+
+                    const below =
+                        gray[
+                            (y + 1) *
+                            w +
+                            x
+                        ];
+
+
+                    energy +=
+
+                        Math.abs(
+                            center -
+                            right
+                        )
+
+                        +
+
+                        Math.abs(
+                            center -
+                            below
+                        );
+
+                }
+
+            }
+
+
+            /*
+            讓中央區不要太容易
+            一直被選中。
+
+            稍微鼓勵三分構圖。
+            */
+
+            if (
+                col === 1
+                &&
+                row === 1
+            ) {
+
+                energy *=
+                    0.80;
+
+            }
+
+
+            if (
+                energy >
+                bestEnergy
+            ) {
+
+                bestEnergy =
+                    energy;
+
+
+                bestCol =
+                    col;
+
+
+                bestRow =
+                    row;
+
+            }
 
         }
 
     }
 
 
-    return {
+    const width =
+        video.clientWidth;
 
-        y:
-            bestY,
 
-        strength:
-            bestScore
+    const height =
+        video.clientHeight;
 
-    };
+
+    /*
+    如果主要視覺在左側，
+    推薦左三分。
+
+    在右側，
+    推薦右三分。
+    */
+
+    let targetX;
+
+
+    if (
+        bestCol === 0
+    ) {
+
+        targetX =
+            width * 0.34;
+
+    }
+
+    else if (
+        bestCol === 2
+    ) {
+
+        targetX =
+            width * 0.66;
+
+    }
+
+    else {
+
+        /*
+        中央主體時，
+        選距離目前細節較近的一側。
+        */
+
+        targetX =
+            width * 0.50;
+
+    }
+
+
+    let targetY;
+
+
+    if (
+        bestRow === 0
+    ) {
+
+        targetY =
+            height * 0.34;
+
+    }
+
+    else if (
+        bestRow === 2
+    ) {
+
+        targetY =
+            height * 0.66;
+
+    }
+
+    else {
+
+        targetY =
+            height * 0.50;
+
+    }
+
+
+    /*
+    純場景分析沒有明確物件中心，
+    因此不直接判定綠色。
+
+    保持白色推薦框。
+    */
+
+    setSmoothTarget(
+
+        targetX,
+        targetY,
+        false
+
+    );
 
 }
 
 
 /* =====================================================
-   讓 HTML 按鈕可以呼叫
+   平滑手機框
+
+   避免 AI 每次分析後
+   框框突然跳位置
+===================================================== */
+
+function setSmoothTarget(
+    x,
+    y,
+    ok
+) {
+
+    if (
+        smoothTargetX ===
+        null
+    ) {
+
+        smoothTargetX =
+            x;
+
+
+        smoothTargetY =
+            y;
+
+    }
+
+    else {
+
+        /*
+        90% 舊位置
+        10% 新位置
+
+        所以移動會很柔和
+        */
+
+        smoothTargetX =
+
+            smoothTargetX *
+            0.90
+
+            +
+
+            x *
+            0.10;
+
+
+        smoothTargetY =
+
+            smoothTargetY *
+            0.90
+
+            +
+
+            y *
+            0.10;
+
+    }
+
+
+    targetOK =
+        ok;
+
+}
+
+
+/* =====================================================
+   畫唯一的 AI 提示
+
+   只畫：
+   「手機輪廓」
+
+   不畫其他任何線或框。
+===================================================== */
+
+function drawTarget() {
+
+    const width =
+        video.clientWidth;
+
+
+    const height =
+        video.clientHeight;
+
+
+    overlay.width =
+        width;
+
+
+    overlay.height =
+        height;
+
+
+    ctx.clearRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    if (
+        smoothTargetX ===
+        null
+        ||
+        smoothTargetY ===
+        null
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+    手機框大小依螢幕自動調整
+    */
+
+    const phoneWidth =
+
+        Math.max(
+
+            42,
+
+            Math.min(
+                width,
+                height
+            )
+            *
+            0.13
+
+        );
+
+
+    const phoneHeight =
+        phoneWidth *
+        1.85;
+
+
+    let x =
+        smoothTargetX -
+        phoneWidth / 2;
+
+
+    let y =
+        smoothTargetY -
+        phoneHeight / 2;
+
+
+    /*
+    不讓手機框跑出畫面
+    */
+
+    const margin =
+        10;
+
+
+    x =
+        Math.max(
+
+            margin,
+
+            Math.min(
+
+                width -
+                phoneWidth -
+                margin,
+
+                x
+
+            )
+
+        );
+
+
+    y =
+        Math.max(
+
+            margin,
+
+            Math.min(
+
+                height -
+                phoneHeight -
+                margin,
+
+                y
+
+            )
+
+        );
+
+
+    /*
+    白色 =
+    推薦位置
+
+    綠色 =
+    主體已接近推薦位置
+    */
+
+    ctx.strokeStyle =
+
+        targetOK
+
+        ?
+
+        "#46ff73"
+
+        :
+
+        "rgba(255,255,255,0.95)";
+
+
+    ctx.lineWidth =
+        targetOK
+        ? 5
+        : 4;
+
+
+    ctx.shadowColor =
+        "rgba(0,0,0,0.7)";
+
+
+    ctx.shadowBlur =
+        6;
+
+
+    /*
+    手機外框
+    */
+
+    roundRect(
+
+        ctx,
+
+        x,
+        y,
+
+        phoneWidth,
+        phoneHeight,
+
+        phoneWidth *
+        0.16
+
+    );
+
+
+    ctx.stroke();
+
+
+    /*
+    上方聽筒
+    */
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+
+        x +
+        phoneWidth *
+        0.36,
+
+        y +
+        phoneHeight *
+        0.08
+
+    );
+
+
+    ctx.lineTo(
+
+        x +
+        phoneWidth *
+        0.64,
+
+        y +
+        phoneHeight *
+        0.08
+
+    );
+
+
+    ctx.lineWidth =
+        3;
+
+
+    ctx.stroke();
+
+
+    /*
+    下方 Home 圓圈
+
+    做成舊式手機符號，
+    看起來更像「手機框」。
+    */
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+
+        x +
+        phoneWidth / 2,
+
+        y +
+        phoneHeight *
+        0.91,
+
+        phoneWidth *
+        0.07,
+
+        0,
+
+        Math.PI * 2
+
+    );
+
+
+    ctx.lineWidth =
+        2.5;
+
+
+    ctx.stroke();
+
+
+    /*
+    清除陰影設定
+    */
+
+    ctx.shadowBlur =
+        0;
+
+}
+
+
+/* =====================================================
+   圓角矩形
+===================================================== */
+
+function roundRect(
+    context,
+    x,
+    y,
+    width,
+    height,
+    radius
+) {
+
+    radius =
+        Math.min(
+
+            radius,
+
+            width / 2,
+
+            height / 2
+
+        );
+
+
+    context.beginPath();
+
+
+    context.moveTo(
+        x + radius,
+        y
+    );
+
+
+    context.lineTo(
+        x + width - radius,
+        y
+    );
+
+
+    context.quadraticCurveTo(
+
+        x + width,
+        y,
+
+        x + width,
+        y + radius
+
+    );
+
+
+    context.lineTo(
+        x + width,
+        y + height - radius
+    );
+
+
+    context.quadraticCurveTo(
+
+        x + width,
+        y + height,
+
+        x + width - radius,
+        y + height
+
+    );
+
+
+    context.lineTo(
+        x + radius,
+        y + height
+    );
+
+
+    context.quadraticCurveTo(
+
+        x,
+        y + height,
+
+        x,
+        y + height - radius
+
+    );
+
+
+    context.lineTo(
+        x,
+        y + radius
+    );
+
+
+    context.quadraticCurveTo(
+
+        x,
+        y,
+
+        x + radius,
+        y
+
+    );
+
+
+    context.closePath();
+
+}
+
+
+/* =====================================================
+   拍照
+===================================================== */
+
+function takePhoto() {
+
+    if (
+        !cameraRunning
+        ||
+        video.videoWidth === 0
+    ) {
+
+        alert(
+            "請先開啟相機"
+        );
+
+        return;
+
+    }
+
+
+    photoCanvas.width =
+        video.videoWidth;
+
+
+    photoCanvas.height =
+        video.videoHeight;
+
+
+    /*
+    只拍原始照片。
+
+    AI 手機框不會出現在照片裡。
+    */
+
+    photoCtx.drawImage(
+
+        video,
+
+        0,
+        0,
+
+        photoCanvas.width,
+        photoCanvas.height
+
+    );
+
+
+    const imageData =
+        photoCanvas.toDataURL(
+
+            "image/jpeg",
+
+            0.94
+
+        );
+
+
+    photoPreview.src =
+        imageData;
+
+
+    photoPreview.style.display =
+        "inline-block";
+
+
+    statusText.innerText =
+        "📸 拍照完成";
+
+}
+
+
+/* =====================================================
+   HTML 按鈕
 ===================================================== */
 
 window.openFrontCamera =
@@ -2807,12 +2698,13 @@ window.stopCamera =
 
 
 /* =====================================================
-   開始載入 AI
+   啟動
 ===================================================== */
 
 loadAI();
 
 </script>
+
 
 </body>
 
