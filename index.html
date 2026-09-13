@@ -9,7 +9,7 @@
                    initial-scale=1.0,
                    user-scalable=no">
 
-    <title>阿策智慧構圖助手 V2.2</title>
+    <title>阿策智慧構圖助手 V2.3</title>
 
     <style>
 
@@ -32,6 +32,11 @@
 
         #faceInfo {
             font-size: 17px;
+            margin: 6px;
+        }
+
+        #modeInfo {
+            font-size: 18px;
             margin: 6px;
         }
 
@@ -76,7 +81,7 @@
             top: 0;
             height: 100%;
             width: 2px;
-            background: rgba(255,255,255,0.75);
+            background: rgba(255,255,255,0.65);
             pointer-events: none;
         }
 
@@ -93,7 +98,7 @@
             left: 0;
             width: 100%;
             height: 2px;
-            background: rgba(255,255,255,0.75);
+            background: rgba(255,255,255,0.65);
             pointer-events: none;
         }
 
@@ -119,7 +124,7 @@
 
 <body>
 
-<h2>📷 阿策智慧構圖助手 V2.2</h2>
+<h2>📷 阿策智慧構圖助手 V2.3</h2>
 
 <div id="status">
     AI 模型載入中...
@@ -127,6 +132,9 @@
 
 <div id="faceInfo">
     尚未偵測
+</div>
+
+<div id="modeInfo">
 </div>
 
 <div id="guideInfo">
@@ -201,6 +209,9 @@ const statusText =
 const faceInfo =
     document.getElementById("faceInfo");
 
+const modeInfo =
+    document.getElementById("modeInfo");
+
 const guideInfo =
     document.getElementById("guideInfo");
 
@@ -222,7 +233,9 @@ async function loadAI() {
 
         const resolver =
             await FilesetResolver.forVisionTasks(
+
                 "https://unpkg.com/@mediapipe/tasks-vision@0.10.35/wasm"
+
             );
 
 
@@ -232,11 +245,17 @@ async function loadAI() {
 
         detector =
             await FaceDetector.createFromOptions(
+
                 resolver,
+
                 {
+
                     baseOptions: {
+
                         modelAssetPath:
+
                         "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
+
                     },
 
                     runningMode:
@@ -244,7 +263,9 @@ async function loadAI() {
 
                     minDetectionConfidence:
                         0.4
+
                 }
+
             );
 
 
@@ -303,8 +324,10 @@ async function startCamera() {
                 .getUserMedia({
 
                     video: {
+
                         facingMode:
                             "user"
+
                     },
 
                     audio:
@@ -405,6 +428,10 @@ function stopCamera() {
         "尚未偵測";
 
 
+    modeInfo.innerText =
+        "";
+
+
     guideInfo.innerText =
         "";
 
@@ -426,7 +453,9 @@ function stopCamera() {
 function detectLoop() {
 
     if (!cameraRunning) {
+
         return;
+
     }
 
 
@@ -449,8 +478,11 @@ function detectLoop() {
 
                 const result =
                     detector.detectForVideo(
+
                         video,
+
                         performance.now()
+
                     );
 
 
@@ -502,6 +534,123 @@ function getDistance(
         dx * dx +
         dy * dy
     );
+
+}
+
+
+/* =========================
+   分數平滑
+========================= */
+
+function updateSmoothScore(
+    rawScore
+) {
+
+    if (
+        smoothScore === 0
+    ) {
+
+        smoothScore =
+            rawScore;
+
+    }
+
+    else {
+
+        smoothScore =
+            smoothScore * 0.85 +
+            rawScore * 0.15;
+
+    }
+
+
+    return Math.round(
+        smoothScore
+    );
+
+}
+
+
+/* =========================
+   方向文字
+========================= */
+
+function getDirectionText(
+    dx,
+    dy,
+    toleranceX,
+    toleranceY
+) {
+
+    let horizontal =
+        "";
+
+
+    let vertical =
+        "";
+
+
+    if (
+        Math.abs(dx) >
+        toleranceX
+    ) {
+
+        horizontal =
+            dx > 0
+            ? "往右"
+            : "往左";
+
+    }
+
+
+    if (
+        Math.abs(dy) >
+        toleranceY
+    ) {
+
+        vertical =
+            dy > 0
+            ? "往下"
+            : "往上";
+
+    }
+
+
+    let message =
+        "";
+
+
+    if (
+        horizontal !== ""
+    ) {
+
+        message +=
+            horizontal;
+
+    }
+
+
+    if (
+        vertical !== ""
+    ) {
+
+        if (
+            message !== ""
+        ) {
+
+            message +=
+                "、";
+
+        }
+
+
+        message +=
+            vertical;
+
+    }
+
+
+    return message;
 
 }
 
@@ -560,7 +709,7 @@ function drawResult(result) {
 
 
     /* =========================
-       三分點
+       四個三分點
     ========================= */
 
     const x1 =
@@ -599,7 +748,7 @@ function drawResult(result) {
         ctx.arc(
             point.x,
             point.y,
-            8,
+            7,
             0,
             Math.PI * 2
         );
@@ -613,7 +762,7 @@ function drawResult(result) {
 
 
     /* =========================
-       沒有偵測結果
+       沒有人臉
     ========================= */
 
     if (
@@ -623,6 +772,9 @@ function drawResult(result) {
 
         faceInfo.innerText =
             "找不到人臉";
+
+        modeInfo.innerText =
+            "";
 
         guideInfo.innerText =
             "";
@@ -676,10 +828,7 @@ function drawResult(result) {
 
 
         /*
-        過小人臉過濾：
-        人臉寬度小於畫面 8%
-        或高度小於畫面 8%
-        就先忽略
+        過小人臉過濾
         */
 
         if (
@@ -696,20 +845,28 @@ function drawResult(result) {
 
 
         validFaces.push({
-            detection: detection,
+
             x: x,
+
             y: y,
+
             w: w,
+
             h: h,
-            area: w * h
+
+            area:
+                w * h,
+
+            centerX:
+                x + w / 2,
+
+            centerY:
+                y + h / 2
+
         });
 
     }
 
-
-    /* =========================
-       過濾後沒有有效人臉
-    ========================= */
 
     if (
         validFaces.length === 0
@@ -718,14 +875,14 @@ function drawResult(result) {
         faceInfo.innerText =
             "找不到有效人臉";
 
+        modeInfo.innerText =
+            "";
+
         guideInfo.innerText =
             "";
 
         scoreInfo.innerText =
             "";
-
-        okCounter =
-            0;
 
         return;
 
@@ -739,33 +896,7 @@ function drawResult(result) {
 
 
     /* =========================
-       找最大張臉
-    ========================= */
-
-    let mainFace =
-        validFaces[0];
-
-
-    for (
-        const face
-        of validFaces
-    ) {
-
-        if (
-            face.area >
-            mainFace.area
-        ) {
-
-            mainFace =
-                face;
-
-        }
-
-    }
-
-
-    /* =========================
-       所有人臉都畫綠框
+       所有人都畫綠框
     ========================= */
 
     for (
@@ -791,305 +922,699 @@ function drawResult(result) {
     }
 
 
+    /* ==================================
+       單人模式
+    ================================== */
+
+    if (
+        validFaces.length === 1
+    ) {
+
+        modeInfo.innerText =
+            "👤 單人構圖模式";
+
+
+        const face =
+            validFaces[0];
+
+
+        const centerX =
+            face.centerX;
+
+
+        const centerY =
+            face.centerY;
+
+
+        /* 主角黃框 */
+
+        ctx.strokeStyle =
+            "yellow";
+
+
+        ctx.lineWidth =
+            5;
+
+
+        ctx.strokeRect(
+            face.x,
+            face.y,
+            face.w,
+            face.h
+        );
+
+
+        /* 紅色中心點 */
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+            centerX,
+            centerY,
+            8,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fillStyle =
+            "red";
+
+
+        ctx.fill();
+
+
+        /* 找最近三分點 */
+
+        let nearestPoint =
+            targetPoints[0];
+
+
+        let nearestDistance =
+            getDistance(
+
+                centerX,
+                centerY,
+
+                nearestPoint.x,
+                nearestPoint.y
+
+            );
+
+
+        for (
+            const point
+            of targetPoints
+        ) {
+
+            const distance =
+                getDistance(
+
+                    centerX,
+                    centerY,
+
+                    point.x,
+                    point.y
+
+                );
+
+
+            if (
+                distance <
+                nearestDistance
+            ) {
+
+                nearestDistance =
+                    distance;
+
+
+                nearestPoint =
+                    point;
+
+            }
+
+        }
+
+
+        const okDistance =
+            Math.min(
+                displayWidth,
+                displayHeight
+            ) * 0.18;
+
+
+        const nearDistance =
+            Math.min(
+                displayWidth,
+                displayHeight
+            ) * 0.28;
+
+
+        /* OK 圈 */
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+            nearestPoint.x,
+            nearestPoint.y,
+            okDistance,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.strokeStyle =
+            "rgba(0,255,255,0.6)";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        ctx.stroke();
+
+
+        /* 黃色引導線 */
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            centerX,
+            centerY
+        );
+
+
+        ctx.lineTo(
+            nearestPoint.x,
+            nearestPoint.y
+        );
+
+
+        ctx.strokeStyle =
+            "yellow";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        ctx.stroke();
+
+
+        const dx =
+            nearestPoint.x -
+            centerX;
+
+
+        const dy =
+            nearestPoint.y -
+            centerY;
+
+
+        const message =
+            getDirectionText(
+
+                dx,
+
+                dy,
+
+                displayWidth * 0.10,
+
+                displayHeight * 0.10
+
+            );
+
+
+        const maxDistance =
+            Math.sqrt(
+
+                displayWidth *
+                displayWidth +
+
+                displayHeight *
+                displayHeight
+
+            ) *
+            0.45;
+
+
+        let rawScore =
+            100 -
+            (
+                nearestDistance /
+                maxDistance
+            ) *
+            100;
+
+
+        rawScore =
+            Math.max(
+                0,
+                Math.min(
+                    100,
+                    rawScore
+                )
+            );
+
+
+        const finalScore =
+            updateSmoothScore(
+                rawScore
+            );
+
+
+        if (
+            nearestDistance <=
+            okDistance
+        ) {
+
+            okCounter++;
+
+        }
+
+        else {
+
+            okCounter =
+                Math.max(
+                    0,
+                    okCounter - 1
+                );
+
+        }
+
+
+        if (
+            okCounter >= 4
+        ) {
+
+            guideInfo.innerText =
+                "✅ 構圖 OK";
+
+        }
+
+        else if (
+            nearestDistance <=
+            nearDistance
+        ) {
+
+            guideInfo.innerText =
+                "👍 快到了";
+
+        }
+
+        else {
+
+            guideInfo.innerText =
+                message === ""
+                ? "👍 快到了"
+                : "建議：" + message;
+
+        }
+
+
+        scoreInfo.innerText =
+            "構圖分數：" +
+            finalScore +
+            " 分";
+
+
+        return;
+
+    }
+
+
+    /* ==================================
+       多人模式
+    ================================== */
+
+    modeInfo.innerText =
+        "👥 多人合照模式：" +
+        validFaces.length +
+        " 人";
+
+
     /* =========================
-       主要人物中心
+       計算整群人的中心
     ========================= */
 
-    const centerX =
-        mainFace.x +
-        mainFace.w / 2;
+    let totalX =
+        0;
 
 
-    const centerY =
-        mainFace.y +
-        mainFace.h / 2;
+    let totalY =
+        0;
 
 
-    /* 主要人物框加粗 */
+    for (
+        const face
+        of validFaces
+    ) {
 
-    ctx.strokeStyle =
-        "yellow";
-
-
-    ctx.lineWidth =
-        5;
-
-
-    ctx.strokeRect(
-        mainFace.x,
-        mainFace.y,
-        mainFace.w,
-        mainFace.h
-    );
+        totalX +=
+            face.centerX;
 
 
-    /* 紅色中心點 */
+        totalY +=
+            face.centerY;
+
+    }
+
+
+    const groupCenterX =
+        totalX /
+        validFaces.length;
+
+
+    const groupCenterY =
+        totalY /
+        validFaces.length;
+
+
+    /* =========================
+       畫群體中心紫色點
+    ========================= */
 
     ctx.beginPath();
 
 
     ctx.arc(
-        centerX,
-        centerY,
-        8,
+        groupCenterX,
+        groupCenterY,
+        10,
         0,
         Math.PI * 2
     );
 
 
     ctx.fillStyle =
-        "red";
+        "magenta";
 
 
     ctx.fill();
 
 
     /* =========================
-       找最近三分點
+       多人理想構圖位置
+
+       水平：
+       接近畫面正中央
+
+       垂直：
+       稍微高於正中央
     ========================= */
 
-    let nearestPoint =
-        targetPoints[0];
+    const targetX =
+        displayWidth *
+        0.50;
 
 
-    let nearestDistance =
-        getDistance(
-            centerX,
-            centerY,
-            nearestPoint.x,
-            nearestPoint.y
-        );
-
-
-    for (
-        const point
-        of targetPoints
-    ) {
-
-        const distance =
-            getDistance(
-                centerX,
-                centerY,
-                point.x,
-                point.y
-            );
-
-
-        if (
-            distance <
-            nearestDistance
-        ) {
-
-            nearestDistance =
-                distance;
-
-
-            nearestPoint =
-                point;
-
-        }
-
-    }
+    const targetY =
+        displayHeight *
+        0.43;
 
 
     /* =========================
-       舒適判定範圍
-    ========================= */
-
-    const okDistance =
-        Math.min(
-            displayWidth,
-            displayHeight
-        ) * 0.18;
-
-
-    const nearDistance =
-        Math.min(
-            displayWidth,
-            displayHeight
-        ) * 0.28;
-
-
-    /* =========================
-       畫 OK 圈
+       畫多人目標點
     ========================= */
 
     ctx.beginPath();
 
+
     ctx.arc(
-        nearestPoint.x,
-        nearestPoint.y,
-        okDistance,
+        targetX,
+        targetY,
+        10,
         0,
         Math.PI * 2
     );
 
+
+    ctx.fillStyle =
+        "cyan";
+
+
+    ctx.fill();
+
+
+    /* =========================
+       多人舒適區
+    ========================= */
+
+    const groupOkDistance =
+        Math.min(
+            displayWidth,
+            displayHeight
+        ) * 0.20;
+
+
+    const groupNearDistance =
+        Math.min(
+            displayWidth,
+            displayHeight
+        ) * 0.32;
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+        targetX,
+        targetY,
+        groupOkDistance,
+        0,
+        Math.PI * 2
+    );
+
+
     ctx.strokeStyle =
-        "rgba(0,255,255,0.6)";
+        "rgba(0,255,255,0.65)";
+
 
     ctx.lineWidth =
         3;
+
 
     ctx.stroke();
 
 
     /* =========================
-       黃色引導線
+       群中心 → 目標點
     ========================= */
 
     ctx.beginPath();
 
+
     ctx.moveTo(
-        centerX,
-        centerY
+        groupCenterX,
+        groupCenterY
     );
 
+
     ctx.lineTo(
-        nearestPoint.x,
-        nearestPoint.y
+        targetX,
+        targetY
     );
+
 
     ctx.strokeStyle =
         "yellow";
 
+
     ctx.lineWidth =
         3;
+
 
     ctx.stroke();
 
 
     /* =========================
-       方向判定
+       多人外框
     ========================= */
 
-    const dx =
-        nearestPoint.x -
-        centerX;
+    let minX =
+        Infinity;
+
+    let minY =
+        Infinity;
+
+    let maxX =
+        -Infinity;
+
+    let maxY =
+        -Infinity;
 
 
-    const dy =
-        nearestPoint.y -
-        centerY;
-
-
-    const directionToleranceX =
-        displayWidth *
-        0.10;
-
-
-    const directionToleranceY =
-        displayHeight *
-        0.10;
-
-
-    let horizontal =
-        "";
-
-
-    let vertical =
-        "";
-
-
-    if (
-        Math.abs(dx) >
-        directionToleranceX
+    for (
+        const face
+        of validFaces
     ) {
 
-        horizontal =
-            dx > 0
-            ? "往右"
-            : "往左";
+        minX =
+            Math.min(
+                minX,
+                face.x
+            );
+
+
+        minY =
+            Math.min(
+                minY,
+                face.y
+            );
+
+
+        maxX =
+            Math.max(
+                maxX,
+                face.x + face.w
+            );
+
+
+        maxY =
+            Math.max(
+                maxY,
+                face.y + face.h
+            );
 
     }
 
 
-    if (
-        Math.abs(dy) >
-        directionToleranceY
-    ) {
+    ctx.strokeStyle =
+        "orange";
 
-        vertical =
-            dy > 0
-            ? "往下"
-            : "往上";
 
-    }
+    ctx.lineWidth =
+        4;
+
+
+    ctx.strokeRect(
+        minX,
+        minY,
+        maxX - minX,
+        maxY - minY
+    );
 
 
     /* =========================
-       分數計算
+       多人方向判定
     ========================= */
 
-    const maxDistance =
+    const groupDx =
+        targetX -
+        groupCenterX;
+
+
+    const groupDy =
+        targetY -
+        groupCenterY;
+
+
+    const groupMessage =
+        getDirectionText(
+
+            groupDx,
+
+            groupDy,
+
+            displayWidth * 0.08,
+
+            displayHeight * 0.08
+
+        );
+
+
+    const groupDistance =
+        getDistance(
+
+            groupCenterX,
+            groupCenterY,
+
+            targetX,
+            targetY
+
+        );
+
+
+    /* =========================
+       多人構圖分數
+    ========================= */
+
+    const groupMaxDistance =
         Math.sqrt(
+
             displayWidth *
             displayWidth +
+
             displayHeight *
             displayHeight
+
         ) *
-        0.45;
+        0.50;
 
 
     let rawScore =
         100 -
         (
-            nearestDistance /
-            maxDistance
+            groupDistance /
+            groupMaxDistance
         ) *
         100;
 
 
+    rawScore =
+        Math.max(
+            0,
+            Math.min(
+                100,
+                rawScore
+            )
+        );
+
+
+    /*
+    額外檢查：
+    人群有沒有太靠邊
+    */
+
+    const edgeMarginX =
+        displayWidth *
+        0.05;
+
+
+    const edgeMarginY =
+        displayHeight *
+        0.05;
+
+
+    const touchesEdge =
+        minX < edgeMarginX
+        ||
+        maxX >
+        displayWidth -
+        edgeMarginX
+        ||
+        minY < edgeMarginY
+        ||
+        maxY >
+        displayHeight -
+        edgeMarginY;
+
+
     if (
-        rawScore < 0
+        touchesEdge
     ) {
 
-        rawScore =
-            0;
+        rawScore -=
+            10;
 
     }
 
 
-    if (
-        rawScore > 100
-    ) {
-
-        rawScore =
-            100;
-
-    }
-
-
-    if (
-        smoothScore === 0
-    ) {
-
-        smoothScore =
-            rawScore;
-
-    }
-
-    else {
-
-        smoothScore =
-            smoothScore * 0.85 +
-            rawScore * 0.15;
-
-    }
+    rawScore =
+        Math.max(
+            0,
+            rawScore
+        );
 
 
     const finalScore =
-        Math.round(
-            smoothScore
+        updateSmoothScore(
+            rawScore
         );
 
 
     /* =========================
-       OK 緩衝
+       多人 OK 緩衝
     ========================= */
 
     if (
-        nearestDistance <=
-        okDistance
+        groupDistance <=
+        groupOkDistance
+        &&
+        !touchesEdge
     ) {
 
         okCounter++;
@@ -1108,21 +1633,30 @@ function drawResult(result) {
 
 
     /* =========================
-       顯示提示
+       多人提示
     ========================= */
 
     if (
-        okCounter >= 4
+        touchesEdge
     ) {
 
         guideInfo.innerText =
-            "✅ 構圖 OK";
+            "⚠️ 人物太靠近畫面邊緣";
 
     }
 
     else if (
-        nearestDistance <=
-        nearDistance
+        okCounter >= 4
+    ) {
+
+        guideInfo.innerText =
+            "✅ 多人構圖 OK";
+
+    }
+
+    else if (
+        groupDistance <=
+        groupNearDistance
     ) {
 
         guideInfo.innerText =
@@ -1132,56 +1666,11 @@ function drawResult(result) {
 
     else {
 
-        let message =
-            "";
-
-
-        if (
-            horizontal !== ""
-        ) {
-
-            message +=
-                horizontal;
-
-        }
-
-
-        if (
-            vertical !== ""
-        ) {
-
-            if (
-                message !== ""
-            ) {
-
-                message +=
-                    "、";
-
-            }
-
-
-            message +=
-                vertical;
-
-        }
-
-
-        if (
-            message === ""
-        ) {
-
-            guideInfo.innerText =
-                "👍 快到了";
-
-        }
-
-        else {
-
-            guideInfo.innerText =
-                "建議：" +
-                message;
-
-        }
+        guideInfo.innerText =
+            groupMessage === ""
+            ? "👍 快到了"
+            : "建議：" +
+              groupMessage;
 
     }
 
@@ -1207,7 +1696,7 @@ window.stopCamera =
 
 
 /* =========================
-   啟動
+   啟動 AI
 ========================= */
 
 loadAI();
