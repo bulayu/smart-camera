@@ -6,14 +6,14 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
 
-    <title>AI 載入測試</title>
+    <title>MediaPipe 測試</title>
 
     <style>
         body {
             background: black;
             color: white;
-            text-align: center;
             font-family: Arial;
+            text-align: center;
             padding-top: 50px;
         }
 
@@ -24,11 +24,17 @@
 
         #detail {
             font-size: 16px;
-            color: #ccc;
             padding: 20px;
             word-break: break-all;
         }
     </style>
+
+    <script
+        type="module"
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs"
+        crossorigin="anonymous">
+    </script>
+
 </head>
 
 <body>
@@ -36,11 +42,11 @@
 <h2>阿策 AI 測試</h2>
 
 <div id="status">
-    AI 載入中...
+    MediaPipe 載入中...
 </div>
 
-<div id="detail"></div>
-
+<div id="detail">
+</div>
 
 <script type="module">
 
@@ -50,50 +56,33 @@ const status =
 const detail =
     document.getElementById("detail");
 
-
 try {
 
-    status.innerText =
-        "正在下載 MediaPipe...";
-
-    const vision =
+    const module =
         await import(
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm"
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs"
         );
 
     status.innerText =
-        "MediaPipe 已下載，正在啟動...";
-
-    const {
-        FilesetResolver
-    } = vision;
-
-    const resolver =
-        await FilesetResolver.forVisionTasks(
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
-        );
-
-    status.innerText =
-        "✅ AI 基礎載入成功";
+        "✅ MediaPipe 程式載入成功";
 
     detail.innerText =
-        "MediaPipe 可以在這支手機上執行。";
+        "下一步可以開始載入人臉模型";
+
+    console.log(module);
 
 }
 
 catch(error) {
 
     status.innerText =
-        "❌ AI 載入失敗";
+        "❌ MediaPipe 載入失敗";
 
     detail.innerText =
-        String(error);
-
-    console.error(error);
+        error.name + "：" + error.message;
 }
 
 </script>
 
 </body>
-
 </html>
