@@ -9,7 +9,7 @@
                    initial-scale=1.0,
                    user-scalable=no">
 
-    <title>阿策智慧構圖助手 V2.1</title>
+    <title>阿策智慧構圖助手 V2.2</title>
 
     <style>
 
@@ -119,7 +119,7 @@
 
 <body>
 
-<h2>📷 阿策智慧構圖助手 V2.1</h2>
+<h2>📷 阿策智慧構圖助手 V2.2</h2>
 
 <div id="status">
     AI 模型載入中...
@@ -181,15 +181,8 @@ let cameraRunning = false;
 
 let lastVideoTime = -1;
 
-/*
-分數平滑用
-*/
 let smoothScore = 0;
 
-/*
-連續進入 OK 區幾次之後，
-才顯示構圖成功
-*/
 let okCounter = 0;
 
 
@@ -229,9 +222,7 @@ async function loadAI() {
 
         const resolver =
             await FilesetResolver.forVisionTasks(
-
                 "https://unpkg.com/@mediapipe/tasks-vision@0.10.35/wasm"
-
             );
 
 
@@ -241,17 +232,11 @@ async function loadAI() {
 
         detector =
             await FaceDetector.createFromOptions(
-
                 resolver,
-
                 {
-
                     baseOptions: {
-
                         modelAssetPath:
-
                         "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
-
                     },
 
                     runningMode:
@@ -259,9 +244,7 @@ async function loadAI() {
 
                     minDetectionConfidence:
                         0.4
-
                 }
-
             );
 
 
@@ -320,10 +303,8 @@ async function startCamera() {
                 .getUserMedia({
 
                     video: {
-
                         facingMode:
                             "user"
-
                     },
 
                     audio:
@@ -445,9 +426,7 @@ function stopCamera() {
 function detectLoop() {
 
     if (!cameraRunning) {
-
         return;
-
     }
 
 
@@ -470,11 +449,8 @@ function detectLoop() {
 
                 const result =
                     detector.detectForVideo(
-
                         video,
-
                         performance.now()
-
                     );
 
 
@@ -505,7 +481,7 @@ function detectLoop() {
 
 
 /* =========================
-   計算兩點距離
+   距離計算
 ========================= */
 
 function getDistance(
@@ -531,7 +507,7 @@ function getDistance(
 
 
 /* =========================
-   畫面與構圖判定
+   畫面處理
 ========================= */
 
 function drawResult(result) {
@@ -584,7 +560,7 @@ function drawResult(result) {
 
 
     /* =========================
-       四個三分點
+       三分點
     ========================= */
 
     const x1 =
@@ -613,10 +589,6 @@ function drawResult(result) {
     ];
 
 
-    /* =========================
-       畫藍色目標點
-    ========================= */
-
     for (
         const point
         of targetPoints
@@ -641,7 +613,7 @@ function drawResult(result) {
 
 
     /* =========================
-       沒找到臉
+       沒有偵測結果
     ========================= */
 
     if (
@@ -666,76 +638,192 @@ function drawResult(result) {
     }
 
 
+    /* =========================
+       整理有效人臉
+    ========================= */
+
+    const validFaces =
+        [];
+
+
+    for (
+        const detection
+        of result.detections
+    ) {
+
+        const box =
+            detection.boundingBox;
+
+
+        const x =
+            box.originX *
+            scaleX;
+
+
+        const y =
+            box.originY *
+            scaleY;
+
+
+        const w =
+            box.width *
+            scaleX;
+
+
+        const h =
+            box.height *
+            scaleY;
+
+
+        /*
+        過小人臉過濾：
+        人臉寬度小於畫面 8%
+        或高度小於畫面 8%
+        就先忽略
+        */
+
+        if (
+            w <
+            displayWidth * 0.08
+            ||
+            h <
+            displayHeight * 0.08
+        ) {
+
+            continue;
+
+        }
+
+
+        validFaces.push({
+            detection: detection,
+            x: x,
+            y: y,
+            w: w,
+            h: h,
+            area: w * h
+        });
+
+    }
+
+
+    /* =========================
+       過濾後沒有有效人臉
+    ========================= */
+
+    if (
+        validFaces.length === 0
+    ) {
+
+        faceInfo.innerText =
+            "找不到有效人臉";
+
+        guideInfo.innerText =
+            "";
+
+        scoreInfo.innerText =
+            "";
+
+        okCounter =
+            0;
+
+        return;
+
+    }
+
+
     faceInfo.innerText =
         "找到人臉：" +
-        result.detections.length +
+        validFaces.length +
         " 張";
 
 
-    /*
-    先使用第一張臉
-    */
-    const detection =
-        result.detections[0];
-
-
-    const box =
-        detection.boundingBox;
-
-
-    const x =
-        box.originX *
-        scaleX;
-
-
-    const y =
-        box.originY *
-        scaleY;
-
-
-    const w =
-        box.width *
-        scaleX;
-
-
-    const h =
-        box.height *
-        scaleY;
-
-
     /* =========================
-       綠色人臉框
+       找最大張臉
     ========================= */
 
-    ctx.strokeStyle =
-        "lime";
+    let mainFace =
+        validFaces[0];
 
 
-    ctx.lineWidth =
-        4;
+    for (
+        const face
+        of validFaces
+    ) {
 
+        if (
+            face.area >
+            mainFace.area
+        ) {
 
-    ctx.strokeRect(
-        x,
-        y,
-        w,
-        h
-    );
+            mainFace =
+                face;
+
+        }
+
+    }
 
 
     /* =========================
-       人臉中心
+       所有人臉都畫綠框
+    ========================= */
+
+    for (
+        const face
+        of validFaces
+    ) {
+
+        ctx.strokeStyle =
+            "lime";
+
+
+        ctx.lineWidth =
+            3;
+
+
+        ctx.strokeRect(
+            face.x,
+            face.y,
+            face.w,
+            face.h
+        );
+
+    }
+
+
+    /* =========================
+       主要人物中心
     ========================= */
 
     const centerX =
-        x +
-        w / 2;
+        mainFace.x +
+        mainFace.w / 2;
 
 
     const centerY =
-        y +
-        h / 2;
+        mainFace.y +
+        mainFace.h / 2;
 
+
+    /* 主要人物框加粗 */
+
+    ctx.strokeStyle =
+        "yellow";
+
+
+    ctx.lineWidth =
+        5;
+
+
+    ctx.strokeRect(
+        mainFace.x,
+        mainFace.y,
+        mainFace.w,
+        mainFace.h
+    );
+
+
+    /* 紅色中心點 */
 
     ctx.beginPath();
 
@@ -766,13 +854,10 @@ function drawResult(result) {
 
     let nearestDistance =
         getDistance(
-
             centerX,
             centerY,
-
             nearestPoint.x,
             nearestPoint.y
-
         );
 
 
@@ -783,13 +868,10 @@ function drawResult(result) {
 
         const distance =
             getDistance(
-
                 centerX,
                 centerY,
-
                 point.x,
                 point.y
-
             );
 
 
@@ -801,6 +883,7 @@ function drawResult(result) {
             nearestDistance =
                 distance;
 
+
             nearestPoint =
                 point;
 
@@ -810,13 +893,8 @@ function drawResult(result) {
 
 
     /* =========================
-       畫目標區域
+       舒適判定範圍
     ========================= */
-
-    /*
-    舒適版重點：
-    OK 範圍放大成畫面短邊 18%
-    */
 
     const okDistance =
         Math.min(
@@ -825,10 +903,6 @@ function drawResult(result) {
         ) * 0.18;
 
 
-    /*
-    快到了的範圍
-    */
-
     const nearDistance =
         Math.min(
             displayWidth,
@@ -836,9 +910,9 @@ function drawResult(result) {
         ) * 0.28;
 
 
-    /*
-    畫出 OK 圈
-    */
+    /* =========================
+       畫 OK 圈
+    ========================= */
 
     ctx.beginPath();
 
@@ -860,7 +934,7 @@ function drawResult(result) {
 
 
     /* =========================
-       畫引導線
+       黃色引導線
     ========================= */
 
     ctx.beginPath();
@@ -885,7 +959,7 @@ function drawResult(result) {
 
 
     /* =========================
-       X / Y 差距
+       方向判定
     ========================= */
 
     const dx =
@@ -897,11 +971,6 @@ function drawResult(result) {
         nearestPoint.y -
         centerY;
 
-
-    /*
-    舒適版方向提示：
-    要偏比較多才提示
-    */
 
     const directionToleranceX =
         displayWidth *
@@ -926,21 +995,10 @@ function drawResult(result) {
         directionToleranceX
     ) {
 
-        if (
+        horizontal =
             dx > 0
-        ) {
-
-            horizontal =
-                "往右";
-
-        }
-
-        else {
-
-            horizontal =
-                "往左";
-
-        }
+            ? "往右"
+            : "往左";
 
     }
 
@@ -950,38 +1008,24 @@ function drawResult(result) {
         directionToleranceY
     ) {
 
-        if (
+        vertical =
             dy > 0
-        ) {
-
-            vertical =
-                "往下";
-
-        }
-
-        else {
-
-            vertical =
-                "往上";
-
-        }
+            ? "往下"
+            : "往上";
 
     }
 
 
     /* =========================
-       構圖分數
+       分數計算
     ========================= */
 
     const maxDistance =
         Math.sqrt(
-
             displayWidth *
             displayWidth +
-
             displayHeight *
             displayHeight
-
         ) *
         0.45;
 
@@ -1015,12 +1059,6 @@ function drawResult(result) {
     }
 
 
-    /*
-    分數平滑
-    85% 使用舊值
-    15% 使用新值
-    */
-
     if (
         smoothScore === 0
     ) {
@@ -1046,7 +1084,7 @@ function drawResult(result) {
 
 
     /* =========================
-       舒適版狀態判定
+       OK 緩衝
     ========================= */
 
     if (
@@ -1054,20 +1092,11 @@ function drawResult(result) {
         okDistance
     ) {
 
-        /*
-        連續幾次都在 OK 區
-        才真正顯示 OK
-        */
-
         okCounter++;
 
     }
 
     else {
-
-        /*
-        不要一出去就瞬間歸零
-        */
 
         okCounter =
             Math.max(
@@ -1078,9 +1107,9 @@ function drawResult(result) {
     }
 
 
-    /*
-    只要累積 4 次，就算成功
-    */
+    /* =========================
+       顯示提示
+    ========================= */
 
     if (
         okCounter >= 4
@@ -1137,11 +1166,6 @@ function drawResult(result) {
         }
 
 
-        /*
-        如果其實方向差異已經很小，
-        就直接顯示快到了
-        */
-
         if (
             message === ""
         ) {
@@ -1183,7 +1207,7 @@ window.stopCamera =
 
 
 /* =========================
-   載入 AI
+   啟動
 ========================= */
 
 loadAI();
