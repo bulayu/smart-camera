@@ -9,7 +9,7 @@
                    initial-scale=1.0,
                    user-scalable=no">
 
-    <title>阿策構圖助手</title>
+    <title>阿策智慧構圖助手</title>
 
     <style>
         body {
@@ -21,7 +21,12 @@
         }
 
         h2 {
-            margin: 12px 0;
+            margin: 10px 0;
+        }
+
+        #status {
+            font-size: 18px;
+            margin: 10px;
         }
 
         #cameraBox {
@@ -33,17 +38,27 @@
             background: #111;
         }
 
-        video {
+        #camera {
             width: 100%;
             display: block;
         }
 
+        #overlay {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* 三分法直線 */
         .vline {
             position: absolute;
             top: 0;
             height: 100%;
             width: 2px;
-            background: rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.65);
             pointer-events: none;
         }
 
@@ -55,12 +70,13 @@
             left: 66.66%;
         }
 
+        /* 三分法橫線 */
         .hline {
             position: absolute;
             left: 0;
             width: 100%;
             height: 2px;
-            background: rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.65);
             pointer-events: none;
         }
 
@@ -73,26 +89,32 @@
         }
 
         button {
-            font-size: 20px;
-            padding: 12px 24px;
-            margin: 18px 8px;
-            border-radius: 10px;
+            font-size: 18px;
+            padding: 12px 20px;
+            margin: 10px 5px;
             border: none;
+            border-radius: 10px;
         }
 
-        #status {
-            font-size: 18px;
+        #faceInfo {
+            font-size: 20px;
             margin: 10px;
+            min-height: 30px;
         }
     </style>
 </head>
 
+
 <body>
 
-<h2>📷 阿策構圖助手</h2>
+<h2>📷 阿策智慧構圖助手</h2>
 
 <div id="status">
-    尚未開啟相機
+    AI 模型載入中...
+</div>
+
+<div id="faceInfo">
+    尚未偵測
 </div>
 
 <div id="cameraBox">
@@ -103,6 +125,10 @@
            muted>
     </video>
 
+    <!-- AI 畫框用 -->
+    <canvas id="overlay"></canvas>
+
+    <!-- 三分法 -->
     <div class="vline v1"></div>
     <div class="vline v2"></div>
 
@@ -119,24 +145,98 @@
     關閉相機
 </button>
 
-<script>
 
+<script type="module">
+
+import vision from
+"https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm";
+
+const {
+    FaceDetector,
+    FilesetResolver
+} = vision;
+
+
+let faceDetector = null;
 let stream = null;
+let cameraRunning = false;
 
-async function startCamera() {
+const video =
+    document.getElementById("camera");
 
-    const status = document.getElementById("status");
-    const video = document.getElementById("camera");
+const canvas =
+    document.getElementById("overlay");
+
+const ctx =
+    canvas.getContext("2d");
+
+const statusText =
+    document.getElementById("status");
+
+const faceInfo =
+    document.getElementById("faceInfo");
+
+
+/* =========================
+   載入 AI 人臉模型
+========================= */
+
+async function loadAI() {
 
     try {
 
-        if (!navigator.mediaDevices ||
-            !navigator.mediaDevices.getUserMedia) {
+        const filesetResolver =
+            await FilesetResolver.forVisionTasks(
+                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
+            );
 
-            status.innerText =
-                "這個瀏覽器目前不能使用相機功能";
+        faceDetector =
+            await FaceDetector.createFromOptions(
+                filesetResolver,
+                {
+                    baseOptions: {
+                        modelAssetPath:
+                        "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite"
+                    },
 
-            return;
+                    runningMode: "VIDEO",
+
+                    minDetectionConfidence: 0.5
+                }
+            );
+
+        statusText.innerText =
+            "AI 已準備完成";
+
+    }
+
+    catch(error) {
+
+        statusText.innerText =
+            "AI 載入失敗：" + error.message;
+
+        console.log(error);
+    }
+}
+
+
+/* =========================
+   開啟手機相機
+========================= */
+
+async function startCamera() {
+
+    if (!faceDetector) {
+
+        alert("AI 還在載入，請等一下再按");
+
+        return;
+    }
+
+    try {
+
+        if (stream) {
+            stopCamera();
         }
 
         stream =
@@ -146,29 +246,48 @@ async function startCamera() {
                         ideal: "environment"
                     }
                 },
+
                 audio: false
             });
 
+
         video.srcObject = stream;
 
-        status.innerText =
+        await video.play();
+
+
+        canvas.width =
+            video.videoWidth;
+
+        canvas.height =
+            video.videoHeight;
+
+
+        cameraRunning = true;
+
+        statusText.innerText =
             "相機已開啟";
+
+        detectFace();
 
     }
 
     catch(error) {
 
-        status.innerText =
+        statusText.innerText =
             "無法開啟相機：" + error.message;
 
     }
 }
 
 
+/* =========================
+   關閉相機
+========================= */
+
 function stopCamera() {
 
-    const status = document.getElementById("status");
-    const video = document.getElementById("camera");
+    cameraRunning = false;
 
     if (stream) {
 
@@ -177,13 +296,137 @@ function stopCamera() {
         );
 
         stream = null;
-
-        video.srcObject = null;
-
-        status.innerText =
-            "相機已關閉";
     }
+
+    video.srcObject = null;
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    statusText.innerText =
+        "相機已關閉";
+
+    faceInfo.innerText =
+        "尚未偵測";
 }
+
+
+/* =========================
+   人臉偵測
+========================= */
+
+function detectFace() {
+
+    if (!cameraRunning) {
+        return;
+    }
+
+
+    if (video.readyState >= 2) {
+
+        const now =
+            performance.now();
+
+
+        const result =
+            faceDetector.detectForVideo(
+                video,
+                now
+            );
+
+
+        ctx.clearRect(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+
+        if (result.detections.length > 0) {
+
+            faceInfo.innerText =
+                "找到人臉：" +
+                result.detections.length +
+                " 張";
+
+
+            for (const detection of result.detections) {
+
+                const box =
+                    detection.boundingBox;
+
+
+                /* 人臉框 */
+                ctx.strokeStyle =
+                    "lime";
+
+                ctx.lineWidth = 6;
+
+                ctx.strokeRect(
+                    box.originX,
+                    box.originY,
+                    box.width,
+                    box.height
+                );
+
+
+                /* 人臉中心 */
+                const centerX =
+                    box.originX +
+                    box.width / 2;
+
+                const centerY =
+                    box.originY +
+                    box.height / 2;
+
+
+                ctx.beginPath();
+
+                ctx.arc(
+                    centerX,
+                    centerY,
+                    10,
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fillStyle =
+                    "red";
+
+                ctx.fill();
+            }
+
+        }
+
+        else {
+
+            faceInfo.innerText =
+                "找不到人臉";
+        }
+    }
+
+
+    requestAnimationFrame(
+        detectFace
+    );
+}
+
+
+/* 讓 HTML 按鈕可以呼叫 */
+window.startCamera =
+    startCamera;
+
+window.stopCamera =
+    stopCamera;
+
+
+/* 網頁開啟時先載入 AI */
+loadAI();
 
 </script>
 
