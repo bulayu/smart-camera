@@ -9,10 +9,9 @@ initial-scale=1.0,
 maximum-scale=1.0,
 user-scalable=no">
 
-<title>AI 構圖助手 V5.4</title>
+<title>AI 構圖助手 V5.5</title>
 
 <style>
-
 *{
     box-sizing:border-box;
 }
@@ -59,13 +58,9 @@ video{
     top:18px;
     left:16px;
     z-index:10;
-
-    min-width:190px;
-
+    min-width:200px;
     background:rgba(0,0,0,.68);
-
     padding:13px 17px;
-
     border-radius:18px;
 }
 
@@ -93,24 +88,15 @@ video{
 
 #message{
     position:absolute;
-
     left:50%;
     bottom:20px;
-
     transform:translateX(-50%);
-
     width:90%;
-
     z-index:10;
-
     background:rgba(0,0,0,.75);
-
     border-radius:18px;
-
     padding:13px;
-
     text-align:center;
-
     font-size:16px;
     font-weight:bold;
 }
@@ -119,7 +105,6 @@ video{
     position:absolute;
     left:8px;
     bottom:5px;
-
     font-size:11px;
     opacity:.45;
 }
@@ -141,35 +126,25 @@ video{
     border:none;
     background:#292929;
     color:white;
-
     border-radius:22px;
-
     padding:10px 17px;
-
     font-size:15px;
 }
 
 #modes{
     display:flex;
     gap:8px;
-
     overflow-x:auto;
-
     margin-bottom:11px;
 }
 
 .mode{
     flex:none;
-
     border:1px solid #555;
-
     background:#111;
     color:#ddd;
-
     border-radius:25px;
-
     padding:10px 16px;
-
     font-size:15px;
 }
 
@@ -188,13 +163,10 @@ video{
 #zoom{
     flex:1;
 }
-
 </style>
 </head>
 
-
 <body>
-
 
 <div id="cameraArea">
 
@@ -205,15 +177,13 @@ video{
         muted>
     </video>
 
-
     <canvas id="overlay"></canvas>
 
     <canvas
         id="analysisCanvas"
-        width="160"
-        height="120">
+        width="180"
+        height="135">
     </canvas>
-
 
     <div id="info">
 
@@ -232,19 +202,15 @@ video{
 
     </div>
 
-
     <div id="message">
         按「✨ AI 自動」分析目前畫面
     </div>
 
-
     <div id="version">
-        V5.4
+        V5.5
     </div>
 
 </div>
-
-
 
 <div id="controls">
 
@@ -253,72 +219,50 @@ video{
         <button
         class="cameraBtn"
         onclick="changeCamera('user')">
-
             🤳 前鏡頭
-
         </button>
-
 
         <button
         class="cameraBtn"
         onclick="changeCamera('environment')">
-
             📷 後鏡頭
-
         </button>
 
     </div>
-
 
     <div id="modes">
 
         <button
         class="mode active"
-        id="autoBtn"
         onclick="selectMode('auto',this)">
-
             ✨ AI 自動
-
         </button>
-
 
         <button
         class="mode"
         onclick="selectMode('third',this)">
-
             # 三分法
-
         </button>
-
 
         <button
         class="mode"
         onclick="selectMode('center',this)">
-
             ◎ 居中
-
         </button>
-
 
         <button
         class="mode"
         onclick="selectMode('leading',this)">
-
             ↗ 引導線
-
         </button>
-
 
         <button
         class="mode"
         onclick="selectMode('vshape',this)">
-
             V 型
-
         </button>
 
     </div>
-
 
     <div id="zoomRow">
 
@@ -384,33 +328,21 @@ let stream = null;
 
 let facingMode = "environment";
 
-/*
-目前鎖定的構圖
-*/
 let lockedMode = null;
 
-/*
-是否進入導航
-*/
 let navigationActive = false;
 
-/*
-目前動態分數
-*/
 let currentScore = 0;
 
-/*
-每隔多久分析一次
-*/
 let lastAnalysisTime = 0;
 
-const ANALYSIS_INTERVAL = 280;
+const ANALYSIS_INTERVAL = 300;
 
 
 
-/* =====================================
+/* =========================
    CAMERA
-===================================== */
+========================= */
 
 async function startCamera(){
 
@@ -426,18 +358,15 @@ async function startCamera(){
         }
 
         stream =
-        await navigator.mediaDevices
-        .getUserMedia({
+        await navigator.mediaDevices.getUserMedia({
 
             video:{
                 facingMode:{
                     ideal:facingMode
                 },
-
                 width:{
                     ideal:1280
                 },
-
                 height:{
                     ideal:720
                 }
@@ -447,13 +376,11 @@ async function startCamera(){
 
         });
 
-
         video.srcObject = stream;
 
         await video.play();
 
         resizeCanvas();
-
 
         navigationActive = false;
         lockedMode = null;
@@ -484,7 +411,6 @@ async function startCamera(){
 }
 
 
-
 async function changeCamera(mode){
 
     facingMode = mode;
@@ -495,52 +421,51 @@ async function changeCamera(mode){
 
 
 
-/* =====================================
+/* =========================
    MODE
-===================================== */
+========================= */
 
 function selectMode(mode,button){
 
     document
     .querySelectorAll(".mode")
     .forEach(btn=>{
-
         btn.classList.remove("active");
-
     });
 
-
     button.classList.add("active");
-
 
     if(mode === "auto"){
 
         runAutoAnalysis();
-
         return;
 
     }
-
 
     lockedMode = mode;
 
     navigationActive = true;
 
+    const result = analyzeFrame();
+
+    currentScore =
+    result[mode] || 50;
+
     updateModeText(mode);
+
+    updateScore(currentScore);
 
 }
 
 
 
-/* =====================================
+/* =========================
    AI AUTO
-===================================== */
+========================= */
 
 function runAutoAnalysis(){
 
-    if(
-        video.readyState < 2
-    ){
+    if(video.readyState < 2){
 
         messageBox.innerText =
         "鏡頭尚未準備完成";
@@ -549,23 +474,21 @@ function runAutoAnalysis(){
 
     }
 
-
     navigationActive = false;
 
     lockedMode = null;
-
 
     compositionBox.innerText =
     "AI 分析中";
 
     descBox.innerText =
-    "正在分析畫面線條與位置";
+    "正在分析線條、位置與消失點";
 
     scoreBox.innerHTML =
     `-- <small>/100</small>`;
 
     messageBox.innerText =
-    "✨ 分析目前畫面...";
+    "✨ AI 正在判斷最佳構圖...";
 
 
     setTimeout(()=>{
@@ -574,7 +497,13 @@ function runAutoAnalysis(){
         analyzeFrame();
 
 
-        const scores = {
+        console.log(
+            "構圖分析結果:",
+            result
+        );
+
+
+        let scores = {
 
             vshape:
             result.vshape,
@@ -591,11 +520,44 @@ function runAutoAnalysis(){
         };
 
 
+        /*
+        V5.5：
+        如果 V 型非常明顯，
+        額外提高優先度
+        */
+
+        if(
+            result.vshape >
+            72
+        ){
+
+            scores.vshape += 6;
+
+        }
+
+
+        /*
+        如果左右收斂差，
+        引導線略優先
+        */
+
+        if(
+            result.vBalance <
+            0.40
+        ){
+
+            scores.vshape -= 8;
+
+            scores.leading += 5;
+
+        }
+
+
         let bestMode =
         "center";
 
         let bestScore =
-        -1;
+        -999;
 
 
         for(
@@ -625,7 +587,7 @@ function runAutoAnalysis(){
         true;
 
         currentScore =
-        bestScore;
+        clampScore(bestScore);
 
 
         updateModeText(
@@ -634,19 +596,19 @@ function runAutoAnalysis(){
 
 
         updateScore(
-            bestScore
+            currentScore
         );
 
 
-    },650);
+    },600);
 
 }
 
 
 
-/* =====================================
-   真實畫面分析
-===================================== */
+/* =========================
+   FRAME ANALYSIS
+========================= */
 
 function analyzeFrame(){
 
@@ -679,10 +641,6 @@ function analyzeFrame(){
     img.data;
 
 
-    /*
-    轉灰階
-    */
-
     const gray =
     new Float32Array(
         W * H
@@ -707,22 +665,30 @@ function analyzeFrame(){
 
             gray[y*W+x] =
 
-                data[i] * 0.299 +
-
-                data[i+1] * 0.587 +
-
-                data[i+2] * 0.114;
+            data[i] * 0.299
+            +
+            data[i+1] * 0.587
+            +
+            data[i+2] * 0.114;
 
         }
 
     }
 
 
-    /*
-    Sobel 邊緣
-    */
-
     const edge =
+    new Float32Array(
+        W * H
+    );
+
+
+    const gxMap =
+    new Float32Array(
+        W * H
+    );
+
+
+    const gyMap =
     new Float32Array(
         W * H
     );
@@ -750,41 +716,24 @@ function analyzeFrame(){
             const gx =
 
             -gray[p-W-1]
-            +
-            gray[p-W+1]
+            +gray[p-W+1]
 
-            -
+            -2*gray[p-1]
+            +2*gray[p+1]
 
-            2*gray[p-1]
-            +
-            2*gray[p+1]
-
-            -
-
-            gray[p+W-1]
-            +
-            gray[p+W+1];
+            -gray[p+W-1]
+            +gray[p+W+1];
 
 
             const gy =
 
             -gray[p-W-1]
+            -2*gray[p-W]
+            -gray[p-W+1]
 
-            -
-            2*gray[p-W]
-
-            -
-            gray[p-W+1]
-
-            +
-
-            gray[p+W-1]
-
-            +
-            2*gray[p+W]
-
-            +
-            gray[p+W+1];
+            +gray[p+W-1]
+            +2*gray[p+W]
+            +gray[p+W+1];
 
 
             const mag =
@@ -794,39 +743,35 @@ function analyzeFrame(){
             );
 
 
-            edge[p] =
-            mag;
+            edge[p] = mag;
 
+            gxMap[p] = gx;
 
-            totalEdge +=
-            mag;
+            gyMap[p] = gy;
+
+            totalEdge += mag;
 
         }
 
     }
 
 
-    /*
-    避免全黑畫面
-    */
-
-    if(
-        totalEdge < 1
-    ){
+    if(totalEdge < 1){
 
         return{
 
-            vshape:40,
-            leading:40,
-            third:40,
-            center:40
+            vshape:35,
+            leading:35,
+            third:35,
+            center:35,
+            vBalance:0
 
         };
 
     }
 
 
-    const centerScore =
+    const centerData =
     calculateCenterScore(
         edge,
         W,
@@ -835,7 +780,7 @@ function analyzeFrame(){
     );
 
 
-    const thirdScore =
+    const thirdData =
     calculateThirdScore(
         edge,
         W,
@@ -844,37 +789,42 @@ function analyzeFrame(){
     );
 
 
-    const vScore =
+    const vData =
     calculateVScore(
         edge,
+        gxMap,
+        gyMap,
         W,
-        H,
-        totalEdge
+        H
     );
 
 
-    const leadingScore =
+    const leadingData =
     calculateLeadingScore(
         edge,
+        gxMap,
+        gyMap,
         W,
-        H,
-        totalEdge
+        H
     );
 
 
     return{
 
         center:
-        centerScore,
+        centerData.score,
 
         third:
-        thirdScore,
+        thirdData.score,
 
         vshape:
-        vScore,
+        vData.score,
 
         leading:
-        leadingScore
+        leadingData.score,
+
+        vBalance:
+        vData.balance
 
     };
 
@@ -882,9 +832,9 @@ function analyzeFrame(){
 
 
 
-/* =====================================
-   居中構圖分數
-===================================== */
+/* =========================
+   CENTER
+========================= */
 
 function calculateCenterScore(
     edge,
@@ -893,7 +843,9 @@ function calculateCenterScore(
     total
 ){
 
-    let inside = 0;
+    let centerEnergy = 0;
+
+    let outerEnergy = 0;
 
 
     const cx =
@@ -901,13 +853,6 @@ function calculateCenterScore(
 
     const cy =
     H * 0.5;
-
-
-    const rx =
-    W * 0.22;
-
-    const ry =
-    H * 0.28;
 
 
     for(
@@ -922,21 +867,37 @@ function calculateCenterScore(
             x++
         ){
 
-            const dx =
-            (x-cx)/rx;
+            const e =
+            edge[y*W+x];
 
-            const dy =
-            (y-cy)/ry;
+
+            const nx =
+            Math.abs(
+                x-cx
+            ) /
+            (W*0.5);
+
+
+            const ny =
+            Math.abs(
+                y-cy
+            ) /
+            (H*0.5);
 
 
             if(
-                dx*dx +
-                dy*dy <
-                1
+                nx < 0.30
+                &&
+                ny < 0.34
             ){
 
-                inside +=
-                edge[y*W+x];
+                centerEnergy += e;
+
+            }
+
+            else{
+
+                outerEnergy += e;
 
             }
 
@@ -945,23 +906,46 @@ function calculateCenterScore(
     }
 
 
-    const ratio =
-    inside /
+    const centerRatio =
+    centerEnergy /
     total;
 
 
-    return clampScore(
-        45 +
-        ratio * 220
-    );
+    const outerRatio =
+    outerEnergy /
+    total;
+
+
+    /*
+    中央要真的夠集中，
+    才給高分
+    */
+
+    let score =
+
+    38
+
+    +
+    centerRatio * 170
+
+    -
+    outerRatio * 22;
+
+
+    return{
+
+        score:
+        clampScore(score)
+
+    };
 
 }
 
 
 
-/* =====================================
-   三分法
-===================================== */
+/* =========================
+   THIRD
+========================= */
 
 function calculateThirdScore(
     edge,
@@ -972,61 +956,51 @@ function calculateThirdScore(
 
     const points = [
 
-        [
-            W/3,
-            H/3
-        ],
+        [W/3,H/3],
 
-        [
-            W*2/3,
-            H/3
-        ],
+        [W*2/3,H/3],
 
-        [
-            W/3,
-            H*2/3
-        ],
+        [W/3,H*2/3],
 
-        [
-            W*2/3,
-            H*2/3
-        ]
+        [W*2/3,H*2/3]
 
     ];
-
-
-    let energy = 0;
 
 
     const radius =
     Math.min(
         W,
         H
-    ) * 0.13;
+    ) * 0.12;
+
+
+    let bestPointEnergy = 0;
 
 
     for(
-        let y=0;
-        y<H;
-        y++
+        const point of points
     ){
 
+        let energy = 0;
+
+
         for(
-            let x=0;
-            x<W;
-            x++
+            let y=0;
+            y<H;
+            y++
         ){
 
             for(
-                const p
-                of points
+                let x=0;
+                x<W;
+                x++
             ){
 
                 const dx =
-                x-p[0];
+                x-point[0];
 
                 const dy =
-                y-p[1];
+                y-point[1];
 
 
                 if(
@@ -1038,7 +1012,269 @@ function calculateThirdScore(
                     energy +=
                     edge[y*W+x];
 
-                    break;
+                }
+
+            }
+
+        }
+
+
+        if(
+            energy >
+            bestPointEnergy
+        ){
+
+            bestPointEnergy =
+            energy;
+
+        }
+
+    }
+
+
+    /*
+    看中心是否太強。
+    如果中心太強，
+    不應該硬判三分法。
+    */
+
+    let centerEnergy = 0;
+
+
+    for(
+        let y=
+        Math.floor(H*0.36);
+
+        y<
+        Math.floor(H*0.64);
+
+        y++
+    ){
+
+        for(
+            let x=
+            Math.floor(W*0.36);
+
+            x<
+            Math.floor(W*0.64);
+
+            x++
+        ){
+
+            centerEnergy +=
+            edge[y*W+x];
+
+        }
+
+    }
+
+
+    const thirdRatio =
+    bestPointEnergy /
+    total;
+
+
+    const centerRatio =
+    centerEnergy /
+    total;
+
+
+    let score =
+
+    38
+
+    +
+    thirdRatio * 210
+
+    -
+    centerRatio * 75;
+
+
+    return{
+
+        score:
+        clampScore(score)
+
+    };
+
+}
+
+
+
+/* =========================
+   V SHAPE
+========================= */
+
+function calculateVScore(
+    edge,
+    gxMap,
+    gyMap,
+    W,
+    H
+){
+
+    /*
+    消失點先設定在
+    中央偏下區域。
+    */
+
+    const vanishX =
+    W * 0.50;
+
+    const vanishY =
+    H * 0.72;
+
+
+    let leftMatch = 0;
+
+    let rightMatch = 0;
+
+    let leftTotal = 0;
+
+    let rightTotal = 0;
+
+
+    for(
+        let y=2;
+        y<H-2;
+        y++
+    ){
+
+        for(
+            let x=2;
+            x<W-2;
+            x++
+        ){
+
+            const p =
+            y*W+x;
+
+
+            const e =
+            edge[p];
+
+
+            if(e < 65)
+            continue;
+
+
+            /*
+            只分析中下區域，
+            避免天空雜訊
+            */
+
+            if(
+                y <
+                H*0.12
+            )
+            continue;
+
+
+            const gx =
+            gxMap[p];
+
+            const gy =
+            gyMap[p];
+
+
+            /*
+            邊緣方向
+            */
+
+            let angle =
+            Math.atan2(
+                gy,
+                gx
+            );
+
+
+            /*
+            線本身方向
+            與梯度垂直
+            */
+
+            angle +=
+            Math.PI/2;
+
+
+            const vx =
+            vanishX-x;
+
+            const vy =
+            vanishY-y;
+
+
+            const targetAngle =
+            Math.atan2(
+                vy,
+                vx
+            );
+
+
+            let diff =
+            Math.abs(
+                normalizeAngle(
+                    angle -
+                    targetAngle
+                )
+            );
+
+
+            /*
+            越接近消失點方向，
+            得分越高
+            */
+
+            const directionMatch =
+            Math.max(
+                0,
+                1 -
+                diff /
+                0.65
+            );
+
+
+            /*
+            左邊
+            */
+
+            if(
+                x <
+                vanishX
+            ){
+
+                leftTotal += e;
+
+                if(
+                    directionMatch >
+                    0
+                ){
+
+                    leftMatch +=
+                    e *
+                    directionMatch;
+
+                }
+
+            }
+
+
+            /*
+            右邊
+            */
+
+            else{
+
+                rightTotal += e;
+
+                if(
+                    directionMatch >
+                    0
+                ){
+
+                    rightMatch +=
+                    e *
+                    directionMatch;
 
                 }
 
@@ -1049,63 +1285,114 @@ function calculateThirdScore(
     }
 
 
-    const ratio =
-    energy /
-    total;
+    const leftRatio =
+    leftTotal > 0
+    ?
+    leftMatch /
+    leftTotal
+    :
+    0;
 
 
-    return clampScore(
-        40 +
-        ratio * 160
+    const rightRatio =
+    rightTotal > 0
+    ?
+    rightMatch /
+    rightTotal
+    :
+    0;
+
+
+    /*
+    V 型最重要：
+    左右兩邊都要有。
+    */
+
+    const weakest =
+    Math.min(
+        leftRatio,
+        rightRatio
     );
+
+
+    const strongest =
+    Math.max(
+        leftRatio,
+        rightRatio
+    );
+
+
+    const balance =
+    strongest > 0
+    ?
+    weakest /
+    strongest
+    :
+    0;
+
+
+    let score =
+
+    34
+
+    +
+    weakest * 105
+
+    +
+    balance * 24;
+
+
+    /*
+    左右很不平衡，
+    不該判 V 型。
+    */
+
+    if(
+        balance <
+        0.35
+    ){
+
+        score -= 12;
+
+    }
+
+
+    return{
+
+        score:
+        clampScore(score),
+
+        balance:
+        balance
+
+    };
 
 }
 
 
 
-/* =====================================
-   V 型
-===================================== */
+/* =========================
+   LEADING LINE
+========================= */
 
-function calculateVScore(
+function calculateLeadingScore(
     edge,
+    gxMap,
+    gyMap,
     W,
-    H,
-    total
+    H
 ){
 
-    let energy = 0;
+    const targetX =
+    W * 0.50;
 
-    let zoneTotal = 0;
-
-
-    /*
-    理想 V 消失點
-    */
-
-    const vanishX =
-    W * 0.5;
-
-    const vanishY =
-    H * 0.76;
+    const targetY =
+    H * 0.48;
 
 
-    /*
-    左右起點
-    */
+    let matched = 0;
 
-    const leftX =
-    W * 0.12;
-
-    const rightX =
-    W * 0.88;
-
-    const topY =
-    H * 0.18;
-
-
-    const tolerance =
-    W * 0.08;
+    let strongEdges = 0;
 
 
     for(
@@ -1120,61 +1407,76 @@ function calculateVScore(
             x++
         ){
 
+            const p =
+            y*W+x;
+
+
             const e =
-            edge[y*W+x];
+            edge[p];
 
 
-            if(
-                e < 55
-            )
+            if(e < 70)
             continue;
 
 
-            zoneTotal += e;
+            strongEdges += e;
 
 
-            const d1 =
-            pointLineDistance(
+            const gx =
+            gxMap[p];
 
-                x,
-                y,
+            const gy =
+            gyMap[p];
 
-                leftX,
-                topY,
 
-                vanishX,
-                vanishY
+            let lineAngle =
+            Math.atan2(
+                gy,
+                gx
+            )
+            +
+            Math.PI/2;
 
+
+            const targetAngle =
+            Math.atan2(
+                targetY-y,
+                targetX-x
             );
 
 
-            const d2 =
-            pointLineDistance(
-
-                x,
-                y,
-
-                rightX,
-                topY,
-
-                vanishX,
-                vanishY
-
+            const diff =
+            Math.abs(
+                normalizeAngle(
+                    lineAngle -
+                    targetAngle
+                )
             );
 
 
-            if(
-                d1 <
-                tolerance
-                ||
-                d2 <
-                tolerance
-            ){
+            const match =
+            Math.max(
+                0,
+                1 -
+                diff /
+                0.78
+            );
 
-                energy +=
-                e;
 
-            }
+            /*
+            畫面下方線條
+            權重更高
+            */
+
+            const lowerWeight =
+            0.65 +
+            (y/H) * 0.65;
+
+
+            matched +=
+            e *
+            match *
+            lowerWeight;
 
         }
 
@@ -1182,212 +1484,111 @@ function calculateVScore(
 
 
     if(
-        zoneTotal < 1
-    )
-    return 40;
-
-
-    const ratio =
-    energy /
-    zoneTotal;
-
-
-    return clampScore(
-        38 +
-        ratio * 120
-    );
-
-}
-
-
-
-/* =====================================
-   引導線
-===================================== */
-
-function calculateLeadingScore(
-    edge,
-    W,
-    H,
-    total
-){
-
-    let lowerEnergy = 0;
-
-    let centerEnergy = 0;
-
-
-    for(
-        let y=0;
-        y<H;
-        y++
+        strongEdges <= 0
     ){
 
-        for(
-            let x=0;
-            x<W;
-            x++
-        ){
-
-            const e =
-            edge[y*W+x];
-
-
-            /*
-            下半部
-            */
-
-            if(
-                y >
-                H * 0.55
-            ){
-
-                lowerEnergy +=
-                e;
-
-            }
-
-
-            /*
-            中央深處
-            */
-
-            if(
-
-                y >
-                H*0.30
-                &&
-
-                y <
-                H*0.72
-                &&
-
-                x >
-                W*0.32
-                &&
-
-                x <
-                W*0.68
-
-            ){
-
-                centerEnergy +=
-                e;
-
-            }
-
-        }
+        return{
+            score:35
+        };
 
     }
 
 
     const ratio =
-
-    (
-        lowerEnergy * 0.55
-        +
-        centerEnergy
-    )
-    /
-    total;
+    matched /
+    strongEdges;
 
 
-    return clampScore(
-        38 +
-        ratio * 90
-    );
+    const score =
 
-}
+    36
 
-
-
-/* =====================================
-   點到線距離
-===================================== */
-
-function pointLineDistance(
-    px,
-    py,
-    x1,
-    y1,
-    x2,
-    y2
-){
-
-    const A =
-    px-x1;
-
-    const B =
-    py-y1;
-
-    const C =
-    x2-x1;
-
-    const D =
-    y2-y1;
+    +
+    ratio * 95;
 
 
-    const dot =
-    A*C +
-    B*D;
+    return{
 
+        score:
+        clampScore(score)
 
-    const len =
-    C*C +
-    D*D;
-
-
-    let param =
-    dot /
-    len;
-
-
-    param =
-    Math.max(
-        0,
-        Math.min(
-            1,
-            param
-        )
-    );
-
-
-    const xx =
-    x1 +
-    param*C;
-
-
-    const yy =
-    y1 +
-    param*D;
-
-
-    const dx =
-    px-xx;
-
-    const dy =
-    py-yy;
-
-
-    return Math.sqrt(
-        dx*dx +
-        dy*dy
-    );
+    };
 
 }
 
 
 
-/* =====================================
-   分數範圍
-===================================== */
+/* =========================
+   ANGLE
+========================= */
+
+function normalizeAngle(a){
+
+    while(
+        a >
+        Math.PI
+    ){
+
+        a -=
+        Math.PI*2;
+
+    }
+
+
+    while(
+        a <
+        -Math.PI
+    ){
+
+        a +=
+        Math.PI*2;
+
+    }
+
+
+    /*
+    線沒有前後方向，
+    180度視為同方向
+    */
+
+    if(
+        a >
+        Math.PI/2
+    ){
+
+        a -=
+        Math.PI;
+
+    }
+
+
+    if(
+        a <
+        -Math.PI/2
+    ){
+
+        a +=
+        Math.PI;
+
+    }
+
+
+    return a;
+
+}
+
+
+
+/* =========================
+   SCORE LIMIT
+========================= */
 
 function clampScore(v){
 
     return Math.round(
 
         Math.max(
-            35,
+            32,
             Math.min(
                 96,
                 v
@@ -1400,9 +1601,9 @@ function clampScore(v){
 
 
 
-/* =====================================
-   動態更新
-===================================== */
+/* =========================
+   LIVE UPDATE
+========================= */
 
 function updateLiveScore(){
 
@@ -1418,27 +1619,24 @@ function updateLiveScore(){
     analyzeFrame();
 
 
-    let score =
+    const newScore =
     result[lockedMode];
 
 
     if(
-        score === undefined
+        newScore === undefined
     )
     return;
 
 
-    /*
-    做一點平滑，
-    避免數字跳太快
-    */
-
     currentScore =
     Math.round(
 
-        currentScore * 0.65
+        currentScore * 0.72
+
         +
-        score * 0.35
+
+        newScore * 0.28
 
     );
 
@@ -1451,9 +1649,9 @@ function updateLiveScore(){
 
 
 
-/* =====================================
-   更新文字
-===================================== */
+/* =========================
+   TEXT
+========================= */
 
 function updateModeText(mode){
 
@@ -1478,15 +1676,26 @@ function updateModeText(mode){
     names[mode];
 
 
-    if(
-        mode === "vshape"
+    if(mode === "vshape"){
+
+        descBox.innerText =
+        "讓左右線條朝同一消失點收斂";
+
+        messageBox.innerText =
+        "📱 移動手機，讓景物貼近白色 V 線";
+
+    }
+
+
+    else if(
+        mode === "leading"
     ){
 
         descBox.innerText =
-        "讓場景線條靠近白色 V 虛線";
+        "讓主要線條把視線帶向畫面內";
 
         messageBox.innerText =
-        "📱 移動手機，讓實景線條貼近 V 線";
+        "📱 調整角度，讓線條朝白色方向延伸";
 
     }
 
@@ -1496,7 +1705,7 @@ function updateModeText(mode){
     ){
 
         descBox.innerText =
-        "將主要景物靠近三分線交點";
+        "讓主體靠近三分線交點";
 
         messageBox.innerText =
         "📱 移動手機，讓主體靠近白色交點";
@@ -1509,23 +1718,10 @@ function updateModeText(mode){
     ){
 
         descBox.innerText =
-        "將主要主體放入中央區域";
+        "讓主要主體集中在中央";
 
         messageBox.innerText =
-        "📱 將主要主體移到中央";
-
-    }
-
-
-    else if(
-        mode === "leading"
-    ){
-
-        descBox.innerText =
-        "讓線條引導視線進入畫面";
-
-        messageBox.innerText =
-        "📱 調整角度，讓線條朝中央延伸";
+        "📱 將主體移入中央白框";
 
     }
 
@@ -1533,9 +1729,9 @@ function updateModeText(mode){
 
 
 
-/* =====================================
-   SCORE
-===================================== */
+/* =========================
+   SCORE UI
+========================= */
 
 function updateScore(score){
 
@@ -1566,9 +1762,9 @@ function updateScore(score){
 
 
 
-/* =====================================
-   OVERLAY DRAW
-===================================== */
+/* =========================
+   OVERLAY
+========================= */
 
 function resizeCanvas(){
 
@@ -1587,18 +1783,15 @@ function resizeCanvas(){
 
 
     ctx.setTransform(
-
         dpr,
         0,
         0,
         dpr,
         0,
         0
-
     );
 
 }
-
 
 
 function getGuideColor(){
@@ -1621,7 +1814,9 @@ function getGuideColor(){
 
 
 
-/* V 型 */
+/* =========================
+   V DRAW
+========================= */
 
 function drawV(){
 
@@ -1635,11 +1830,8 @@ function drawV(){
     const cx =
     w * 0.5;
 
-    const bottomY =
-    h * 0.76;
-
-    const topY =
-    h * 0.18;
+    const vanishY =
+    h * 0.72;
 
 
     ctx.save();
@@ -1647,8 +1839,7 @@ function drawV(){
     ctx.strokeStyle =
     getGuideColor();
 
-    ctx.lineWidth =
-    3;
+    ctx.lineWidth = 3;
 
     ctx.setLineDash([
         13,
@@ -1659,13 +1850,13 @@ function drawV(){
     ctx.beginPath();
 
     ctx.moveTo(
-        w*0.12,
-        topY
+        w*0.10,
+        h*0.18
     );
 
     ctx.lineTo(
         cx,
-        bottomY
+        vanishY
     );
 
     ctx.stroke();
@@ -1674,16 +1865,35 @@ function drawV(){
     ctx.beginPath();
 
     ctx.moveTo(
-        w*0.88,
-        topY
+        w*0.90,
+        h*0.18
     );
 
     ctx.lineTo(
         cx,
-        bottomY
+        vanishY
     );
 
     ctx.stroke();
+
+
+    ctx.setLineDash([]);
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        cx,
+        vanishY,
+        6,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fillStyle =
+    getGuideColor();
+
+    ctx.fill();
 
 
     ctx.restore();
@@ -1692,7 +1902,9 @@ function drawV(){
 
 
 
-/* 三分法 */
+/* =========================
+   THIRD DRAW
+========================= */
 
 function drawThird(){
 
@@ -1711,8 +1923,7 @@ function drawThird(){
     ctx.fillStyle =
     getGuideColor();
 
-    ctx.lineWidth =
-    2;
+    ctx.lineWidth = 2;
 
     ctx.setLineDash([
         10,
@@ -1797,7 +2008,9 @@ function drawThird(){
 
 
 
-/* 居中 */
+/* =========================
+   CENTER DRAW
+========================= */
 
 function drawCenter(){
 
@@ -1813,8 +2026,7 @@ function drawCenter(){
     ctx.strokeStyle =
     getGuideColor();
 
-    ctx.lineWidth =
-    3;
+    ctx.lineWidth = 3;
 
     ctx.setLineDash([
         12,
@@ -1825,17 +2037,13 @@ function drawCenter(){
     ctx.beginPath();
 
     ctx.ellipse(
-
         w*0.5,
         h*0.5,
-
         w*0.20,
         h*0.24,
-
         0,
         0,
         Math.PI*2
-
     );
 
     ctx.stroke();
@@ -1847,7 +2055,9 @@ function drawCenter(){
 
 
 
-/* 引導線 */
+/* =========================
+   LEADING DRAW
+========================= */
 
 function drawLeading(){
 
@@ -1863,8 +2073,7 @@ function drawLeading(){
     ctx.strokeStyle =
     getGuideColor();
 
-    ctx.lineWidth =
-    3;
+    ctx.lineWidth = 3;
 
     ctx.setLineDash([
         12,
@@ -1875,28 +2084,13 @@ function drawLeading(){
     ctx.beginPath();
 
     ctx.moveTo(
-        w*0.08,
+        w*0.10,
         h*0.90
     );
 
     ctx.lineTo(
         w*0.50,
-        h*0.52
-    );
-
-    ctx.stroke();
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w*0.92,
-        h*0.90
-    );
-
-    ctx.lineTo(
-        w*0.50,
-        h*0.52
+        h*0.48
     );
 
     ctx.stroke();
@@ -1908,9 +2102,9 @@ function drawLeading(){
 
 
 
-/* =====================================
-   主循環
-===================================== */
+/* =========================
+   LOOP
+========================= */
 
 function drawLoop(time){
 
@@ -1975,18 +2169,16 @@ function drawLoop(time){
 
 
 
-/* =====================================
+/* =========================
    ZOOM
-===================================== */
+========================= */
 
 zoomSlider.addEventListener(
 "input",
 async function(){
 
     const value =
-    Number(
-        this.value
-    );
+    Number(this.value);
 
 
     zoomText.innerText =
@@ -1995,15 +2187,12 @@ async function(){
     "×";
 
 
-    if(
-        !stream
-    )
+    if(!stream)
     return;
 
 
     const track =
-    stream
-    .getVideoTracks()[0];
+    stream.getVideoTracks()[0];
 
 
     if(
@@ -2018,9 +2207,7 @@ async function(){
     track.getCapabilities();
 
 
-    if(
-        !cap.zoom
-    )
+    if(!cap.zoom)
     return;
 
 
@@ -2041,7 +2228,7 @@ async function(){
     catch(e){
 
         console.log(
-            "此手機不支援硬體Zoom"
+            "此手機不支援硬體 Zoom"
         );
 
     }
@@ -2054,7 +2241,6 @@ window.addEventListener(
 "resize",
 resizeCanvas
 );
-
 
 
 startCamera();
