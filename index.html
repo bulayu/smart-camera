@@ -11,7 +11,7 @@
                user-scalable=no,
                viewport-fit=cover">
 
-<title>智慧構圖助手 V4.2</title>
+<title>智慧構圖助手 V5.0</title>
 
 <style>
 
@@ -37,7 +37,6 @@ body {
 }
 
 #topBar {
-
     padding-top:
         max(
             8px,
@@ -48,15 +47,12 @@ body {
 }
 
 #title {
-
     font-size: 19px;
     font-weight: 600;
 }
 
 #status {
-
     min-height: 18px;
-
     margin-top: 4px;
 
     font-size: 13px;
@@ -65,12 +61,11 @@ body {
 }
 
 
-/* ======================
+/* =========================
    相機
-====================== */
+========================= */
 
 #cameraBox {
-
     position: relative;
 
     width: 100%;
@@ -78,13 +73,12 @@ body {
 
     margin: auto;
 
-    overflow: hidden;
-
     background: #111;
+
+    overflow: hidden;
 }
 
 #camera {
-
     display: block;
 
     width: 100%;
@@ -92,7 +86,6 @@ body {
 }
 
 #overlay {
-
     position: absolute;
 
     left: 0;
@@ -105,16 +98,13 @@ body {
 }
 
 
-/* ======================
-   控制
-====================== */
+/* =========================
+   按鈕
+========================= */
 
 #controls {
-
     padding:
-
         10px 4px
-
         calc(
             15px +
             env(safe-area-inset-bottom)
@@ -122,7 +112,6 @@ body {
 }
 
 button {
-
     border: none;
 
     border-radius: 12px;
@@ -138,35 +127,32 @@ button {
 }
 
 .cameraButton {
-
     min-width: 118px;
 }
 
 #shutterButton {
-
     width: 72px;
     height: 72px;
-
-    border-radius: 50%;
 
     padding: 0;
 
     margin: 9px 12px;
 
+    border-radius: 50%;
+
     border: 4px solid white;
 
-    font-size: 29px;
-
     background: #222;
+
+    font-size: 29px;
 }
 
 
-/* ======================
-   照片
-====================== */
+/* =========================
+   拍照預覽
+========================= */
 
 #photoPreview {
-
     display: none;
 
     width: 170px;
@@ -181,7 +167,6 @@ button {
 
 #photoCanvas,
 #analysisCanvas {
-
     display: none;
 }
 
@@ -310,72 +295,62 @@ let cameraSession =
 let lastVideoTime =
     -1;
 
-let lastObjectTime =
-    0;
-
-let lastSceneTime =
+let lastRearAnalysis =
     0;
 
 
 /* =====================================================
-   AI 主體
+   AI 推薦目標位置
 ===================================================== */
 
-let smoothSubjectX =
+let targetX =
     null;
 
-let smoothSubjectY =
+let targetY =
     null;
-
-
-/* =====================================================
-   推薦構圖位置
-===================================================== */
-
-let desiredXRatio =
-    0.5;
-
-let desiredYRatio =
-    0.45;
 
 
 /*
-推薦位置鎖定
-
-避免一下左邊
-一下右邊
+目標框平滑位置
 */
-let lockedType =
+let smoothTargetX =
+    null;
+
+let smoothTargetY =
+    null;
+
+
+/*
+目前主體位置
+*/
+let subjectX =
+    null;
+
+let subjectY =
+    null;
+
+
+/*
+避免 AI 一直換構圖法
+*/
+let lockedComposition =
     "";
 
 let lockUntil =
     0;
 
+
+/*
+4 秒內盡量保持同一構圖
+*/
 const LOCK_TIME =
-    3500;
+    4000;
 
 
-/* =====================================================
-   導航手機
-===================================================== */
-
-let navX =
-    null;
-
-let navY =
-    null;
-
-let smoothNavX =
-    null;
-
-let smoothNavY =
-    null;
-
-
-/* =====================================================
-   OK
-===================================================== */
-
+/*
+接近目標時
+變綠色
+*/
 let okCounter =
     0;
 
@@ -392,40 +367,48 @@ const video =
         "camera"
     );
 
+
 const overlay =
     document.getElementById(
         "overlay"
     );
+
 
 const ctx =
     overlay.getContext(
         "2d"
     );
 
+
 const statusText =
     document.getElementById(
         "status"
     );
+
 
 const photoCanvas =
     document.getElementById(
         "photoCanvas"
     );
 
+
 const photoCtx =
     photoCanvas.getContext(
         "2d"
     );
+
 
 const photoPreview =
     document.getElementById(
         "photoPreview"
     );
 
+
 const analysisCanvas =
     document.getElementById(
         "analysisCanvas"
     );
+
 
 const analysisCtx =
     analysisCanvas.getContext(
@@ -441,7 +424,7 @@ const analysisCtx =
 
 
 /* =====================================================
-   AI 載入
+   載入 AI
 ===================================================== */
 
 async function loadAI() {
@@ -462,7 +445,8 @@ async function loadAI() {
 
 
         /*
-        人臉 AI
+        前鏡頭：
+        人臉辨識
         */
 
         faceDetector =
@@ -493,7 +477,8 @@ async function loadAI() {
 
 
         /*
-        物件 AI
+        後鏡頭：
+        物件辨識
         */
 
         objectDetector =
@@ -551,7 +536,7 @@ async function loadAI() {
 
 
 /* =====================================================
-   找前後鏡頭
+   找真正前後鏡頭
 ===================================================== */
 
 async function prepareCameraDevices() {
@@ -614,15 +599,25 @@ async function prepareCameraDevices() {
                 .toLowerCase();
 
 
+            /*
+            前鏡頭
+            */
+
             if (
                 !frontDeviceId
                 &&
                 (
-                    name.includes("front")
+                    name.includes(
+                        "front"
+                    )
                     ||
-                    name.includes("user")
+                    name.includes(
+                        "user"
+                    )
                     ||
-                    name.includes("前")
+                    name.includes(
+                        "前"
+                    )
                 )
             ) {
 
@@ -632,34 +627,57 @@ async function prepareCameraDevices() {
             }
 
 
+            /*
+            後鏡頭
+            */
+
             const isRear =
 
-                name.includes("back")
+                name.includes(
+                    "back"
+                )
 
                 ||
 
-                name.includes("rear")
+                name.includes(
+                    "rear"
+                )
 
                 ||
 
-                name.includes("environment")
+                name.includes(
+                    "environment"
+                )
 
                 ||
 
-                name.includes("後");
+                name.includes(
+                    "後"
+                );
 
+
+            /*
+            優先一般鏡頭，
+            不優先超廣角或望遠
+            */
 
             const specialLens =
 
-                name.includes("ultra")
+                name.includes(
+                    "ultra"
+                )
 
                 ||
 
-                name.includes("tele")
+                name.includes(
+                    "tele"
+                )
 
                 ||
 
-                name.includes("zoom");
+                name.includes(
+                    "zoom"
+                );
 
 
             if (
@@ -679,8 +697,8 @@ async function prepareCameraDevices() {
 
 
         /*
-        找不到普通後鏡頭
-        就選任何後鏡頭
+        找不到普通後鏡頭時，
+        再找任何後鏡頭
         */
 
         if (
@@ -830,8 +848,7 @@ async function openCamera(
 
                 },
 
-                audio:
-                    false
+                audio: false
 
             };
 
@@ -857,8 +874,7 @@ async function openCamera(
 
                 },
 
-                audio:
-                    false
+                audio: false
 
             };
 
@@ -880,8 +896,7 @@ async function openCamera(
 
                 },
 
-                audio:
-                    false
+                audio: false
 
             };
 
@@ -945,7 +960,7 @@ async function openCamera(
         true;
 
 
-    resetNavigation();
+    resetComposition();
 
 
     statusText.innerText =
@@ -977,45 +992,41 @@ async function openCamera(
    重設
 ===================================================== */
 
-function resetNavigation() {
+function resetComposition() {
 
     lastVideoTime =
         -1;
 
 
-    lastObjectTime =
+    lastRearAnalysis =
         0;
 
 
-    lastSceneTime =
-        0;
-
-
-    smoothSubjectX =
+    targetX =
         null;
 
 
-    smoothSubjectY =
+    targetY =
         null;
 
 
-    navX =
+    smoothTargetX =
         null;
 
 
-    navY =
+    smoothTargetY =
         null;
 
 
-    smoothNavX =
+    subjectX =
         null;
 
 
-    smoothNavY =
+    subjectY =
         null;
 
 
-    lockedType =
+    lockedComposition =
         "";
 
 
@@ -1034,7 +1045,7 @@ function resetNavigation() {
 
 
 /* =====================================================
-   關閉串流
+   停止相機串流
 ===================================================== */
 
 function stopCurrentStream() {
@@ -1079,6 +1090,9 @@ function stopCamera() {
         null;
 
 
+    resetComposition();
+
+
     ctx.clearRect(
 
         0,
@@ -1088,9 +1102,6 @@ function stopCamera() {
         overlay.height
 
     );
-
-
-    resetNavigation();
 
 
     statusText.innerText =
@@ -1137,20 +1148,20 @@ function cameraLoop(
             "user"
         ) {
 
-            processFront();
+            processFrontCamera();
 
         }
 
         else {
 
-            processRear();
+            processRearCamera();
 
         }
 
     }
 
 
-    drawNavigation();
+    drawTarget();
 
 
     requestAnimationFrame(
@@ -1167,9 +1178,12 @@ function cameraLoop(
 
 /* =====================================================
    前鏡頭
+
+   人像優先使用：
+   三分法 / 黃金比例
 ===================================================== */
 
-function processFront() {
+function processFrontCamera() {
 
     if (
         video.currentTime ===
@@ -1191,7 +1205,8 @@ function processFront() {
     try {
 
         result =
-            faceDetector.detectForVideo(
+            faceDetector
+                .detectForVideo(
 
                 video,
 
@@ -1220,11 +1235,12 @@ function processFront() {
 
 
     /*
-    最大臉
+    最大的人臉
     */
 
     let best =
         null;
+
 
     let bestArea =
         0;
@@ -1286,7 +1302,7 @@ function processFront() {
         video.videoHeight;
 
 
-    const subjectX =
+    subjectX =
 
         (
             best.originX +
@@ -1297,7 +1313,7 @@ function processFront() {
         sx;
 
 
-    const subjectY =
+    subjectY =
 
         (
             best.originY +
@@ -1308,12 +1324,12 @@ function processFront() {
         sy;
 
 
-    setTarget(
+    /*
+    人像：
+    AI 自動決定三分或黃金比例
+    */
 
-        "person",
-
-        subjectX,
-        subjectY,
+    selectPortraitComposition(
 
         width,
         height
@@ -1321,10 +1337,7 @@ function processFront() {
     );
 
 
-    updateNavigation(
-
-        subjectX,
-        subjectY,
+    updateOKState(
 
         width,
         height
@@ -1335,20 +1348,237 @@ function processFront() {
 
 
 /* =====================================================
-   後鏡頭
+   人像構圖選擇
 ===================================================== */
 
-function processRear() {
+function selectPortraitComposition(
+
+    width,
+    height
+
+) {
 
     const now =
         performance.now();
 
 
+    /*
+    鎖定期間不一直換
+    */
+
+    if (
+        now <
+        lockUntil
+        &&
+        lockedComposition
+    ) {
+
+        applyLockedComposition(
+
+            width,
+            height
+
+        );
+
+        return;
+
+    }
+
+
+    /*
+    主體靠近中央：
+
+    改用黃金比例，
+    讓移動量不要太大。
+    */
+
+    const centerDistance =
+        Math.abs(
+
+            subjectX -
+            width / 2
+
+        );
+
+
+    if (
+        centerDistance <
+        width * 0.12
+    ) {
+
+        lockedComposition =
+            "golden";
+
+    }
+
+    else {
+
+        lockedComposition =
+            "thirds";
+
+    }
+
+
+    lockUntil =
+        now +
+        LOCK_TIME;
+
+
+    applyLockedComposition(
+
+        width,
+        height
+
+    );
+
+}
+
+
+/* =====================================================
+   套用已鎖定的構圖
+===================================================== */
+
+function applyLockedComposition(
+
+    width,
+    height
+
+) {
+
+    /*
+    ======================
+    三分法
+    ======================
+    */
+
+    if (
+        lockedComposition ===
+        "thirds"
+    ) {
+
+        targetX =
+
+            subjectX <
+            width / 2
+
+            ?
+
+            width * 0.333
+
+            :
+
+            width * 0.667;
+
+
+        targetY =
+            height *
+            0.38;
+
+    }
+
+
+    /*
+    ======================
+    黃金比例
+    ======================
+    */
+
+    else if (
+        lockedComposition ===
+        "golden"
+    ) {
+
+        targetX =
+
+            subjectX <
+            width / 2
+
+            ?
+
+            width * 0.382
+
+            :
+
+            width * 0.618;
+
+
+        targetY =
+            height *
+            0.40;
+
+    }
+
+
+    /*
+    ======================
+    居中
+    ======================
+    */
+
+    else if (
+        lockedComposition ===
+        "center"
+    ) {
+
+        targetX =
+            width *
+            0.50;
+
+
+        targetY =
+            height *
+            0.48;
+
+    }
+
+
+    /*
+    ======================
+    引導線
+    ======================
+    */
+
+    else if (
+        lockedComposition ===
+        "leading"
+    ) {
+
+        /*
+        targetX / targetY
+        已由場景分析算好
+        */
+
+    }
+
+
+    /*
+    平滑目標框
+    */
+
+    smoothTarget();
+
+}
+
+
+/* =====================================================
+   後鏡頭
+===================================================== */
+
+function processRearCamera() {
+
+    const now =
+        performance.now();
+
+
+    /*
+    約每 350ms 分析一次
+    */
+
     if (
         now -
-        lastObjectTime
+        lastRearAnalysis
         <
-        300
+        350
     ) {
 
         return;
@@ -1356,7 +1586,7 @@ function processRear() {
     }
 
 
-    lastObjectTime =
+    lastRearAnalysis =
         now;
 
 
@@ -1367,7 +1597,8 @@ function processRear() {
     try {
 
         result =
-            objectDetector.detectForVideo(
+            objectDetector
+                .detectForVideo(
 
                 video,
                 now
@@ -1385,16 +1616,20 @@ function processRear() {
     }
 
 
-    const subject =
-        chooseMainSubject(
+    const object =
+        chooseMainObject(
             result
         );
 
 
-    if (subject) {
+    /*
+    有明確物件
+    */
 
-        processObject(
-            subject
+    if (object) {
+
+        processDetectedObject(
+            object
         );
 
         return;
@@ -1402,16 +1637,21 @@ function processRear() {
     }
 
 
-    analyzeScene();
+    /*
+    沒有物件：
+    做場景構圖分析
+    */
+
+    analyzeSceneComposition();
 
 }
 
 
 /* =====================================================
-   選主體
+   選主要物件
 ===================================================== */
 
-function chooseMainSubject(
+function chooseMainObject(
     result
 ) {
 
@@ -1428,19 +1668,18 @@ function chooseMainSubject(
     }
 
 
+    const frameArea =
+
+        video.videoWidth *
+        video.videoHeight;
+
+
     let best =
         null;
 
 
     let bestScore =
         -Infinity;
-
-
-    const frameArea =
-
-        video.videoWidth
-        *
-        video.videoHeight;
 
 
     for (
@@ -1479,6 +1718,10 @@ function chooseMainSubject(
             frameArea;
 
 
+        /*
+        太小的東西忽略
+        */
+
         if (
             areaRatio <
             0.018
@@ -1513,7 +1756,7 @@ function chooseMainSubject(
             video.videoHeight;
 
 
-        const distance =
+        const centerDistance =
 
             Math.hypot(
 
@@ -1535,7 +1778,7 @@ function chooseMainSubject(
 
             -
 
-            distance *
+            centerDistance *
             0.25;
 
 
@@ -1569,11 +1812,11 @@ function chooseMainSubject(
 
 
 /* =====================================================
-   物件
+   有辨識到主體
 ===================================================== */
 
-function processObject(
-    subject
+function processDetectedObject(
+    object
 ) {
 
     const width =
@@ -1595,10 +1838,10 @@ function processObject(
 
 
     const box =
-        subject.box;
+        object.box;
 
 
-    const subjectX =
+    subjectX =
 
         (
             box.originX +
@@ -1609,7 +1852,7 @@ function processObject(
         sx;
 
 
-    const subjectY =
+    subjectY =
 
         (
             box.originY +
@@ -1620,71 +1863,131 @@ function processObject(
         sy;
 
 
-    setTarget(
-
-        subject.category,
-
-        subjectX,
-        subjectY,
-
-        width,
-        height
-
-    );
-
-
-    updateNavigation(
-
-        subjectX,
-        subjectY,
-
-        width,
-        height
-
-    );
-
-}
-
-
-/* =====================================================
-   選最佳構圖點
-===================================================== */
-
-function setTarget(
-
-    type,
-
-    subjectX,
-    subjectY,
-
-    width,
-    height
-
-) {
-
     const now =
         performance.now();
 
 
     /*
     還在鎖定期間
-    不亂改
     */
 
     if (
-        lockedType === type
-        &&
         now <
         lockUntil
+        &&
+        lockedComposition
     ) {
+
+        applyLockedComposition(
+
+            width,
+            height
+
+        );
+
+
+        updateOKState(
+
+            width,
+            height
+
+        );
+
 
         return;
 
     }
 
 
-    lockedType =
-        type;
+    /*
+    =====================================
+    判斷是否適合居中
+    =====================================
+    */
+
+    const centered =
+
+        Math.abs(
+
+            subjectX -
+            width / 2
+
+        )
+
+        <
+        width *
+        0.08;
+
+
+    /*
+    建築、車、船等
+    如果本來就在中央附近，
+    優先使用居中構圖。
+    */
+
+    const centerFriendly = [
+
+        "car",
+        "truck",
+        "bus",
+        "boat",
+        "train",
+        "airplane"
+
+    ];
+
+
+    if (
+        centered
+        &&
+        centerFriendly.includes(
+            object.category
+        )
+    ) {
+
+        lockedComposition =
+            "center";
+
+    }
+
+
+    /*
+    人與動物：
+    優先三分法
+    */
+
+    else if (
+        [
+            "person",
+            "dog",
+            "cat",
+            "bird",
+            "horse",
+            "cow",
+            "sheep"
+        ]
+        .includes(
+            object.category
+        )
+    ) {
+
+        lockedComposition =
+            "thirds";
+
+    }
+
+
+    /*
+    其他物體：
+    黃金比例
+    */
+
+    else {
+
+        lockedComposition =
+            "golden";
+
+    }
 
 
     lockUntil =
@@ -1692,439 +1995,35 @@ function setTarget(
         LOCK_TIME;
 
 
-    /*
-    水平：
-    左邊主體 → 左三分
-    右邊主體 → 右三分
-    */
+    applyLockedComposition(
 
-    if (
-        subjectX <
-        width / 2
-    ) {
+        width,
+        height
 
-        desiredXRatio =
-            0.34;
-
-    }
-
-    else {
-
-        desiredXRatio =
-            0.66;
-
-    }
+    );
 
 
-    /*
-    垂直不要太激進。
+    updateOKState(
 
-    這版全部控制在
-    畫面中央附近。
-    */
+        width,
+        height
 
-    const portraitTypes = [
-
-        "person",
-        "dog",
-        "cat",
-        "bird",
-        "horse",
-        "cow",
-        "sheep"
-
-    ];
-
-
-    if (
-        portraitTypes.includes(
-            type
-        )
-    ) {
-
-        desiredYRatio =
-            0.42;
-
-    }
-
-    else {
-
-        desiredYRatio =
-            0.50;
-
-    }
+    );
 
 }
 
 
 /* =====================================================
-   V4.2 核心導航
+   場景分析
 
-   注意：
+   自動判斷：
 
-   這裡算的是
-   「手機應該往哪個方向微調」
-
-   不是把主體位置
-   直接搬成手機位置。
+   1. 居中
+   2. 引導線
+   3. 黃金比例
 ===================================================== */
 
-function updateNavigation(
-
-    subjectX,
-    subjectY,
-
-    width,
-    height
-
-) {
-
-    /*
-    平滑 AI 主體
-    */
-
-    if (
-        smoothSubjectX === null
-    ) {
-
-        smoothSubjectX =
-            subjectX;
-
-
-        smoothSubjectY =
-            subjectY;
-
-    }
-
-    else {
-
-        smoothSubjectX =
-
-            smoothSubjectX *
-            0.75
-
-            +
-
-            subjectX *
-            0.25;
-
-
-        smoothSubjectY =
-
-            smoothSubjectY *
-            0.75
-
-            +
-
-            subjectY *
-            0.25;
-
-    }
-
-
-    /*
-    AI 希望主體最後在哪
-    */
-
-    const desiredX =
-
-        width *
-        desiredXRatio;
-
-
-    const desiredY =
-
-        height *
-        desiredYRatio;
-
-
-    /*
-    主體誤差
-    */
-
-    const errorX =
-
-        smoothSubjectX -
-        desiredX;
-
-
-    const errorY =
-
-        smoothSubjectY -
-        desiredY;
-
-
-    /*
-    導航目標框
-    永遠固定畫面中央偏上。
-
-    使用者不用追著框跑。
-    */
-
-    const centerX =
-        width * 0.50;
-
-
-    const centerY =
-        height * 0.32;
-
-
-    /*
-    =================================================
-    水平導航
-
-    主體在建議位置右邊 →
-    手機應往右轉 / 右移。
-
-    所以直接使用 errorX。
-    =================================================
-    */
-
-    const maxHorizontal =
-
-        width *
-        0.30;
-
-
-    let guideX =
-        errorX *
-        0.85;
-
-
-    guideX =
-        Math.max(
-
-            -maxHorizontal,
-
-            Math.min(
-
-                maxHorizontal,
-
-                guideX
-
-            )
-
-        );
-
-
-    /*
-    =================================================
-    垂直導航
-
-    這就是 V4.2 最大改變。
-
-    垂直最大只允許畫面高度 6%。
-
-    就算 AI 認為差很多，
-    也不會叫你大幅低頭拍地板。
-    =================================================
-    */
-
-    const maxVertical =
-
-        height *
-        0.06;
-
-
-    /*
-    小誤差才給垂直提示。
-
-    如果垂直差距太大，
-    視為拍攝場景本身不同，
-    不強迫使用者猛抬 / 猛低鏡頭。
-    */
-
-    let guideY =
-        0;
-
-
-    const verticalDeadZone =
-
-        height *
-        0.06;
-
-
-    const verticalLimit =
-
-        height *
-        0.20;
-
-
-    if (
-        Math.abs(errorY)
-        >
-        verticalDeadZone
-
-        &&
-
-        Math.abs(errorY)
-        <
-        verticalLimit
-    ) {
-
-        guideY =
-            errorY *
-            0.25;
-
-    }
-
-
-    guideY =
-        Math.max(
-
-            -maxVertical,
-
-            Math.min(
-
-                maxVertical,
-
-                guideY
-
-            )
-
-        );
-
-
-    /*
-    最終手機圖示位置
-    */
-
-    navX =
-
-        centerX +
-        guideX;
-
-
-    navY =
-
-        centerY +
-        guideY;
-
-
-    /*
-    平滑
-    */
-
-    if (
-        smoothNavX === null
-    ) {
-
-        smoothNavX =
-            navX;
-
-
-        smoothNavY =
-            navY;
-
-    }
-
-    else {
-
-        smoothNavX =
-
-            smoothNavX *
-            0.70
-
-            +
-
-            navX *
-            0.30;
-
-
-        smoothNavY =
-
-            smoothNavY *
-            0.70
-
-            +
-
-            navY *
-            0.30;
-
-    }
-
-
-    /*
-    ============================
-    OK 判斷
-
-    水平比較重要。
-
-    垂直放寬很多。
-    ============================
-    */
-
-    const horizontalOK =
-
-        Math.abs(errorX)
-        <
-        width * 0.09;
-
-
-    const verticalOK =
-
-        Math.abs(errorY)
-        <
-        height * 0.18;
-
-
-    if (
-        horizontalOK
-        &&
-        verticalOK
-    ) {
-
-        okCounter++;
-
-    }
-
-    else {
-
-        okCounter =
-            Math.max(
-
-                0,
-
-                okCounter - 1
-
-            );
-
-    }
-
-
-    compositionOK =
-
-        okCounter >= 4;
-
-}
-
-
-/* =====================================================
-   無物件時：
-   風景視覺重心
-===================================================== */
-
-function analyzeScene() {
-
-    const now =
-        performance.now();
-
-
-    if (
-        now -
-        lastSceneTime
-        <
-        500
-    ) {
-
-        return;
-
-    }
-
-
-    lastSceneTime =
-        now;
-
+function analyzeSceneComposition() {
 
     if (
         video.videoWidth === 0
@@ -2138,11 +2037,11 @@ function analyzeScene() {
 
 
     const w =
-        120;
+        160;
 
 
     const h =
-        80;
+        100;
 
 
     analysisCanvas.width =
@@ -2187,6 +2086,10 @@ function analyzeScene() {
             w * h
         );
 
+
+    /*
+    灰階
+    */
 
     for (
         let y = 0;
@@ -2235,249 +2138,825 @@ function analyzeScene() {
 
 
     /*
-    找畫面細節最明顯區
+    =====================================
+    1. 左右對稱分析
+    =====================================
     */
 
-    const cols =
-        5;
-
-    const rows =
-        5;
+    let symmetryDifference =
+        0;
 
 
-    let bestCol =
-        2;
-
-    let bestRow =
-        2;
-
-    let bestEnergy =
-        -1;
+    let symmetrySamples =
+        0;
 
 
     for (
-        let row = 0;
-        row < rows;
-        row++
+        let y = 5;
+        y < h - 5;
+        y += 3
     ) {
 
         for (
-            let col = 0;
-            col < cols;
-            col++
+            let x = 5;
+            x < w / 2;
+            x += 3
         ) {
 
-            const startX =
-                Math.floor(
-                    col * w / cols
+            const left =
+
+                gray[
+                    y * w +
+                    x
+                ];
+
+
+            const mirrorX =
+                w - 1 - x;
+
+
+            const right =
+
+                gray[
+                    y * w +
+                    mirrorX
+                ];
+
+
+            symmetryDifference +=
+
+                Math.abs(
+
+                    left -
+                    right
+
                 );
 
 
-            const endX =
-                Math.floor(
-                    (col + 1) * w / cols
-                );
-
-
-            const startY =
-                Math.floor(
-                    row * h / rows
-                );
-
-
-            const endY =
-                Math.floor(
-                    (row + 1) * h / rows
-                );
-
-
-            let energy =
-                0;
-
-
-            for (
-                let y = startY + 1;
-                y < endY - 1;
-                y += 2
-            ) {
-
-                for (
-                    let x = startX + 1;
-                    x < endX - 1;
-                    x += 2
-                ) {
-
-                    const center =
-                        gray[
-                            y * w + x
-                        ];
-
-
-                    const right =
-                        gray[
-                            y * w + x + 1
-                        ];
-
-
-                    const below =
-                        gray[
-                            (y + 1) * w + x
-                        ];
-
-
-                    energy +=
-
-                        Math.abs(
-                            center - right
-                        )
-
-                        +
-
-                        Math.abs(
-                            center - below
-                        );
-
-                }
-
-            }
-
-
-            if (
-                col === 2
-                &&
-                row === 2
-            ) {
-
-                energy *=
-                    0.82;
-
-            }
-
-
-            if (
-                energy >
-                bestEnergy
-            ) {
-
-                bestEnergy =
-                    energy;
-
-
-                bestCol =
-                    col;
-
-
-                bestRow =
-                    row;
-
-            }
+            symmetrySamples++;
 
         }
 
     }
 
 
-    const width =
-        video.clientWidth;
+    const averageSymmetryDifference =
 
-
-    const height =
-        video.clientHeight;
-
-
-    const subjectX =
-
-        width *
-
-        (
-            bestCol + 0.5
-        )
-
-        /
-        cols;
-
-
-    const subjectY =
-
-        height *
-
-        (
-            bestRow + 0.5
-        )
-
-        /
-        rows;
+        symmetryDifference /
+        Math.max(
+            1,
+            symmetrySamples
+        );
 
 
     /*
-    風景導航：
-    主要以左右為主。
-
-    垂直直接靠近中央，
-    不叫使用者往地板拍。
+    數字越小
+    越左右對稱
     */
 
-    const now2 =
+    const isSymmetric =
+
+        averageSymmetryDifference
+        <
+        30;
+
+
+    /*
+    =====================================
+    2. 引導線 / V 型分析
+    =====================================
+    */
+
+    const leading =
+        detectLeadingLines(
+
+            gray,
+            w,
+            h
+
+        );
+
+
+    const now =
         performance.now();
 
 
     if (
-        lockedType !== "scene"
-        ||
-        now2 >= lockUntil
+        now <
+        lockUntil
+        &&
+        lockedComposition
     ) {
 
-        lockedType =
-            "scene";
-
-
-        lockUntil =
-            now2 +
-            LOCK_TIME;
-
+        /*
+        引導線模式的 target
+        已經算好
+        */
 
         if (
-            subjectX <
-            width / 2
+            lockedComposition !==
+            "leading"
         ) {
 
-            desiredXRatio =
-                0.34;
+            applyLockedComposition(
+
+                video.clientWidth,
+                video.clientHeight
+
+            );
 
         }
 
-        else {
 
-            desiredXRatio =
-                0.66;
-
-        }
-
-
-        desiredYRatio =
-            0.50;
+        return;
 
     }
 
 
-    updateNavigation(
+    /*
+    =====================================
+    強烈左右對稱
+    → 居中構圖
+    =====================================
+    */
 
-        subjectX,
-        subjectY,
+    if (
+        isSymmetric
+    ) {
 
-        width,
-        height
+        lockedComposition =
+            "center";
 
-    );
+
+        targetX =
+            video.clientWidth *
+            0.50;
+
+
+        targetY =
+            video.clientHeight *
+            0.48;
+
+    }
+
+
+    /*
+    =====================================
+    有強烈引導線
+    → 引導線構圖
+    =====================================
+    */
+
+    else if (
+        leading.strength >
+        0.60
+    ) {
+
+        lockedComposition =
+            "leading";
+
+
+        targetX =
+
+            video.clientWidth
+
+            *
+
+            leading.xRatio;
+
+
+        targetY =
+
+            video.clientHeight
+
+            *
+
+            leading.yRatio;
+
+    }
+
+
+    /*
+    =====================================
+    一般風景
+    → 黃金比例
+    =====================================
+    */
+
+    else {
+
+        lockedComposition =
+            "golden";
+
+
+        /*
+        分析左右哪邊細節比較多
+        */
+
+        const energy =
+            getVisualEnergy(
+
+                gray,
+                w,
+                h
+
+            );
+
+
+        targetX =
+
+            energy.left >
+            energy.right
+
+            ?
+
+            video.clientWidth *
+            0.382
+
+            :
+
+            video.clientWidth *
+            0.618;
+
+
+        targetY =
+            video.clientHeight *
+            0.45;
+
+    }
+
+
+    lockUntil =
+        now +
+        LOCK_TIME;
+
+
+    smoothTarget();
 
 }
 
 
 /* =====================================================
-   畫導航
+   簡易引導線分析
+
+   找左右兩側
+   是否有線條朝某個區域集中。
+
+   不是完整電腦視覺 Hough Transform，
+   但可先做 Web 原型。
 ===================================================== */
 
-function drawNavigation() {
+function detectLeadingLines(
+
+    gray,
+    w,
+    h
+
+) {
+
+    /*
+    候選匯聚點
+    */
+
+    const candidates = [
+
+        {
+            x: 0.35,
+            y: 0.35
+        },
+
+        {
+            x: 0.50,
+            y: 0.35
+        },
+
+        {
+            x: 0.65,
+            y: 0.35
+        },
+
+        {
+            x: 0.35,
+            y: 0.50
+        },
+
+        {
+            x: 0.50,
+            y: 0.50
+        },
+
+        {
+            x: 0.65,
+            y: 0.50
+        }
+
+    ];
+
+
+    let bestCandidate =
+        candidates[1];
+
+
+    let bestScore =
+        0;
+
+
+    for (
+        const candidate
+        of candidates
+    ) {
+
+        const cx =
+            candidate.x *
+            w;
+
+
+        const cy =
+            candidate.y *
+            h;
+
+
+        let score =
+            0;
+
+
+        let samples =
+            0;
+
+
+        /*
+        從畫面下半部
+        朝候選點取樣
+        */
+
+        for (
+            let baseX = 10;
+            baseX < w - 10;
+            baseX += 12
+        ) {
+
+            const baseY =
+                h - 8;
+
+
+            const steps =
+                20;
+
+
+            let lineEnergy =
+                0;
+
+
+            for (
+                let s = 0;
+                s < steps;
+                s++
+            ) {
+
+                const t =
+                    s /
+                    (
+                        steps - 1
+                    );
+
+
+                const x =
+                    Math.round(
+
+                        baseX +
+                        (
+                            cx -
+                            baseX
+                        )
+                        *
+                        t
+
+                    );
+
+
+                const y =
+                    Math.round(
+
+                        baseY +
+                        (
+                            cy -
+                            baseY
+                        )
+                        *
+                        t
+
+                    );
+
+
+                if (
+                    x <= 1
+                    ||
+                    x >= w - 2
+                    ||
+                    y <= 1
+                    ||
+                    y >= h - 2
+                ) {
+
+                    continue;
+
+                }
+
+
+                const center =
+
+                    gray[
+                        y * w +
+                        x
+                    ];
+
+
+                const left =
+
+                    gray[
+                        y * w +
+                        x - 1
+                    ];
+
+
+                const right =
+
+                    gray[
+                        y * w +
+                        x + 1
+                    ];
+
+
+                const above =
+
+                    gray[
+                        (y - 1) *
+                        w +
+                        x
+                    ];
+
+
+                const below =
+
+                    gray[
+                        (y + 1) *
+                        w +
+                        x
+                    ];
+
+
+                lineEnergy +=
+
+                    Math.abs(
+                        center -
+                        left
+                    )
+
+                    +
+
+                    Math.abs(
+                        center -
+                        right
+                    )
+
+                    +
+
+                    Math.abs(
+                        center -
+                        above
+                    )
+
+                    +
+
+                    Math.abs(
+                        center -
+                        below
+                    );
+
+
+                samples++;
+
+            }
+
+
+            score +=
+                lineEnergy;
+
+        }
+
+
+        if (
+            score >
+            bestScore
+        ) {
+
+            bestScore =
+                score;
+
+
+            bestCandidate =
+                candidate;
+
+        }
+
+    }
+
+
+    /*
+    正規化成大約 0~1
+    */
+
+    const normalized =
+
+        Math.min(
+
+            1,
+
+            bestScore /
+            130000
+
+        );
+
+
+    return {
+
+        xRatio:
+            bestCandidate.x,
+
+        yRatio:
+            bestCandidate.y,
+
+        strength:
+            normalized
+
+    };
+
+}
+
+
+/* =====================================================
+   左右視覺能量
+===================================================== */
+
+function getVisualEnergy(
+
+    gray,
+    w,
+    h
+
+) {
+
+    let leftEnergy =
+        0;
+
+
+    let rightEnergy =
+        0;
+
+
+    for (
+        let y = 2;
+        y < h - 2;
+        y += 2
+    ) {
+
+        for (
+            let x = 2;
+            x < w - 2;
+            x += 2
+        ) {
+
+            const center =
+
+                gray[
+                    y * w +
+                    x
+                ];
+
+
+            const right =
+
+                gray[
+                    y * w +
+                    x + 1
+                ];
+
+
+            const below =
+
+                gray[
+                    (y + 1) *
+                    w +
+                    x
+                ];
+
+
+            const energy =
+
+                Math.abs(
+                    center -
+                    right
+                )
+
+                +
+
+                Math.abs(
+                    center -
+                    below
+                );
+
+
+            if (
+                x <
+                w / 2
+            ) {
+
+                leftEnergy +=
+                    energy;
+
+            }
+
+            else {
+
+                rightEnergy +=
+                    energy;
+
+            }
+
+        }
+
+    }
+
+
+    return {
+
+        left:
+            leftEnergy,
+
+        right:
+            rightEnergy
+
+    };
+
+}
+
+
+/* =====================================================
+   平滑目標框位置
+===================================================== */
+
+function smoothTarget() {
+
+    if (
+        targetX === null
+        ||
+        targetY === null
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        smoothTargetX === null
+    ) {
+
+        smoothTargetX =
+            targetX;
+
+
+        smoothTargetY =
+            targetY;
+
+    }
+
+    else {
+
+        smoothTargetX =
+
+            smoothTargetX *
+            0.86
+
+            +
+
+            targetX *
+            0.14;
+
+
+        smoothTargetY =
+
+            smoothTargetY *
+            0.86
+
+            +
+
+            targetY *
+            0.14;
+
+    }
+
+}
+
+
+/* =====================================================
+   判斷主體是否已進推薦區
+===================================================== */
+
+function updateOKState(
+
+    width,
+    height
+
+) {
+
+    smoothTarget();
+
+
+    if (
+        subjectX === null
+        ||
+        subjectY === null
+        ||
+        targetX === null
+        ||
+        targetY === null
+    ) {
+
+        compositionOK =
+            false;
+
+        return;
+
+    }
+
+
+    const distance =
+
+        Math.hypot(
+
+            subjectX -
+            targetX,
+
+            subjectY -
+            targetY
+
+        );
+
+
+    /*
+    容許範圍稍微放寬
+    不要太難對準
+    */
+
+    const tolerance =
+
+        Math.min(
+            width,
+            height
+        )
+
+        *
+        0.17;
+
+
+    if (
+        distance <
+        tolerance
+    ) {
+
+        okCounter++;
+
+    }
+
+    else {
+
+        okCounter =
+            Math.max(
+
+                0,
+
+                okCounter - 1
+
+            );
+
+    }
+
+
+    compositionOK =
+
+        okCounter >=
+        3;
+
+}
+
+
+/* =====================================================
+   畫唯一的提示：
+   AI 建議主體位置
+===================================================== */
+
+function drawTarget() {
 
     const width =
         video.clientWidth;
@@ -2507,9 +2986,9 @@ function drawNavigation() {
 
 
     if (
-        smoothNavX === null
+        smoothTargetX === null
         ||
-        smoothNavY === null
+        smoothTargetY === null
     ) {
 
         return;
@@ -2518,24 +2997,17 @@ function drawNavigation() {
 
 
     /*
-    ======================
-    固定目標框
-    ======================
+    目標框大小
+
+    比之前大一點，
+    比較容易使用。
     */
-
-    const targetX =
-        width * 0.50;
-
-
-    const targetY =
-        height * 0.32;
-
 
     const boxWidth =
 
         Math.max(
 
-            72,
+            70,
 
             Math.min(
                 width,
@@ -2543,7 +3015,7 @@ function drawNavigation() {
             )
 
             *
-            0.20
+            0.22
 
         );
 
@@ -2551,20 +3023,28 @@ function drawNavigation() {
     const boxHeight =
 
         boxWidth *
-        1.30;
+        0.85;
 
 
-    const boxLeft =
+    const left =
 
-        targetX -
+        smoothTargetX -
         boxWidth / 2;
 
 
-    const boxTop =
+    const top =
 
-        targetY -
+        smoothTargetY -
         boxHeight / 2;
 
+
+    /*
+    白色：
+    AI 建議位置
+
+    綠色：
+    已符合構圖
+    */
 
     ctx.strokeStyle =
 
@@ -2572,18 +3052,18 @@ function drawNavigation() {
 
         ?
 
-        "#48ff70"
+        "#46ff73"
 
         :
 
-        "rgba(255,255,255,0.95)";
+        "rgba(255,255,255,0.92)";
 
 
     ctx.lineWidth =
 
         compositionOK
         ? 5
-        : 4;
+        : 3;
 
 
     ctx.shadowColor =
@@ -2591,214 +3071,25 @@ function drawNavigation() {
 
 
     ctx.shadowBlur =
-        5;
-
-
-    roundRect(
-
-        ctx,
-
-        boxLeft,
-        boxTop,
-
-        boxWidth,
-        boxHeight,
-
-        11
-
-    );
-
-
-    ctx.stroke();
+        6;
 
 
     /*
-    ======================
-    黃色手機
-    ======================
+    不畫完整死框，
+    改成四個角。
+
+    會比較像相機 UI。
     */
 
-    const phoneWidth =
-
-        Math.max(
-
-            28,
-
-            Math.min(
-                width,
-                height
-            )
-
-            *
-            0.075
-
-        );
-
-
-    const phoneHeight =
-
-        phoneWidth *
-        1.65;
-
-
-    let px =
-        smoothNavX;
-
-
-    let py =
-        smoothNavY;
-
-
-    /*
-    不讓圖示跑出去
-    */
-
-    px =
-        Math.max(
-
-            phoneWidth,
-
-            Math.min(
-
-                width -
-                phoneWidth,
-
-                px
-
-            )
-
-        );
-
-
-    py =
-        Math.max(
-
-            phoneHeight,
-
-            Math.min(
-
-                height -
-                phoneHeight,
-
-                py
-
-            )
-
-        );
-
-
-    ctx.strokeStyle =
-
-        compositionOK
-
-        ?
-
-        "#48ff70"
-
-        :
-
-        "#ffd84a";
-
-
-    ctx.lineWidth =
-        4;
-
-
-    const left =
-
-        px -
-        phoneWidth / 2;
-
-
-    const top =
-
-        py -
-        phoneHeight / 2;
-
-
-    roundRect(
-
-        ctx,
+    drawCornerFrame(
 
         left,
         top,
 
-        phoneWidth,
-        phoneHeight,
-
-        phoneWidth *
-        0.16
+        boxWidth,
+        boxHeight
 
     );
-
-
-    ctx.stroke();
-
-
-    /*
-    聽筒
-    */
-
-    ctx.beginPath();
-
-
-    ctx.moveTo(
-
-        left +
-        phoneWidth * 0.32,
-
-        top +
-        phoneHeight * 0.10
-
-    );
-
-
-    ctx.lineTo(
-
-        left +
-        phoneWidth * 0.68,
-
-        top +
-        phoneHeight * 0.10
-
-    );
-
-
-    ctx.lineWidth =
-        2.5;
-
-
-    ctx.stroke();
-
-
-    /*
-    Home 圓圈
-    */
-
-    ctx.beginPath();
-
-
-    ctx.arc(
-
-        px,
-
-        top +
-        phoneHeight * 0.89,
-
-        phoneWidth * 0.07,
-
-        0,
-
-        Math.PI * 2
-
-    );
-
-
-    ctx.lineWidth =
-        2;
-
-
-    ctx.stroke();
 
 
     ctx.shadowBlur =
@@ -2808,113 +3099,114 @@ function drawNavigation() {
 
 
 /* =====================================================
-   圓角矩形
+   四角目標框
 ===================================================== */
 
-function roundRect(
-
-    context,
+function drawCornerFrame(
 
     x,
     y,
 
     width,
-    height,
-
-    radius
+    height
 
 ) {
 
-    radius =
+    const corner =
+
         Math.min(
+            width,
+            height
+        )
 
-            radius,
-
-            width / 2,
-
-            height / 2
-
-        );
+        *
+        0.28;
 
 
-    context.beginPath();
+    ctx.beginPath();
 
 
-    context.moveTo(
-        x + radius,
+    /*
+    左上
+    */
+
+    ctx.moveTo(
+        x + corner,
         y
     );
 
-
-    context.lineTo(
-        x + width - radius,
+    ctx.lineTo(
+        x,
         y
     );
 
-
-    context.quadraticCurveTo(
-
-        x + width,
-        y,
-
-        x + width,
-        y + radius
-
+    ctx.lineTo(
+        x,
+        y + corner
     );
 
 
-    context.lineTo(
+    /*
+    右上
+    */
+
+    ctx.moveTo(
+        x + width - corner,
+        y
+    );
+
+    ctx.lineTo(
         x + width,
-        y + height - radius
+        y
+    );
+
+    ctx.lineTo(
+        x + width,
+        y + corner
     );
 
 
-    context.quadraticCurveTo(
+    /*
+    左下
+    */
 
-        x + width,
-        y + height,
+    ctx.moveTo(
+        x,
+        y + height - corner
+    );
 
-        x + width - radius,
+    ctx.lineTo(
+        x,
         y + height
-
     );
 
-
-    context.lineTo(
-        x + radius,
+    ctx.lineTo(
+        x + corner,
         y + height
     );
 
 
-    context.quadraticCurveTo(
+    /*
+    右下
+    */
 
-        x,
-        y + height,
+    ctx.moveTo(
+        x + width - corner,
+        y + height
+    );
 
-        x,
-        y + height - radius
+    ctx.lineTo(
+        x + width,
+        y + height
+    );
 
+    ctx.lineTo(
+        x + width,
+        y + height - corner
     );
 
 
-    context.lineTo(
-        x,
-        y + radius
-    );
-
-
-    context.quadraticCurveTo(
-
-        x,
-        y,
-
-        x + radius,
-        y
-
-    );
-
-
-    context.closePath();
+    ctx.stroke();
 
 }
 
@@ -2947,6 +3239,12 @@ function takePhoto() {
     photoCanvas.height =
         video.videoHeight;
 
+
+    /*
+    拍出乾淨照片
+
+    AI 目標框不會被拍進去
+    */
 
     photoCtx.drawImage(
 
