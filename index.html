@@ -4,284 +4,3007 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
   <meta name="theme-color" content="#000000" />
-  <title>智慧構圖助手 V5.2.1｜構圖評分版</title>
+  <title>智慧構圖助手 V5.3｜AI 構圖導航評分版</title>
+
   <style>
-    :root{--ok:#32d74b;--warn:#ffd60a;--bad:#ff453a;--panel:#171717;--muted:#a8a8ad}
-    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;overflow-x:hidden}
-    body{min-height:100dvh}
-    .app{max-width:760px;margin:0 auto;background:#000;min-height:100dvh}
-    header{height:112px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:14px 12px 12px;gap:5px}
-    .title{font-size:23px;font-weight:800;letter-spacing:.5px}.sub{font-size:16px;color:#aaa}
-    .stage{position:relative;width:100%;background:#111;overflow:hidden;aspect-ratio:3/4}
-    video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(1)}
-    video.mirror{transform:scaleX(-1)}
-    #analysis{display:none}
-    .overlay{position:absolute;inset:0;pointer-events:none}
-    .frame{position:absolute;left:50%;top:50%;width:45%;height:42%;transform:translate(-50%,-50%);transition:.18s ease;filter:drop-shadow(0 0 4px #000)}
-    .corner{position:absolute;width:48px;height:48px;border-color:#fff;transition:.18s ease}
-    .tl{left:0;top:0;border-left:4px solid;border-top:4px solid}.tr{right:0;top:0;border-right:4px solid;border-top:4px solid}.bl{left:0;bottom:0;border-left:4px solid;border-bottom:4px solid}.br{right:0;bottom:0;border-right:4px solid;border-bottom:4px solid}
-    .frame.ok .corner{border-color:var(--ok)}.frame.warn .corner{border-color:var(--warn)}.frame.bad .corner{border-color:var(--bad)}
-    .grid{position:absolute;inset:0;opacity:0;transition:.2s}.grid.show{opacity:.65}
-    .grid i{position:absolute;background:rgba(255,255,255,.75)}
-    .grid .v1{left:33.333%;top:0;bottom:0;width:1px}.grid .v2{left:66.666%;top:0;bottom:0;width:1px}.grid .h1{top:33.333%;left:0;right:0;height:1px}.grid .h2{top:66.666%;left:0;right:0;height:1px}
-    .vp{position:absolute;width:24px;height:24px;border:2px solid var(--warn);border-radius:50%;transform:translate(-50%,-50%);display:none}.vp:before,.vp:after{content:"";position:absolute;background:var(--warn);left:50%;top:50%;transform:translate(-50%,-50%)}.vp:before{width:34px;height:2px}.vp:after{height:34px;width:2px}
-    .scorebox{position:absolute;left:12px;top:12px;background:rgba(0,0,0,.58);backdrop-filter:blur(8px);border-radius:15px;padding:9px 12px;min-width:142px;border:1px solid rgba(255,255,255,.12)}
-    .scoreline{display:flex;align-items:baseline;gap:7px}.score{font-size:32px;font-weight:900;line-height:1}.unit{font-size:13px;color:#ccc}.mode{font-size:14px;font-weight:700;margin-top:4px}.small{font-size:12px;color:#bbb;margin-top:3px}
-    .guide{position:absolute;left:50%;bottom:15px;transform:translateX(-50%);width:min(92%,520px);text-align:center;background:rgba(0,0,0,.64);backdrop-filter:blur(8px);padding:9px 12px;border-radius:13px;font-size:14px;font-weight:700;border:1px solid rgba(255,255,255,.12)}
-    .loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#111;color:#bbb;font-size:15px}
-    .controls{padding:18px 14px 28px}.row{display:flex;justify-content:center;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}.btn{border:0;border-radius:15px;background:#2b2b2d;color:#fff;padding:13px 20px;font-size:17px;font-weight:750;min-width:145px}.btn:active{transform:scale(.98)}
-    .shutterrow{display:flex;justify-content:center;align-items:center;gap:28px;margin:8px 0 18px}.shutter{width:82px;height:82px;border-radius:50%;border:6px solid #fff;background:#111;display:flex;align-items:center;justify-content:center;font-size:33px}.close{border:0;background:#29292b;color:#fff;border-radius:15px;padding:14px 18px;font-size:17px;font-weight:700}
-    .chips{display:flex;gap:8px;overflow:auto;padding:2px 2px 9px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chip{white-space:nowrap;border:1px solid #444;background:#171719;color:#ddd;border-radius:999px;padding:9px 13px;font-size:13px}.chip.active{background:#fff;color:#000;border-color:#fff;font-weight:800}
-    .zoomwrap{display:flex;align-items:center;gap:10px;margin-top:8px;color:#bbb;font-size:13px}.zoomwrap input{width:100%}
-    .status{text-align:center;color:#8e8e93;font-size:12px;margin-top:8px;line-height:1.55}
-    @media (max-height:700px){header{height:82px}.controls{padding-top:12px}.stage{aspect-ratio:4/5}.shutter{width:70px;height:70px}}
+    :root{
+      --ok:#32d74b;
+      --warn:#ffd60a;
+      --bad:#ff453a;
+    }
+
+    *{
+      box-sizing:border-box;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    html,body{
+      margin:0;
+      background:#000;
+      color:#fff;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;
+      overflow-x:hidden;
+    }
+
+    body{min-height:100dvh;}
+
+    .app{
+      max-width:760px;
+      margin:0 auto;
+      background:#000;
+      min-height:100dvh;
+    }
+
+    header{
+      height:112px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-end;
+      padding:14px 12px 12px;
+      gap:5px;
+    }
+
+    .title{
+      font-size:23px;
+      font-weight:800;
+    }
+
+    .sub{
+      font-size:16px;
+      color:#aaa;
+    }
+
+    .stage{
+      position:relative;
+      width:100%;
+      background:#111;
+      overflow:hidden;
+      aspect-ratio:3/4;
+    }
+
+    video{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    video.mirror{
+      transform:scaleX(-1);
+    }
+
+    #analysis{display:none;}
+
+    .overlay{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+    }
+
+    .frame{
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:45%;
+      height:42%;
+      transform:translate(-50%,-50%);
+      transition:.18s ease;
+      filter:drop-shadow(0 0 4px #000);
+    }
+
+    .corner{
+      position:absolute;
+      width:48px;
+      height:48px;
+      border-color:#fff;
+      transition:.18s ease;
+    }
+
+    .tl{
+      left:0;
+      top:0;
+      border-left:4px solid;
+      border-top:4px solid;
+    }
+
+    .tr{
+      right:0;
+      top:0;
+      border-right:4px solid;
+      border-top:4px solid;
+    }
+
+    .bl{
+      left:0;
+      bottom:0;
+      border-left:4px solid;
+      border-bottom:4px solid;
+    }
+
+    .br{
+      right:0;
+      bottom:0;
+      border-right:4px solid;
+      border-bottom:4px solid;
+    }
+
+    .frame.ok .corner{border-color:var(--ok);}
+    .frame.warn .corner{border-color:var(--warn);}
+    .frame.bad .corner{border-color:var(--bad);}
+
+    .grid{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      transition:.2s;
+    }
+
+    .grid.show{opacity:.65;}
+
+    .grid i{
+      position:absolute;
+      background:rgba(255,255,255,.75);
+    }
+
+    .grid .v1{
+      left:33.333%;
+      top:0;
+      bottom:0;
+      width:1px;
+    }
+
+    .grid .v2{
+      left:66.666%;
+      top:0;
+      bottom:0;
+      width:1px;
+    }
+
+    .grid .h1{
+      top:33.333%;
+      left:0;
+      right:0;
+      height:1px;
+    }
+
+    .grid .h2{
+      top:66.666%;
+      left:0;
+      right:0;
+      height:1px;
+    }
+
+    .vp{
+      position:absolute;
+      width:24px;
+      height:24px;
+      border:2px solid var(--warn);
+      border-radius:50%;
+      transform:translate(-50%,-50%);
+      display:none;
+    }
+
+    .vp:before,
+    .vp:after{
+      content:"";
+      position:absolute;
+      background:var(--warn);
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+    }
+
+    .vp:before{
+      width:34px;
+      height:2px;
+    }
+
+    .vp:after{
+      height:34px;
+      width:2px;
+    }
+
+    .target{
+      position:absolute;
+      width:36px;
+      height:36px;
+      border:2px solid #64d2ff;
+      border-radius:50%;
+      transform:translate(-50%,-50%);
+      display:none;
+      box-shadow:0 0 12px rgba(100,210,255,.5);
+    }
+
+    .target:before,
+    .target:after{
+      content:"";
+      position:absolute;
+      background:#64d2ff;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+    }
+
+    .target:before{
+      width:52px;
+      height:2px;
+    }
+
+    .target:after{
+      width:2px;
+      height:52px;
+    }
+
+    .navarrow{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      font-size:54px;
+      font-weight:900;
+      text-shadow:0 2px 8px #000;
+      display:none;
+      animation:pulse .75s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse{
+      from{
+        opacity:.55;
+        transform:translate(-50%,-50%) scale(.92);
+      }
+      to{
+        opacity:1;
+        transform:translate(-50%,-50%) scale(1.08);
+      }
+    }
+
+    .scorebox{
+      position:absolute;
+      left:12px;
+      top:12px;
+      background:rgba(0,0,0,.58);
+      backdrop-filter:blur(8px);
+      border-radius:15px;
+      padding:9px 12px;
+      min-width:142px;
+      border:1px solid rgba(255,255,255,.12);
+    }
+
+    .scoreline{
+      display:flex;
+      align-items:baseline;
+      gap:7px;
+    }
+
+    .score{
+      font-size:32px;
+      font-weight:900;
+      line-height:1;
+    }
+
+    .unit{
+      font-size:13px;
+      color:#ccc;
+    }
+
+    .mode{
+      font-size:14px;
+      font-weight:700;
+      margin-top:4px;
+    }
+
+    .small{
+      font-size:12px;
+      color:#bbb;
+      margin-top:3px;
+    }
+
+    .guide{
+      position:absolute;
+      left:50%;
+      bottom:15px;
+      transform:translateX(-50%);
+      width:min(92%,520px);
+      text-align:center;
+      background:rgba(0,0,0,.64);
+      backdrop-filter:blur(8px);
+      padding:9px 12px;
+      border-radius:13px;
+      font-size:14px;
+      font-weight:700;
+      border:1px solid rgba(255,255,255,.12);
+    }
+
+    .loading{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#111;
+      color:#bbb;
+      font-size:15px;
+      text-align:center;
+    }
+
+    .controls{
+      padding:18px 14px 28px;
+    }
+
+    .row{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:14px;
+      margin-bottom:16px;
+      flex-wrap:wrap;
+    }
+
+    .btn{
+      border:0;
+      border-radius:15px;
+      background:#2b2b2d;
+      color:#fff;
+      padding:13px 20px;
+      font-size:17px;
+      font-weight:750;
+      min-width:145px;
+    }
+
+    .btn:active{transform:scale(.98);}
+
+    .shutterrow{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:28px;
+      margin:8px 0 18px;
+    }
+
+    .shutter{
+      width:82px;
+      height:82px;
+      border-radius:50%;
+      border:6px solid #fff;
+      background:#111;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:33px;
+    }
+
+    .close{
+      border:0;
+      background:#29292b;
+      color:#fff;
+      border-radius:15px;
+      padding:14px 18px;
+      font-size:17px;
+      font-weight:700;
+    }
+
+    .chips{
+      display:flex;
+      gap:8px;
+      overflow:auto;
+      padding:2px 2px 9px;
+      scrollbar-width:none;
+    }
+
+    .chips::-webkit-scrollbar{
+      display:none;
+    }
+
+    .chip{
+      white-space:nowrap;
+      border:1px solid #444;
+      background:#171719;
+      color:#ddd;
+      border-radius:999px;
+      padding:9px 13px;
+      font-size:13px;
+    }
+
+    .chip.active{
+      background:#fff;
+      color:#000;
+      border-color:#fff;
+      font-weight:800;
+    }
+
+    .zoomwrap{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-top:8px;
+      color:#bbb;
+      font-size:13px;
+    }
+
+    .zoomwrap input{
+      width:100%;
+    }
+
+    .status{
+      text-align:center;
+      color:#8e8e93;
+      font-size:12px;
+      margin-top:8px;
+      line-height:1.55;
+    }
+
+    .rank{
+      margin-top:10px;
+      background:#141416;
+      border:1px solid #2b2b2e;
+      border-radius:14px;
+      padding:10px 12px;
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:7px 12px;
+      font-size:13px;
+    }
+
+    .rank b{color:#fff;}
+    .rank span{color:#aaa;}
+
+    @media (max-height:700px){
+      header{height:82px;}
+      .controls{padding-top:12px;}
+      .stage{aspect-ratio:4/5;}
+      .shutter{
+        width:70px;
+        height:70px;
+      }
+    }
   </style>
 </head>
+
 <body>
+
 <div class="app">
-  <header><div class="title">📷 智慧構圖助手 <span style="font-size:14px;color:#8e8e93">V5.2.1</span></div><div class="sub" id="lensText">📷 後鏡頭 · 構圖評分版</div></header>
-  <main class="stage" id="stage">
+
+  <header>
+    <div class="title">
+      📷 智慧構圖助手
+      <span style="font-size:14px;color:#8e8e93">V5.3</span>
+    </div>
+
+    <div class="sub" id="lensText">
+      📷 後鏡頭 · AI 構圖導航版
+    </div>
+  </header>
+
+  <main class="stage">
+
     <video id="video" playsinline autoplay muted></video>
+
     <canvas id="analysis"></canvas>
+
     <div class="overlay">
-      <div class="grid" id="grid"><i class="v1"></i><i class="v2"></i><i class="h1"></i><i class="h2"></i></div>
-      <div class="frame warn" id="frame"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span></div>
+
+      <div class="grid" id="grid">
+        <i class="v1"></i>
+        <i class="v2"></i>
+        <i class="h1"></i>
+        <i class="h2"></i>
+      </div>
+
+      <div class="frame warn" id="frame">
+        <span class="corner tl"></span>
+        <span class="corner tr"></span>
+        <span class="corner bl"></span>
+        <span class="corner br"></span>
+      </div>
+
       <div class="vp" id="vp"></div>
-      <div class="scorebox"><div class="scoreline"><div class="score" id="score">--</div><div class="unit">/100</div></div><div class="mode" id="mode">分析中…</div><div class="small" id="subscore">等待畫面穩定</div></div>
-      <div class="guide" id="guide">正在分析構圖…</div>
-      <div class="loading" id="loading">正在啟動相機…</div>
+
+      <div class="target" id="target"></div>
+
+      <div class="navarrow" id="navarrow"></div>
+
+      <div class="scorebox">
+        <div class="scoreline">
+          <div class="score" id="score">--</div>
+          <div class="unit">/100</div>
+        </div>
+
+        <div class="mode" id="mode">
+          分析中…
+        </div>
+
+        <div class="small" id="subscore">
+          等待畫面穩定
+        </div>
+      </div>
+
+      <div class="guide" id="guide">
+        正在分析構圖…
+      </div>
+
+      <div class="loading" id="loading">
+        正在啟動相機…
+      </div>
+
     </div>
   </main>
 
   <section class="controls">
+
     <div class="row">
-      <button class="btn" id="frontBtn">🤳 前鏡頭</button>
-      <button class="btn" id="backBtn">📷 後鏡頭</button>
+      <button class="btn" id="frontBtn">
+        🤳 前鏡頭
+      </button>
+
+      <button class="btn" id="backBtn">
+        📷 後鏡頭
+      </button>
     </div>
-    <div class="shutterrow"><button class="shutter" id="shoot">📸</button><button class="close" id="closeBtn">關閉</button></div>
-    <div class="chips" id="chips">
-      <button class="chip active" data-mode="auto">✨ AI 自動</button>
-      <button class="chip" data-mode="thirds"># 三分法</button>
-      <button class="chip" data-mode="center">◎ 居中</button>
-      <button class="chip" data-mode="golden">φ 黃金比例</button>
-      <button class="chip" data-mode="leading">↗ 引導線</button>
-      <button class="chip" data-mode="vshape">V V型</button>
+
+    <div class="shutterrow">
+      <button class="shutter" id="shoot">
+        📸
+      </button>
+
+      <button class="close" id="closeBtn">
+        關閉
+      </button>
     </div>
-    <div class="zoomwrap"><span>倍率</span><input id="zoom" type="range" min="1" max="1" value="1" step="0.1" disabled><span id="zoomText">1.0×</span></div>
-    <div class="status" id="status">綠框 ≥ 80 分｜黃框 60–79｜紅框 &lt; 60。沒有偵測到人物時，會改用線條、對稱、消失點與亮度重心評分。</div>
+
+    <div class="chips">
+
+      <button class="chip active" data-mode="auto">
+        ✨ AI 自動
+      </button>
+
+      <button class="chip" data-mode="thirds">
+        # 三分法
+      </button>
+
+      <button class="chip" data-mode="center">
+        ◎ 居中
+      </button>
+
+      <button class="chip" data-mode="golden">
+        φ 黃金比例
+      </button>
+
+      <button class="chip" data-mode="leading">
+        ↗ 引導線
+      </button>
+
+      <button class="chip" data-mode="vshape">
+        V V型
+      </button>
+
+    </div>
+
+    <div class="zoomwrap">
+      <span>倍率</span>
+
+      <input
+        id="zoom"
+        type="range"
+        min="1"
+        max="1"
+        value="1"
+        step="0.1"
+        disabled
+      >
+
+      <span id="zoomText">
+        1.0×
+      </span>
+    </div>
+
+    <div class="status" id="status">
+      V5.3：自動選構圖＋穩定評分＋方向導航。綠框 ≥ 80 分｜黃框 60–79｜紅框 &lt; 60。
+    </div>
+
+    <div class="rank">
+
+      <b>建議構圖</b>
+      <span id="bestMode">分析中…</span>
+
+      <b>次佳構圖</b>
+      <span id="secondMode">—</span>
+
+      <b>穩定度</b>
+      <span id="stability">—</span>
+
+    </div>
+
   </section>
+
 </div>
 
 <script>
+
 (() => {
+
   const video = document.getElementById('video');
-  const canvas = document.getElementById('analysis');
-  const ctx = canvas.getContext('2d', {willReadFrequently:true});
-  const frame = document.getElementById('frame');
-  const scoreEl = document.getElementById('score');
-  const modeEl = document.getElementById('mode');
-  const subscoreEl = document.getElementById('subscore');
-  const guideEl = document.getElementById('guide');
-  const loading = document.getElementById('loading');
-  const lensText = document.getElementById('lensText');
-  const vpEl = document.getElementById('vp');
-  const gridEl = document.getElementById('grid');
-  const zoom = document.getElementById('zoom');
-  const zoomText = document.getElementById('zoomText');
 
-  let stream = null, facingMode = 'environment', model = null, manualMode='auto';
-  let lastDetect = 0, lastPreds = [], busy=false, raf=0;
-  let smoothScore = 65, smoothVP={x:.5,y:.48};
-  const names={auto:'AI 自動',thirds:'三分法',center:'居中',golden:'黃金比例',leading:'引導線',vshape:'V 型構圖'};
+  const canvas =
+    document.getElementById('analysis');
 
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const dist=(a,b,c,d)=>Math.hypot(a-c,b-d);
-  const scoreDistance=(d,max=.55)=>100*clamp(1-d/max,0,1);
+  const ctx =
+    canvas.getContext(
+      '2d',
+      {willReadFrequently:true}
+    );
 
-  async function startCamera(mode=facingMode){
-    try{
-      if(stream) stream.getTracks().forEach(t=>t.stop());
-      facingMode=mode; loading.style.display='flex'; loading.textContent='正在啟動相機…';
-      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:mode},width:{ideal:1280},height:{ideal:1920}},audio:false});
-      video.srcObject=stream; video.classList.toggle('mirror',mode==='user');
-      await video.play();
-      lensText.textContent=(mode==='user'?'🤳 前鏡頭':'📷 後鏡頭')+' · 構圖評分版';
-      loading.style.display='none'; setupZoom();
-      if(!raf) raf=requestAnimationFrame(loop);
-    }catch(e){
-      console.error(e);
-      let msg='無法開啟相機';
-      if(e?.name==='NotAllowedError') msg='相機權限被拒絕，請到 Safari 網站設定允許相機';
-      else if(e?.name==='NotFoundError') msg='找不到可用的相機';
-      else if(e?.name==='NotReadableError') msg='相機正被其他 App 使用，請先關閉其他相機 App';
-      else if(location.protocol!=='https:' && location.hostname!=='localhost') msg='相機需要 HTTPS，請用 GitHub Pages 開啟';
-      loading.innerHTML=msg+'<br><button id=\"retryCam\" style=\"margin-top:14px;padding:11px 18px;border:0;border-radius:12px;font-size:16px;font-weight:700\">重新開啟相機</button>';
-      document.getElementById('retryCam')?.addEventListener('click',()=>startCamera(mode));
-    }
-  }
+  const frame =
+    document.getElementById('frame');
 
-  function setupZoom(){
-    const track=stream?.getVideoTracks?.()[0]; if(!track) return;
-    const caps=track.getCapabilities?.()||{};
-    if(caps.zoom){ zoom.disabled=false; zoom.min=caps.zoom.min; zoom.max=caps.zoom.max; zoom.step=caps.zoom.step||0.1; zoom.value=track.getSettings().zoom||caps.zoom.min; zoomText.textContent=(+zoom.value).toFixed(1)+'×'; }
-    else { zoom.disabled=true; zoom.min=1; zoom.max=1; zoom.value=1; zoomText.textContent='1.0×'; }
-  }
-  zoom.addEventListener('input',async()=>{ zoomText.textContent=(+zoom.value).toFixed(1)+'×'; const t=stream?.getVideoTracks?.()[0]; try{await t?.applyConstraints({advanced:[{zoom:+zoom.value}]});}catch(e){} });
+  const scoreEl =
+    document.getElementById('score');
 
-  function loadScript(src){
-    return new Promise((resolve,reject)=>{
-      const s=document.createElement('script');
-      s.src=src; s.async=true; s.onload=resolve; s.onerror=reject;
-      document.head.appendChild(s);
-    });
-  }
+  const modeEl =
+    document.getElementById('mode');
 
-  async function loadModel(){
-    try{
-      // 相機先開，再背景載入 AI，避免 CDN 載入失敗把相機一起卡死。
-      if(!window.tf) await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
-      if(!window.cocoSsd) await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js');
-      model=await window.cocoSsd.load({base:'lite_mobilenet_v2'});
-      document.getElementById('status').textContent='AI 物件偵測已載入。綠框 ≥ 80 分｜黃框 60–79｜紅框 < 60。';
-    }catch(e){
-      console.warn('AI model unavailable, using scene analysis only',e);
-      document.getElementById('status').textContent='AI 物件偵測未載入，已改用線條／消失點／對稱分析；相機仍可正常使用。';
-    }
-  }
+  const subscoreEl =
+    document.getElementById('subscore');
 
-  function analyzePixels(){
-    const W=160,H=120; canvas.width=W;canvas.height=H;ctx.drawImage(video,0,0,W,H);
-    const d=ctx.getImageData(0,0,W,H).data; const g=new Float32Array(W*H);
-    let sum=0,sx=0,sy=0;
-    for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;const v=.2126*d[i]+.7152*d[i+1]+.0722*d[i+2];g[y*W+x]=v;const w=Math.pow(v/255,1.6)+.03;sum+=w;sx+=x*w;sy+=y*w;}
-    const sal={x:(sx/sum)/(W-1),y:(sy/sum)/(H-1)};
+  const guideEl =
+    document.getElementById('guide');
 
-    let symErr=0,symN=0;
-    for(let y=0;y<H;y+=2)for(let x=0;x<W/2;x+=2){symErr+=Math.abs(g[y*W+x]-g[y*W+(W-1-x)]);symN++;}
-    const symmetry=clamp(100-(symErr/symN)*1.1,0,100);
+  const loading =
+    document.getElementById('loading');
 
-    // Sobel edges + lightweight vanishing-point scan.
-    const edges=[]; let edgeTotal=0;
-    for(let y=2;y<H-2;y+=2){
-      for(let x=2;x<W-2;x+=2){
-        const gx=-g[(y-1)*W+x-1]-2*g[y*W+x-1]-g[(y+1)*W+x-1]+g[(y-1)*W+x+1]+2*g[y*W+x+1]+g[(y+1)*W+x+1];
-        const gy=-g[(y-1)*W+x-1]-2*g[(y-1)*W+x]-g[(y-1)*W+x+1]+g[(y+1)*W+x-1]+2*g[(y+1)*W+x]+g[(y+1)*W+x+1];
-        const mag=Math.hypot(gx,gy); if(mag>115){edgeTotal+=mag; const tx=-gy,ty=gx,tn=Math.hypot(tx,ty)||1; edges.push([x/W,y/H,tx/tn,ty/tn,Math.min(mag,600)]);}
-      }
-    }
-    let best={s:0,x:.5,y:.45};
-    const candsX=[.32,.38,.44,.5,.56,.62,.68], candsY=[.25,.34,.43,.52,.61,.70];
-    for(const cy of candsY)for(const cx of candsX){
-      let acc=0,den=0;
-      for(let k=0;k<edges.length;k+=2){const [ex,ey,tx,ty,m]=edges[k]; const vx=cx-ex,vy=cy-ey,vn=Math.hypot(vx,vy); if(vn<.06)continue; const a=Math.abs((vx/vn)*tx+(vy/vn)*ty); if(a>.82)acc+=(a-.82)*m; den+=m*.18;}
-      const s=den?100*clamp(acc/den,0,1):0; if(s>best.s)best={s,x:cx,y:cy};
-    }
-    const edgeDensity=clamp(edges.length/750,0,1)*100;
-    const perspective=clamp(best.s*.72+edgeDensity*.28,0,100);
+  const lensText =
+    document.getElementById('lensText');
 
-    // Opposing diagonal energy as a V-shape proxy.
-    let pos=0,neg=0;
-    for(const e of edges){const [x,y,tx,ty,m]=e; if(Math.abs(tx)<.18||Math.abs(ty)<.18)continue; const slope=ty/tx; if(slope>0)pos+=m; else neg+=m;}
-    const vshape=clamp((Math.min(pos,neg)/(Math.max(pos,neg)+1))*70 + perspective*.3,0,100);
-    return {sal,symmetry,perspective,vshape,vp:best,edgeDensity};
-  }
+  const vpEl =
+    document.getElementById('vp');
 
-  function chooseSubject(preds,pix){
-    if(preds?.length){
-      const vw=video.videoWidth||1,vh=video.videoHeight||1;
-      const candidates=preds.filter(p=>p.score>.45).sort((a,b)=>{const aa=a.bbox[2]*a.bbox[3]*(a.class==='person'?1.35:1);const bb=b.bbox[2]*b.bbox[3]*(b.class==='person'?1.35:1);return bb-aa;});
-      if(candidates[0]){const p=candidates[0],b=p.bbox; return {x:(b[0]+b[2]/2)/vw,y:(b[1]+b[3]/2)/vh,w:b[2]/vw,h:b[3]/vh,label:p.class,conf:p.score,detected:true};}
-    }
-    return {...pix.sal,w:.18,h:.18,label:'畫面重心',conf:0,detected:false};
-  }
+  const targetEl =
+    document.getElementById('target');
 
-  function calculateScores(sub,p){
-    const dCenter=dist(sub.x,sub.y,.5,.5);
-    const center=clamp(scoreDistance(dCenter,.5)*.58+p.symmetry*.22+p.perspective*.20,0,100);
-    const thirdsPts=[[1/3,1/3],[2/3,1/3],[1/3,2/3],[2/3,2/3]];
-    const d3=Math.min(...thirdsPts.map(q=>dist(sub.x,sub.y,q[0],q[1])));
-    const thirds=clamp(scoreDistance(d3,.34)*.72+p.edgeDensity*.10+p.perspective*.18,0,100);
-    const phi=.382; const goldPts=[[phi,phi],[1-phi,phi],[phi,1-phi],[1-phi,1-phi]];
-    const dg=Math.min(...goldPts.map(q=>dist(sub.x,sub.y,q[0],q[1])));
-    const golden=clamp(scoreDistance(dg,.32)*.72+p.edgeDensity*.10+p.perspective*.18,0,100);
-    const vpCenter=scoreDistance(dist(p.vp.x,p.vp.y,.5,.48),.44);
-    const leading=clamp(p.perspective*.62+vpCenter*.23+p.symmetry*.15,0,100);
-    const vshape=clamp(p.vshape*.65+vpCenter*.20+p.symmetry*.15,0,100);
-    return {center,thirds,golden,leading,vshape};
-  }
+  const navArrow =
+    document.getElementById('navarrow');
 
-  function targetFor(mode,sub,p){
-    if(mode==='center')return{x:.5,y:.5};
-    if(mode==='thirds'){const pts=[[1/3,1/3],[2/3,1/3],[1/3,2/3],[2/3,2/3]];return pts.map(q=>({x:q[0],y:q[1],d:dist(sub.x,sub.y,q[0],q[1])})).sort((a,b)=>a.d-b.d)[0];}
-    if(mode==='golden'){const z=.382,pts=[[z,z],[1-z,z],[z,1-z],[1-z,1-z]];return pts.map(q=>({x:q[0],y:q[1],d:dist(sub.x,sub.y,q[0],q[1])})).sort((a,b)=>a.d-b.d)[0];}
-    if(mode==='leading'||mode==='vshape')return{x:.5,y:.48, useVP:true};
-    return{x:.5,y:.5};
-  }
+  const bestModeEl =
+    document.getElementById('bestMode');
 
-  function instruction(mode,score,sub,p){
-    if(score>=80){
-      if(mode==='leading')return '✅ 引導線收斂良好，可以拍了';
-      if(mode==='vshape')return '✅ V 型線條平衡，可以拍了';
-      return '✅ 構圖完成，可以拍了';
-    }
-    const t=targetFor(mode,sub,p); const x=t.useVP?p.vp.x:sub.x, y=t.useVP?p.vp.y:sub.y;
-    const dx=t.x-x, dy=t.y-y;
-    if(Math.abs(dx)>.08) return dx>0?'➡️ 鏡頭向右一點':'⬅️ 鏡頭向左一點';
-    if(Math.abs(dy)>.08) return dy>0?'⬇️ 鏡頭稍微往下':'⬆️ 鏡頭稍微抬高';
-    if(mode==='leading' && p.perspective<65) return '↗️ 找左右線條往畫面中央收斂的位置';
-    if(mode==='vshape' && p.vshape<65) return 'V 讓左右斜線形成較明顯的 V 型';
-    if(p.symmetry<48 && mode==='center') return '↔️ 左右再平衡一些';
-    return '👌 很接近了，微調一下角度';
-  }
+  const secondModeEl =
+    document.getElementById('secondMode');
 
-  function render(result,sub,p){
-    smoothScore=smoothScore*.68+result.score*.32; const s=Math.round(smoothScore);
-    scoreEl.textContent=s; modeEl.textContent=names[result.mode];
-    subscoreEl.textContent=sub.detected?`主體：${sub.label} · AI ${(sub.conf*100).toFixed(0)}%`:`無人物時使用場景線條 · 消失點 ${p.perspective.toFixed(0)} 分`;
-    frame.className='frame '+(s>=80?'ok':s>=60?'warn':'bad');
-    guideEl.textContent=instruction(result.mode,s,sub,p);
-    gridEl.classList.toggle('show',['thirds','golden'].includes(result.mode));
-    if(['leading','vshape'].includes(result.mode)){
-      smoothVP.x=smoothVP.x*.7+p.vp.x*.3;smoothVP.y=smoothVP.y*.7+p.vp.y*.3;vpEl.style.display='block';vpEl.style.left=(smoothVP.x*100)+'%';vpEl.style.top=(smoothVP.y*100)+'%';
-    } else vpEl.style.display='none';
-  }
+  const stabilityEl =
+    document.getElementById('stability');
 
-  async function loop(t){
-    raf=requestAnimationFrame(loop); if(video.readyState<2||busy)return;
-    busy=true;
-    try{
-      const pix=analyzePixels();
-      if(model && t-lastDetect>850){lastDetect=t; try{lastPreds=await model.detect(video,8,.35);}catch(e){}}
-      const sub=chooseSubject(lastPreds,pix); const scores=calculateScores(sub,pix);
-      let mode=manualMode;
-      if(mode==='auto'){
-        // Auto mode intentionally favors scene geometry when there is no strong detected subject.
-        const entries=Object.entries(scores);
-        if(!sub.detected){scores.leading+=8;scores.center+=4;}
-        mode=entries.sort((a,b)=>b[1]-a[1])[0][0];
-      }
-      render({mode,score:clamp(scores[mode],0,100)},sub,pix);
-    }catch(e){console.error(e)}finally{busy=false;}
-  }
+  const gridEl =
+    document.getElementById('grid');
 
-  document.getElementById('frontBtn').onclick=()=>startCamera('user');
-  document.getElementById('backBtn').onclick=()=>startCamera('environment');
-  document.getElementById('closeBtn').onclick=()=>{if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;loading.style.display='flex';loading.textContent='相機已關閉';};
-  document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{manualMode=c.dataset.mode;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===c));});
+  const zoom =
+    document.getElementById('zoom');
 
-  document.getElementById('shoot').onclick=()=>{
-    if(video.readyState<2)return;
-    const c=document.createElement('canvas');c.width=video.videoWidth;c.height=video.videoHeight;const x=c.getContext('2d');
-    if(facingMode==='user'){x.translate(c.width,0);x.scale(-1,1);}x.drawImage(video,0,0,c.width,c.height);
-    c.toBlob(blob=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`composition_${new Date().toISOString().replace(/[:.]/g,'-')}.jpg`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1200)},'image/jpeg',.94);
+  const zoomText =
+    document.getElementById('zoomText');
+
+  let stream = null;
+
+  let facingMode =
+    'environment';
+
+  let model = null;
+
+  let manualMode =
+    'auto';
+
+  let lastDetect = 0;
+
+  let lastPreds = [];
+
+  let busy = false;
+
+  let raf = 0;
+
+  let smoothScore = 65;
+
+  let smoothVP = {
+    x:.5,
+    y:.48
   };
 
-  if(!navigator.mediaDevices?.getUserMedia){loading.textContent='此瀏覽器不支援相機 API';return;}
-  // iPhone/Safari：先啟動相機，再背景載入 AI 模型。
-  // 若瀏覽器限制自動啟動，畫面上會出現「重新開啟相機」按鈕。
-  startCamera('environment').then(()=>loadModel()).catch(()=>{});
+  let autoMode =
+    'center';
+
+  let autoModeScore = 0;
+
+  let scoreHistory = [];
+
+  const names = {
+
+    auto:'AI 自動',
+
+    thirds:'三分法',
+
+    center:'居中',
+
+    golden:'黃金比例',
+
+    leading:'引導線',
+
+    vshape:'V 型構圖'
+
+  };
+
+  const clamp =
+    (v,a,b)=>
+      Math.max(
+        a,
+        Math.min(b,v)
+      );
+
+  const dist =
+    (a,b,c,d)=>
+      Math.hypot(
+        a-c,
+        b-d
+      );
+
+  const scoreDistance =
+    (d,max=.55)=>
+      100 *
+      clamp(
+        1-d/max,
+        0,
+        1
+      );
+
+
+
+  async function startCamera(
+    mode=facingMode
+  ){
+
+    try{
+
+      if(stream){
+
+        stream
+          .getTracks()
+          .forEach(
+            t=>t.stop()
+          );
+
+      }
+
+      facingMode = mode;
+
+      loading.style.display =
+        'flex';
+
+      loading.textContent =
+        '正在啟動相機…';
+
+      stream =
+        await navigator.mediaDevices
+          .getUserMedia({
+
+            video:{
+
+              facingMode:{
+                ideal:mode
+              },
+
+              width:{
+                ideal:1280
+              },
+
+              height:{
+                ideal:1920
+              }
+
+            },
+
+            audio:false
+
+          });
+
+      video.srcObject =
+        stream;
+
+      video.classList.toggle(
+        'mirror',
+        mode==='user'
+      );
+
+      await video.play();
+
+      lensText.textContent =
+        (
+          mode==='user'
+          ?
+          '🤳 前鏡頭'
+          :
+          '📷 後鏡頭'
+        )
+        +
+        ' · AI 構圖導航版';
+
+      loading.style.display =
+        'none';
+
+      setupZoom();
+
+      if(!raf){
+
+        raf =
+          requestAnimationFrame(loop);
+
+      }
+
+    }
+    catch(e){
+
+      console.error(e);
+
+      let msg =
+        '無法開啟相機';
+
+      if(
+        e?.name ===
+        'NotAllowedError'
+      ){
+
+        msg =
+          '相機權限被拒絕，請到 Safari 網站設定允許相機';
+
+      }
+
+      else if(
+        e?.name ===
+        'NotFoundError'
+      ){
+
+        msg =
+          '找不到可用的相機';
+
+      }
+
+      else if(
+        e?.name ===
+        'NotReadableError'
+      ){
+
+        msg =
+          '相機正被其他 App 使用';
+
+      }
+
+      else if(
+        location.protocol !==
+        'https:'
+        &&
+        location.hostname !==
+        'localhost'
+      ){
+
+        msg =
+          '相機需要 HTTPS，請用 GitHub Pages 開啟';
+
+      }
+
+      loading.innerHTML =
+        msg
+        +
+        '<br><button id="retryCam" style="margin-top:14px;padding:11px 18px;border:0;border-radius:12px;font-size:16px;font-weight:700">重新開啟相機</button>';
+
+      document
+        .getElementById(
+          'retryCam'
+        )
+        ?.addEventListener(
+          'click',
+          ()=>startCamera(mode)
+        );
+
+    }
+
+  }
+
+
+
+  function setupZoom(){
+
+    const track =
+      stream
+      ?.getVideoTracks
+      ?.()[0];
+
+    if(!track)
+      return;
+
+    const caps =
+      track
+      .getCapabilities
+      ?.()
+      ||
+      {};
+
+    if(caps.zoom){
+
+      zoom.disabled =
+        false;
+
+      zoom.min =
+        caps.zoom.min;
+
+      zoom.max =
+        caps.zoom.max;
+
+      zoom.step =
+        caps.zoom.step
+        ||
+        0.1;
+
+      zoom.value =
+        track
+        .getSettings()
+        .zoom
+        ||
+        caps.zoom.min;
+
+      zoomText.textContent =
+        (+zoom.value)
+        .toFixed(1)
+        +
+        '×';
+
+    }
+    else{
+
+      zoom.disabled =
+        true;
+
+      zoom.min = 1;
+      zoom.max = 1;
+      zoom.value = 1;
+
+      zoomText.textContent =
+        '1.0×';
+
+    }
+
+  }
+
+
+
+  zoom.addEventListener(
+    'input',
+    async()=>{
+
+      zoomText.textContent =
+        (+zoom.value)
+        .toFixed(1)
+        +
+        '×';
+
+      const t =
+        stream
+        ?.getVideoTracks
+        ?.()[0];
+
+      try{
+
+        await t
+          ?.applyConstraints({
+
+            advanced:[
+              {
+                zoom:+zoom.value
+              }
+            ]
+
+          });
+
+      }
+      catch(e){}
+
+    }
+  );
+
+
+
+  function loadScript(src){
+
+    return new Promise(
+      (
+        resolve,
+        reject
+      )=>{
+
+        const s =
+          document
+            .createElement(
+              'script'
+            );
+
+        s.src =
+          src;
+
+        s.async =
+          true;
+
+        s.onload =
+          resolve;
+
+        s.onerror =
+          reject;
+
+        document
+          .head
+          .appendChild(s);
+
+      }
+    );
+
+  }
+
+
+
+  async function loadModel(){
+
+    try{
+
+      if(!window.tf){
+
+        await loadScript(
+          'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js'
+        );
+
+      }
+
+      if(!window.cocoSsd){
+
+        await loadScript(
+          'https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js'
+        );
+
+      }
+
+      model =
+        await window
+          .cocoSsd
+          .load({
+
+            base:
+              'lite_mobilenet_v2'
+
+          });
+
+      document
+        .getElementById(
+          'status'
+        )
+        .textContent =
+          'V5.3 AI 已載入：會自動選構圖、顯示目標點與移動方向。';
+
+    }
+    catch(e){
+
+      console.warn(
+        'AI model unavailable',
+        e
+      );
+
+      document
+        .getElementById(
+          'status'
+        )
+        .textContent =
+          'AI 模型未載入，改用線條／消失點／對稱分析；相機仍可使用。';
+
+    }
+
+  }
+
+
+
+  function analyzePixels(){
+
+    const W = 160;
+
+    const H = 120;
+
+    canvas.width = W;
+
+    canvas.height = H;
+
+    ctx.drawImage(
+      video,
+      0,
+      0,
+      W,
+      H
+    );
+
+    const d =
+      ctx
+        .getImageData(
+          0,
+          0,
+          W,
+          H
+        )
+        .data;
+
+    const g =
+      new Float32Array(
+        W*H
+      );
+
+    let sum = 0;
+
+    let sx = 0;
+
+    let sy = 0;
+
+    for(
+      let y=0;
+      y<H;
+      y++
+    ){
+
+      for(
+        let x=0;
+        x<W;
+        x++
+      ){
+
+        const i =
+          (y*W+x)*4;
+
+        const v =
+          .2126*d[i]
+          +
+          .7152*d[i+1]
+          +
+          .0722*d[i+2];
+
+        g[y*W+x] =
+          v;
+
+        const w =
+          Math.pow(
+            v/255,
+            1.6
+          )
+          +
+          .03;
+
+        sum += w;
+
+        sx +=
+          x*w;
+
+        sy +=
+          y*w;
+
+      }
+
+    }
+
+    const sal = {
+
+      x:
+        (sx/sum)
+        /
+        (W-1),
+
+      y:
+        (sy/sum)
+        /
+        (H-1)
+
+    };
+
+
+
+    let symErr = 0;
+
+    let symN = 0;
+
+    for(
+      let y=0;
+      y<H;
+      y+=2
+    ){
+
+      for(
+        let x=0;
+        x<W/2;
+        x+=2
+      ){
+
+        symErr +=
+          Math.abs(
+            g[y*W+x]
+            -
+            g[
+              y*W
+              +
+              (W-1-x)
+            ]
+          );
+
+        symN++;
+
+      }
+
+    }
+
+    const symmetry =
+      clamp(
+        100
+        -
+        (symErr/symN)*1.1,
+        0,
+        100
+      );
+
+
+
+    const edges = [];
+
+    for(
+      let y=2;
+      y<H-2;
+      y+=2
+    ){
+
+      for(
+        let x=2;
+        x<W-2;
+        x+=2
+      ){
+
+        const gx =
+
+          -g[(y-1)*W+x-1]
+
+          -2*g[y*W+x-1]
+
+          -g[(y+1)*W+x-1]
+
+          +g[(y-1)*W+x+1]
+
+          +2*g[y*W+x+1]
+
+          +g[(y+1)*W+x+1];
+
+        const gy =
+
+          -g[(y-1)*W+x-1]
+
+          -2*g[(y-1)*W+x]
+
+          -g[(y-1)*W+x+1]
+
+          +g[(y+1)*W+x-1]
+
+          +2*g[(y+1)*W+x]
+
+          +g[(y+1)*W+x+1];
+
+        const mag =
+          Math.hypot(
+            gx,
+            gy
+          );
+
+        if(mag>115){
+
+          const tx =
+            -gy;
+
+          const ty =
+            gx;
+
+          const tn =
+            Math.hypot(
+              tx,
+              ty
+            )
+            ||
+            1;
+
+          edges.push([
+
+            x/W,
+
+            y/H,
+
+            tx/tn,
+
+            ty/tn,
+
+            Math.min(
+              mag,
+              600
+            )
+
+          ]);
+
+        }
+
+      }
+
+    }
+
+
+
+    let best = {
+
+      s:0,
+      x:.5,
+      y:.45
+
+    };
+
+    const candsX = [
+      .32,
+      .38,
+      .44,
+      .5,
+      .56,
+      .62,
+      .68
+    ];
+
+    const candsY = [
+      .25,
+      .34,
+      .43,
+      .52,
+      .61,
+      .70
+    ];
+
+    for(
+      const cy
+      of
+      candsY
+    ){
+
+      for(
+        const cx
+        of
+        candsX
+      ){
+
+        let acc = 0;
+
+        let den = 0;
+
+        for(
+          let k=0;
+          k<edges.length;
+          k+=2
+        ){
+
+          const [
+            ex,
+            ey,
+            tx,
+            ty,
+            m
+          ] =
+            edges[k];
+
+          const vx =
+            cx-ex;
+
+          const vy =
+            cy-ey;
+
+          const vn =
+            Math.hypot(
+              vx,
+              vy
+            );
+
+          if(vn<.06)
+            continue;
+
+          const a =
+            Math.abs(
+              (vx/vn)*tx
+              +
+              (vy/vn)*ty
+            );
+
+          if(a>.82){
+
+            acc +=
+              (a-.82)*m;
+
+          }
+
+          den +=
+            m*.18;
+
+        }
+
+        const s =
+          den
+          ?
+          100
+          *
+          clamp(
+            acc/den,
+            0,
+            1
+          )
+          :
+          0;
+
+        if(s>best.s){
+
+          best = {
+            s,
+            x:cx,
+            y:cy
+          };
+
+        }
+
+      }
+
+    }
+
+
+
+    const edgeDensity =
+      clamp(
+        edges.length/750,
+        0,
+        1
+      )
+      *
+      100;
+
+    const perspective =
+      clamp(
+        best.s*.72
+        +
+        edgeDensity*.28,
+        0,
+        100
+      );
+
+
+
+    let pos = 0;
+
+    let neg = 0;
+
+    for(
+      const e
+      of
+      edges
+    ){
+
+      const [
+        x,
+        y,
+        tx,
+        ty,
+        m
+      ] =
+        e;
+
+      if(
+        Math.abs(tx)<.18
+        ||
+        Math.abs(ty)<.18
+      )
+        continue;
+
+      const slope =
+        ty/tx;
+
+      if(slope>0)
+        pos += m;
+      else
+        neg += m;
+
+    }
+
+    const vshape =
+      clamp(
+
+        (
+          Math.min(
+            pos,
+            neg
+          )
+          /
+          (
+            Math.max(
+              pos,
+              neg
+            )
+            +
+            1
+          )
+        )
+        *
+        70
+
+        +
+
+        perspective*.3,
+
+        0,
+
+        100
+
+      );
+
+    return {
+
+      sal,
+      symmetry,
+      perspective,
+      vshape,
+      vp:best,
+      edgeDensity
+
+    };
+
+  }
+
+
+
+  function chooseSubject(
+    preds,
+    pix
+  ){
+
+    if(preds?.length){
+
+      const vw =
+        video.videoWidth
+        ||
+        1;
+
+      const vh =
+        video.videoHeight
+        ||
+        1;
+
+      const candidates =
+        preds
+          .filter(
+            p=>p.score>.45
+          )
+          .sort(
+            (a,b)=>{
+
+              const aa =
+                a.bbox[2]
+                *
+                a.bbox[3]
+                *
+                (
+                  a.class==='person'
+                  ?
+                  1.35
+                  :
+                  1
+                );
+
+              const bb =
+                b.bbox[2]
+                *
+                b.bbox[3]
+                *
+                (
+                  b.class==='person'
+                  ?
+                  1.35
+                  :
+                  1
+                );
+
+              return bb-aa;
+
+            }
+          );
+
+      if(candidates[0]){
+
+        const p =
+          candidates[0];
+
+        const b =
+          p.bbox;
+
+        return {
+
+          x:
+            (
+              b[0]
+              +
+              b[2]/2
+            )
+            /
+            vw,
+
+          y:
+            (
+              b[1]
+              +
+              b[3]/2
+            )
+            /
+            vh,
+
+          w:
+            b[2]/vw,
+
+          h:
+            b[3]/vh,
+
+          label:
+            p.class,
+
+          conf:
+            p.score,
+
+          detected:true
+
+        };
+
+      }
+
+    }
+
+    return {
+
+      ...pix.sal,
+
+      w:.18,
+
+      h:.18,
+
+      label:
+        '畫面重心',
+
+      conf:0,
+
+      detected:false
+
+    };
+
+  }
+
+
+
+  function calculateScores(
+    sub,
+    p
+  ){
+
+    const dCenter =
+      dist(
+        sub.x,
+        sub.y,
+        .5,
+        .5
+      );
+
+    const center =
+      clamp(
+
+        scoreDistance(
+          dCenter,
+          .5
+        )
+        *
+        .58
+
+        +
+
+        p.symmetry*.22
+
+        +
+
+        p.perspective*.20,
+
+        0,
+        100
+
+      );
+
+
+
+    const thirdsPts = [
+
+      [1/3,1/3],
+
+      [2/3,1/3],
+
+      [1/3,2/3],
+
+      [2/3,2/3]
+
+    ];
+
+    const d3 =
+      Math.min(
+        ...thirdsPts
+          .map(
+            q=>
+              dist(
+                sub.x,
+                sub.y,
+                q[0],
+                q[1]
+              )
+          )
+      );
+
+    const thirds =
+      clamp(
+
+        scoreDistance(
+          d3,
+          .34
+        )
+        *
+        .72
+
+        +
+
+        p.edgeDensity*.10
+
+        +
+
+        p.perspective*.18,
+
+        0,
+        100
+
+      );
+
+
+
+    const phi =
+      .382;
+
+    const goldPts = [
+
+      [phi,phi],
+
+      [1-phi,phi],
+
+      [phi,1-phi],
+
+      [1-phi,1-phi]
+
+    ];
+
+    const dg =
+      Math.min(
+        ...goldPts
+          .map(
+            q=>
+              dist(
+                sub.x,
+                sub.y,
+                q[0],
+                q[1]
+              )
+          )
+      );
+
+    const golden =
+      clamp(
+
+        scoreDistance(
+          dg,
+          .32
+        )
+        *
+        .72
+
+        +
+
+        p.edgeDensity*.10
+
+        +
+
+        p.perspective*.18,
+
+        0,
+        100
+
+      );
+
+
+
+    const vpCenter =
+      scoreDistance(
+
+        dist(
+          p.vp.x,
+          p.vp.y,
+          .5,
+          .48
+        ),
+
+        .44
+
+      );
+
+
+
+    const leading =
+      clamp(
+
+        p.perspective*.62
+
+        +
+
+        vpCenter*.23
+
+        +
+
+        p.symmetry*.15,
+
+        0,
+        100
+
+      );
+
+
+
+    const vshape =
+      clamp(
+
+        p.vshape*.65
+
+        +
+
+        vpCenter*.20
+
+        +
+
+        p.symmetry*.15,
+
+        0,
+        100
+
+      );
+
+
+
+    return {
+
+      center,
+      thirds,
+      golden,
+      leading,
+      vshape
+
+    };
+
+  }
+
+
+
+  function targetFor(
+    mode,
+    sub,
+    p
+  ){
+
+    if(mode==='center'){
+
+      return {
+        x:.5,
+        y:.5
+      };
+
+    }
+
+
+
+    if(mode==='thirds'){
+
+      const pts = [
+
+        [1/3,1/3],
+
+        [2/3,1/3],
+
+        [1/3,2/3],
+
+        [2/3,2/3]
+
+      ];
+
+      return pts
+        .map(
+          q=>({
+
+            x:q[0],
+
+            y:q[1],
+
+            d:
+              dist(
+                sub.x,
+                sub.y,
+                q[0],
+                q[1]
+              )
+
+          })
+        )
+        .sort(
+          (a,b)=>
+            a.d-b.d
+        )[0];
+
+    }
+
+
+
+    if(mode==='golden'){
+
+      const z = .382;
+
+      const pts = [
+
+        [z,z],
+
+        [1-z,z],
+
+        [z,1-z],
+
+        [1-z,1-z]
+
+      ];
+
+      return pts
+        .map(
+          q=>({
+
+            x:q[0],
+
+            y:q[1],
+
+            d:
+              dist(
+                sub.x,
+                sub.y,
+                q[0],
+                q[1]
+              )
+
+          })
+        )
+        .sort(
+          (a,b)=>
+            a.d-b.d
+        )[0];
+
+    }
+
+
+
+    if(
+      mode==='leading'
+      ||
+      mode==='vshape'
+    ){
+
+      return {
+
+        x:.5,
+        y:.48,
+        useVP:true
+
+      };
+
+    }
+
+
+
+    return {
+      x:.5,
+      y:.5
+    };
+
+  }
+
+
+
+  function navFor(
+    mode,
+    score,
+    sub,
+    p
+  ){
+
+    if(score>=80){
+
+      return {
+
+        text:
+          mode==='leading'
+          ?
+          '✅ 引導線收斂良好，可以拍了'
+          :
+          mode==='vshape'
+          ?
+          '✅ V 型線條平衡，可以拍了'
+          :
+          '✅ 構圖完成，可以拍了',
+
+        arrow:'',
+
+        target:null
+
+      };
+
+    }
+
+
+
+    const t =
+      targetFor(
+        mode,
+        sub,
+        p
+      );
+
+    const x =
+      t.useVP
+      ?
+      p.vp.x
+      :
+      sub.x;
+
+    const y =
+      t.useVP
+      ?
+      p.vp.y
+      :
+      sub.y;
+
+    const dx =
+      t.x-x;
+
+    const dy =
+      t.y-y;
+
+
+
+    if(
+      Math.abs(dx)>.075
+    ){
+
+      if(dx>0){
+
+        return {
+
+          text:
+            '⬅️ 鏡頭向左一點',
+
+          arrow:
+            '⬅️',
+
+          target:t
+
+        };
+
+      }
+
+      return {
+
+        text:
+          '➡️ 鏡頭向右一點',
+
+        arrow:
+          '➡️',
+
+        target:t
+
+      };
+
+    }
+
+
+
+    if(
+      Math.abs(dy)>.075
+    ){
+
+      if(dy>0){
+
+        return {
+
+          text:
+            '⬆️ 鏡頭稍微抬高',
+
+          arrow:
+            '⬆️',
+
+          target:t
+
+        };
+
+      }
+
+      return {
+
+        text:
+          '⬇️ 鏡頭稍微往下',
+
+        arrow:
+          '⬇️',
+
+        target:t
+
+      };
+
+    }
+
+
+
+    if(
+      mode==='leading'
+      &&
+      p.perspective<65
+    ){
+
+      return {
+
+        text:
+          '↗️ 找左右線條往中央收斂的位置',
+
+        arrow:'',
+
+        target:{
+          x:.5,
+          y:.48
+        }
+
+      };
+
+    }
+
+
+
+    if(
+      mode==='vshape'
+      &&
+      p.vshape<65
+    ){
+
+      return {
+
+        text:
+          'V 讓左右斜線形成更明顯的 V 型',
+
+        arrow:'',
+
+        target:{
+          x:.5,
+          y:.48
+        }
+
+      };
+
+    }
+
+
+
+    if(
+      p.symmetry<48
+      &&
+      mode==='center'
+    ){
+
+      return {
+
+        text:
+          '↔️ 左右再平衡一些',
+
+        arrow:
+          '↔️',
+
+        target:{
+          x:.5,
+          y:.5
+        }
+
+      };
+
+    }
+
+
+
+    return {
+
+      text:
+        '👌 很接近了，微調一下角度',
+
+      arrow:'',
+
+      target:t
+
+    };
+
+  }
+
+
+
+  function updateRanking(
+    scores
+  ){
+
+    const rows =
+      Object
+        .entries(scores)
+        .sort(
+          (a,b)=>
+            b[1]-a[1]
+        );
+
+    if(
+      !rows.length
+    )
+      return;
+
+
+
+    bestModeEl.textContent =
+      names[
+        rows[0][0]
+      ]
+      +
+      ' '
+      +
+      Math.round(
+        rows[0][1]
+      )
+      +
+      ' 分';
+
+
+
+    secondModeEl.textContent =
+      rows[1]
+      ?
+      names[
+        rows[1][0]
+      ]
+      +
+      ' '
+      +
+      Math.round(
+        rows[1][1]
+      )
+      +
+      ' 分'
+      :
+      '—';
+
+  }
+
+
+
+  function chooseAutoMode(
+    scores
+  ){
+
+    const rows =
+      Object
+        .entries(scores)
+        .sort(
+          (a,b)=>
+            b[1]-a[1]
+        );
+
+    const [
+      best,
+      bestScore
+    ] =
+      rows[0];
+
+
+
+    if(
+      !autoMode
+      ||
+      best===autoMode
+      ||
+      bestScore
+      >
+      autoModeScore+7
+    ){
+
+      autoMode =
+        best;
+
+      autoModeScore =
+        bestScore;
+
+    }
+    else{
+
+      autoModeScore =
+        scores[autoMode]
+        ??
+        bestScore;
+
+    }
+
+
+
+    return autoMode;
+
+  }
+
+
+
+  function render(
+    result,
+    sub,
+    p,
+    scores
+  ){
+
+    smoothScore =
+      smoothScore*.72
+      +
+      result.score*.28;
+
+    const s =
+      Math.round(
+        smoothScore
+      );
+
+
+
+    scoreHistory.push(s);
+
+    if(
+      scoreHistory.length>18
+    ){
+
+      scoreHistory.shift();
+
+    }
+
+
+
+    const avg =
+      scoreHistory
+        .reduce(
+          (a,b)=>a+b,
+          0
+        )
+        /
+        scoreHistory.length;
+
+
+
+    const variance =
+      scoreHistory
+        .reduce(
+          (a,b)=>
+            a+(b-avg)**2,
+          0
+        )
+        /
+        scoreHistory.length;
+
+
+
+    const stable =
+      clamp(
+        100
+        -
+        Math.sqrt(
+          variance
+        )
+        *
+        7,
+        0,
+        100
+      );
+
+
+
+    scoreEl.textContent =
+      s;
+
+
+
+    modeEl.textContent =
+      names[
+        result.mode
+      ];
+
+
+
+    subscoreEl.textContent =
+      sub.detected
+      ?
+      `主體：${sub.label} · AI ${(sub.conf*100).toFixed(0)}%`
+      :
+      `場景線條分析 · 透視 ${p.perspective.toFixed(0)} 分`;
+
+
+
+    frame.className =
+      'frame '
+      +
+      (
+        s>=80
+        ?
+        'ok'
+        :
+        s>=60
+        ?
+        'warn'
+        :
+        'bad'
+      );
+
+
+
+    const nav =
+      navFor(
+        result.mode,
+        s,
+        sub,
+        p
+      );
+
+
+
+    guideEl.textContent =
+      nav.text;
+
+
+
+    navArrow.textContent =
+      nav.arrow;
+
+
+
+    navArrow.style.display =
+      nav.arrow
+      &&
+      s<80
+      ?
+      'block'
+      :
+      'none';
+
+
+
+    if(
+      nav.target
+      &&
+      s<80
+    ){
+
+      targetEl.style.display =
+        'block';
+
+      targetEl.style.left =
+        (
+          nav.target.x*100
+        )
+        +
+        '%';
+
+      targetEl.style.top =
+        (
+          nav.target.y*100
+        )
+        +
+        '%';
+
+    }
+    else{
+
+      targetEl.style.display =
+        'none';
+
+    }
+
+
+
+    gridEl
+      .classList
+      .toggle(
+
+        'show',
+
+        [
+          'thirds',
+          'golden'
+        ]
+        .includes(
+          result.mode
+        )
+
+      );
+
+
+
+    if(
+      [
+        'leading',
+        'vshape'
+      ]
+      .includes(
+        result.mode
+      )
+    ){
+
+      smoothVP.x =
+        smoothVP.x*.7
+        +
+        p.vp.x*.3;
+
+      smoothVP.y =
+        smoothVP.y*.7
+        +
+        p.vp.y*.3;
+
+
+
+      vpEl.style.display =
+        'block';
+
+      vpEl.style.left =
+        (
+          smoothVP.x*100
+        )
+        +
+        '%';
+
+      vpEl.style.top =
+        (
+          smoothVP.y*100
+        )
+        +
+        '%';
+
+    }
+    else{
+
+      vpEl.style.display =
+        'none';
+
+    }
+
+
+
+    updateRanking(
+      scores
+    );
+
+
+
+    stabilityEl.textContent =
+      `${Math.round(stable)}%`
+      +
+      (
+        stable>78
+        ?
+        '（穩定）'
+        :
+        stable>55
+        ?
+        '（尚可）'
+        :
+        '（請拿穩）'
+      );
+
+  }
+
+
+
+  async function loop(t){
+
+    raf =
+      requestAnimationFrame(
+        loop
+      );
+
+    if(
+      video.readyState<2
+      ||
+      busy
+    )
+      return;
+
+    busy = true;
+
+
+
+    try{
+
+      const pix =
+        analyzePixels();
+
+
+
+      if(
+        model
+        &&
+        t-lastDetect>850
+      ){
+
+        lastDetect =
+          t;
+
+        try{
+
+          lastPreds =
+            await model.detect(
+              video,
+              8,
+              .35
+            );
+
+        }
+        catch(e){}
+
+      }
+
+
+
+      const sub =
+        chooseSubject(
+          lastPreds,
+          pix
+        );
+
+
+
+      const scores =
+        calculateScores(
+          sub,
+          pix
+        );
+
+
+
+      let mode =
+        manualMode;
+
+
+
+      if(
+        !sub.detected
+      ){
+
+        scores.leading =
+          clamp(
+            scores.leading+8,
+            0,
+            100
+          );
+
+        scores.center =
+          clamp(
+            scores.center+4,
+            0,
+            100
+          );
+
+      }
+
+
+
+      if(
+        mode==='auto'
+      ){
+
+        mode =
+          chooseAutoMode(
+            scores
+          );
+
+      }
+
+
+
+      render(
+
+        {
+          mode,
+          score:
+            clamp(
+              scores[mode],
+              0,
+              100
+            )
+        },
+
+        sub,
+
+        pix,
+
+        scores
+
+      );
+
+    }
+    catch(e){
+
+      console.error(e);
+
+    }
+    finally{
+
+      busy = false;
+
+    }
+
+  }
+
+
+
+  document
+    .getElementById(
+      'frontBtn'
+    )
+    .onclick =
+      ()=>
+        startCamera(
+          'user'
+        );
+
+
+
+  document
+    .getElementById(
+      'backBtn'
+    )
+    .onclick =
+      ()=>
+        startCamera(
+          'environment'
+        );
+
+
+
+  document
+    .getElementById(
+      'closeBtn'
+    )
+    .onclick =
+      ()=>{
+
+        if(stream){
+
+          stream
+            .getTracks()
+            .forEach(
+              t=>t.stop()
+            );
+
+        }
+
+        stream = null;
+
+        video.srcObject =
+          null;
+
+        loading.style.display =
+          'flex';
+
+        loading.textContent =
+          '相機已關閉';
+
+      };
+
+
+
+  document
+    .querySelectorAll(
+      '.chip'
+    )
+    .forEach(
+      c=>
+        c.onclick =
+          ()=>{
+
+            manualMode =
+              c.dataset.mode;
+
+            if(
+              manualMode==='auto'
+            ){
+
+              autoMode =
+                'center';
+
+              autoModeScore =
+                0;
+
+            }
+
+            document
+              .querySelectorAll(
+                '.chip'
+              )
+              .forEach(
+                x=>
+                  x.classList.toggle(
+                    'active',
+                    x===c
+                  )
+              );
+
+          }
+    );
+
+
+
+  document
+    .getElementById(
+      'shoot'
+    )
+    .onclick =
+      ()=>{
+
+        if(
+          video.readyState<2
+        )
+          return;
+
+
+
+        const c =
+          document
+            .createElement(
+              'canvas'
+            );
+
+        c.width =
+          video.videoWidth;
+
+        c.height =
+          video.videoHeight;
+
+
+
+        const x =
+          c.getContext(
+            '2d'
+          );
+
+
+
+        if(
+          facingMode==='user'
+        ){
+
+          x.translate(
+            c.width,
+            0
+          );
+
+          x.scale(
+            -1,
+            1
+          );
+
+        }
+
+
+
+        x.drawImage(
+
+          video,
+
+          0,
+          0,
+
+          c.width,
+
+          c.height
+
+        );
+
+
+
+        c.toBlob(
+
+          blob=>{
+
+            const a =
+              document
+                .createElement(
+                  'a'
+                );
+
+            a.href =
+              URL.createObjectURL(
+                blob
+              );
+
+            a.download =
+              'composition_'
+              +
+              new Date()
+                .toISOString()
+                .replace(
+                  /[:.]/g,
+                  '-'
+                )
+              +
+              '.jpg';
+
+            a.click();
+
+
+
+            setTimeout(
+              ()=>
+                URL.revokeObjectURL(
+                  a.href
+                ),
+              1200
+            );
+
+          },
+
+          'image/jpeg',
+
+          .94
+
+        );
+
+      };
+
+
+
+  if(
+    !navigator
+      .mediaDevices
+      ?.getUserMedia
+  ){
+
+    loading.textContent =
+      '此瀏覽器不支援相機 API';
+
+    return;
+
+  }
+
+
+
+  startCamera(
+    'environment'
+  )
+  .then(
+    ()=>
+      loadModel()
+  )
+  .catch(
+    ()=>{}
+  );
+
 })();
+
 </script>
+
 </body>
 </html>
