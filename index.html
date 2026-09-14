@@ -2,12 +2,17 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-<title>AI 構圖助手 V5.3</title>
+<meta name="viewport"
+content="width=device-width,
+initial-scale=1.0,
+maximum-scale=1.0,
+user-scalable=no">
+
+<title>AI 構圖助手 V5.3.1</title>
 
 <style>
+
 *{
     box-sizing:border-box;
 }
@@ -16,29 +21,21 @@ html,body{
     margin:0;
     width:100%;
     height:100%;
-    overflow:hidden;
     background:#000;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     color:white;
-}
-
-#app{
-    position:relative;
-    width:100%;
-    height:100%;
-    background:#000;
+    overflow:hidden;
+    font-family:Arial,sans-serif;
 }
 
 #cameraArea{
     position:relative;
     width:100%;
     height:72%;
-    overflow:hidden;
     background:#111;
+    overflow:hidden;
 }
 
 video{
-    position:absolute;
     width:100%;
     height:100%;
     object-fit:cover;
@@ -46,168 +43,205 @@ video{
 
 canvas{
     position:absolute;
-    inset:0;
+    left:0;
+    top:0;
     width:100%;
     height:100%;
     pointer-events:none;
 }
 
-/* 上方資訊卡 */
-
 #info{
+
     position:absolute;
-    top:18px;
+
+    top:20px;
     left:18px;
+
+    background:rgba(0,0,0,.7);
+
     padding:14px 18px;
-    min-width:210px;
-    background:rgba(0,0,0,.68);
+
     border-radius:18px;
-    backdrop-filter:blur(8px);
+
     z-index:5;
+
 }
 
 #score{
-    font-size:40px;
-    font-weight:800;
-    line-height:1;
+
+    font-size:42px;
+    font-weight:bold;
+
 }
 
-#score span{
+#score small{
+
     font-size:17px;
-    opacity:.75;
+    opacity:.7;
+
 }
 
-#compositionName{
-    margin-top:7px;
+#composition{
+
     font-size:20px;
-    font-weight:700;
-}
+    font-weight:bold;
 
-#description{
     margin-top:5px;
+
+}
+
+#desc{
+
     font-size:14px;
-    opacity:.78;
+    opacity:.8;
+
+    margin-top:5px;
+
 }
 
-/* 分析按鈕 */
+#message{
 
-#analyzeBtn{
     position:absolute;
-    right:18px;
-    top:25px;
-    z-index:8;
 
-    border:none;
-    border-radius:30px;
-    padding:12px 16px;
-
-    background:rgba(0,0,0,.66);
-    color:white;
-    font-size:15px;
-}
-
-/* 中間提示 */
-
-#guideMessage{
-    position:absolute;
-    left:50%;
     bottom:20px;
-    transform:translateX(-50%);
-    width:88%;
 
-    padding:13px 18px;
-    background:rgba(0,0,0,.72);
+    left:50%;
+
+    transform:translateX(-50%);
+
+    width:90%;
 
     text-align:center;
-    font-size:17px;
-    font-weight:700;
+
+    background:rgba(0,0,0,.75);
+
+    padding:14px;
 
     border-radius:18px;
-    z-index:8;
+
+    font-size:17px;
+    font-weight:bold;
+
+    z-index:10;
+
 }
 
-/* 下方控制 */
+#version{
+
+    position:absolute;
+
+    left:10px;
+
+    bottom:5px;
+
+    font-size:11px;
+
+    opacity:.5;
+
+    z-index:20;
+
+}
+
 
 #controls{
+
     height:28%;
-    padding:16px 16px 10px;
+
     background:#000;
+
+    padding:15px;
+
 }
+
 
 #cameraButtons{
-    display:flex;
-    justify-content:center;
-    gap:16px;
-    margin-bottom:15px;
+
+    text-align:center;
+
+    margin-bottom:12px;
+
 }
 
-.smallBtn{
+
+button{
+
+    color:white;
+
     border:none;
-    border-radius:20px;
-    padding:12px 20px;
+
+}
+
+
+.cameraBtn{
 
     background:#292929;
-    color:white;
-    font-size:16px;
-}
 
-#modeBar{
-    display:flex;
-    overflow-x:auto;
-    gap:10px;
-    padding:5px 2px 12px;
-}
+    border-radius:22px;
 
-.modeBtn{
-    flex:none;
-    padding:10px 18px;
+    padding:11px 18px;
 
-    border:1px solid #555;
-    border-radius:25px;
-
-    background:#111;
-    color:#ddd;
+    margin:0 5px;
 
     font-size:15px;
+
 }
 
-.modeBtn.active{
-    background:white;
-    color:#000;
-    font-weight:700;
-}
 
-#zoomArea{
+#modes{
+
     display:flex;
+
+    gap:8px;
+
+    overflow-x:auto;
+
+    margin-bottom:12px;
+
+}
+
+
+.mode{
+
+    white-space:nowrap;
+
+    background:#111;
+
+    border:1px solid #555;
+
+    border-radius:25px;
+
+    padding:10px 17px;
+
+    font-size:15px;
+
+}
+
+
+.mode.active{
+
+    background:white;
+
+    color:black;
+
+    font-weight:bold;
+
+}
+
+
+#zoomRow{
+
+    display:flex;
+
     align-items:center;
-    gap:12px;
-    padding:5px 8px;
+
+    gap:10px;
+
 }
 
 #zoom{
+
     flex:1;
-}
 
-#zoomValue{
-    width:45px;
-    text-align:right;
-}
-
-/* 拍照鍵 */
-
-#shutterWrap{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    margin-top:3px;
-}
-
-#shutter{
-    width:70px;
-    height:70px;
-    border-radius:50%;
-    border:7px solid white;
-    background:#111;
 }
 
 </style>
@@ -215,494 +249,582 @@ canvas{
 
 <body>
 
-<div id="app">
 
-    <div id="cameraArea">
+<div id="cameraArea">
 
-        <video id="video"
-               autoplay
-               playsinline
-               muted>
-        </video>
+    <video
+    id="video"
+    autoplay
+    playsinline
+    muted>
+    </video>
 
-        <canvas id="overlay"></canvas>
+    <canvas id="overlay"></canvas>
 
-        <div id="info">
-            <div id="score">
-                -- <span>/100</span>
-            </div>
 
-            <div id="compositionName">
-                等待分析
-            </div>
+    <div id="info">
 
-            <div id="description">
-                先將鏡頭對準想拍的畫面
-            </div>
+        <div id="score">
+
+            --
+
+            <small>/100</small>
+
         </div>
 
-        <button id="analyzeBtn">
-            ✨ AI 分析構圖
-        </button>
 
-        <div id="guideMessage">
-            先固定畫面，再按「AI 分析構圖」
+        <div id="composition">
+
+            等待分析
+
+        </div>
+
+
+        <div id="desc">
+
+            先將鏡頭對準想拍的畫面
+
         </div>
 
     </div>
 
 
-    <div id="controls">
+    <div id="message">
 
-        <div id="cameraButtons">
+        按下面「✨ AI 自動」開始分析
 
-            <button class="smallBtn"
-                    onclick="switchCamera('user')">
-                🤳 前鏡頭
-            </button>
-
-            <button class="smallBtn"
-                    onclick="switchCamera('environment')">
-                📷 後鏡頭
-            </button>
-
-        </div>
+    </div>
 
 
-        <div id="modeBar">
+    <div id="version">
 
-            <button class="modeBtn active"
-                    data-mode="auto">
-                ✨ AI 自動
-            </button>
-
-            <button class="modeBtn"
-                    data-mode="third">
-                # 三分法
-            </button>
-
-            <button class="modeBtn"
-                    data-mode="center">
-                ◎ 居中
-            </button>
-
-            <button class="modeBtn"
-                    data-mode="golden">
-                Φ 黃金比例
-            </button>
-
-            <button class="modeBtn"
-                    data-mode="vshape">
-                V 型
-            </button>
-
-        </div>
-
-
-        <div id="zoomArea">
-
-            <span>倍率</span>
-
-            <input id="zoom"
-                   type="range"
-                   min="1"
-                   max="3"
-                   step="0.1"
-                   value="1">
-
-            <span id="zoomValue">
-                1.0×
-            </span>
-
-        </div>
-
-
-        <div id="shutterWrap">
-            <button id="shutter"></button>
-        </div>
+        V5.3.1
 
     </div>
 
 </div>
 
 
+
+<div id="controls">
+
+
+    <div id="cameraButtons">
+
+        <button
+        class="cameraBtn"
+        onclick="changeCamera('user')">
+
+            🤳 前鏡頭
+
+        </button>
+
+
+        <button
+        class="cameraBtn"
+        onclick="changeCamera('environment')">
+
+            📷 後鏡頭
+
+        </button>
+
+    </div>
+
+
+
+    <div id="modes">
+
+
+        <button
+        id="autoBtn"
+        class="mode active"
+        onclick="selectMode('auto',this)">
+
+            ✨ AI 自動
+
+        </button>
+
+
+        <button
+        class="mode"
+        onclick="selectMode('third',this)">
+
+            # 三分法
+
+        </button>
+
+
+        <button
+        class="mode"
+        onclick="selectMode('center',this)">
+
+            ◎ 居中
+
+        </button>
+
+
+        <button
+        class="mode"
+        onclick="selectMode('golden',this)">
+
+            Φ 黃金比例
+
+        </button>
+
+
+        <button
+        class="mode"
+        onclick="selectMode('vshape',this)">
+
+            V 型
+
+        </button>
+
+
+    </div>
+
+
+
+    <div id="zoomRow">
+
+        <span>倍率</span>
+
+        <input
+        id="zoom"
+        type="range"
+        min="1"
+        max="3"
+        step="0.1"
+        value="1">
+
+        <span id="zoomText">
+
+            1.0×
+
+        </span>
+
+    </div>
+
+</div>
+
+
+
 <script>
 
-const video = document.getElementById("video");
-const canvas = document.getElementById("overlay");
-const ctx = canvas.getContext("2d");
+const video =
+document.getElementById("video");
 
-const analyzeBtn = document.getElementById("analyzeBtn");
+const canvas =
+document.getElementById("overlay");
 
-const scoreText =
-    document.getElementById("score");
+const ctx =
+canvas.getContext("2d");
 
-const compositionName =
-    document.getElementById("compositionName");
+const scoreBox =
+document.getElementById("score");
 
-const description =
-    document.getElementById("description");
+const compositionBox =
+document.getElementById("composition");
 
-const guideMessage =
-    document.getElementById("guideMessage");
+const descBox =
+document.getElementById("desc");
 
-const zoomSlider =
-    document.getElementById("zoom");
+const messageBox =
+document.getElementById("message");
 
-const zoomValue =
-    document.getElementById("zoomValue");
+const zoom =
+document.getElementById("zoom");
+
+const zoomText =
+document.getElementById("zoomText");
 
 
 let stream = null;
 
-let facingMode = "environment";
+let facingMode =
+"environment";
 
-let currentMode = "auto";
+let navigation =
+false;
 
-/*
-    AI分析完成後，
-    會把構圖模式鎖住。
-*/
-let lockedComposition = null;
+let selectedComposition =
+null;
 
-/*
-    是否正在導航
-*/
-let navigationActive = false;
+let demoScore =
+55;
 
 
-/*
-=====================================
-啟動攝影機
-=====================================
-*/
+/* =========================
+
+   CAMERA
+
+========================= */
 
 async function startCamera(){
 
-    if(stream){
-
-        stream.getTracks().forEach(track=>{
-            track.stop();
-        });
-
-    }
-
     try{
 
+        if(stream){
+
+            stream
+            .getTracks()
+            .forEach(t=>t.stop());
+
+        }
+
+
         stream =
-            await navigator.mediaDevices.getUserMedia({
+        await navigator.mediaDevices
+        .getUserMedia({
 
-                video:{
-                    facingMode:{
-                        ideal:facingMode
-                    }
-                },
+            video:{
 
-                audio:false
+                facingMode:{
+                    ideal:facingMode
+                }
 
-            });
+            },
 
-        video.srcObject = stream;
+            audio:false
 
-        await video.play();
+        });
 
-        resizeCanvas();
 
-        guideMessage.innerText =
-            "先固定畫面，再按「AI 分析構圖」";
+        video.srcObject =
+        stream;
+
+
+        video.onloadedmetadata =
+        function(){
+
+            resizeCanvas();
+
+        };
+
+
+        messageBox.innerText =
+        "按下面「✨ AI 自動」開始分析";
+
 
     }
 
     catch(err){
 
-        console.error(err);
+        console.log(err);
 
-        guideMessage.innerText =
-            "❌ 無法開啟鏡頭，請確認相機權限";
+        messageBox.innerText =
+        "❌ 鏡頭開啟失敗，請確認相機權限";
 
     }
 
 }
 
 
-/*
-=====================================
-切換鏡頭
-=====================================
-*/
 
-async function switchCamera(mode){
+async function changeCamera(mode){
 
-    facingMode = mode;
+    facingMode =
+    mode;
 
-    lockedComposition = null;
+    navigation =
+    false;
 
-    navigationActive = false;
+    selectedComposition =
+    null;
+
+    compositionBox.innerText =
+    "等待分析";
+
+    scoreBox.innerHTML =
+    `-- <small>/100</small>`;
 
     await startCamera();
 
 }
 
 
-/*
-=====================================
-Canvas尺寸
-=====================================
-*/
+
+/* =========================
+
+   MODE BUTTON
+
+========================= */
+
+function selectMode(mode,button){
+
+
+    document
+    .querySelectorAll(".mode")
+    .forEach(btn=>{
+
+        btn.classList.remove(
+            "active"
+        );
+
+    });
+
+
+    button.classList.add(
+        "active"
+    );
+
+
+
+    /* AI 自動 */
+
+    if(mode === "auto"){
+
+        runAI();
+
+        return;
+
+    }
+
+
+
+    /* V 型手動 */
+
+    if(mode === "vshape"){
+
+        selectedComposition =
+        "vshape";
+
+        navigation =
+        true;
+
+        demoScore =
+        60;
+
+
+        compositionBox.innerText =
+        "V 型構圖";
+
+
+        descBox.innerText =
+        "讓實景線條靠近白色 V 型虛線";
+
+
+        messageBox.innerText =
+        "📱 移動手機，讓景物線條貼近白色 V 線";
+
+        return;
+
+    }
+
+
+
+    navigation =
+    false;
+
+    selectedComposition =
+    null;
+
+
+    compositionBox.innerText =
+    "尚未完成";
+
+
+    descBox.innerText =
+    "此構圖導航後續加入";
+
+
+    messageBox.innerText =
+    "目前先測 AI 自動與 V 型導航";
+
+}
+
+
+
+/* =========================
+
+   AI ANALYZE
+
+========================= */
+
+function runAI(){
+
+
+    navigation =
+    false;
+
+
+    selectedComposition =
+    null;
+
+
+    compositionBox.innerText =
+    "AI 分析中";
+
+
+    descBox.innerText =
+    "正在分析場景線條與消失點";
+
+
+    scoreBox.innerHTML =
+    `-- <small>/100</small>`;
+
+
+    messageBox.innerText =
+    "✨ AI 正在分析構圖...";
+
+
+    /*
+       故意延遲0.8秒，
+       確認按鈕真的有作用
+    */
+
+    setTimeout(()=>{
+
+
+        selectedComposition =
+        "vshape";
+
+
+        navigation =
+        true;
+
+
+        demoScore =
+        58;
+
+
+        compositionBox.innerText =
+        "V 型構圖";
+
+
+        descBox.innerText =
+        "AI 建議使用 V 型構圖";
+
+
+        scoreBox.innerHTML =
+        `58 <small>/100</small>`;
+
+
+        messageBox.innerText =
+        "📱 移動手機，讓景物線條貼近白色 V 線";
+
+
+    },800);
+
+}
+
+
+
+/* =========================
+
+   CANVAS
+
+========================= */
 
 function resizeCanvas(){
 
+
     const rect =
-        canvas.getBoundingClientRect();
+    canvas.getBoundingClientRect();
+
+
+    const dpr =
+    window.devicePixelRatio || 1;
+
 
     canvas.width =
-        rect.width *
-        window.devicePixelRatio;
+    rect.width * dpr;
+
 
     canvas.height =
-        rect.height *
-        window.devicePixelRatio;
+    rect.height * dpr;
+
 
     ctx.setTransform(
-        window.devicePixelRatio,
+
+        dpr,
         0,
         0,
-        window.devicePixelRatio,
+        dpr,
         0,
         0
+
     );
 
 }
 
 
-/*
-=====================================
-AI分析
-=====================================
-*/
 
-analyzeBtn.addEventListener(
-    "click",
-    analyzeScene
-);
+function drawV(){
 
-
-function analyzeScene(){
-
-    /*
-        V5.3目前先專心測 V 型導航。
-
-        下一步才換真正的
-        AI場景分類器。
-    */
-
-    lockedComposition = "vshape";
-
-    navigationActive = true;
-
-    compositionName.innerText =
-        "V 型構圖";
-
-    description.innerText =
-        "讓場景線條靠近白色 V 型虛線";
-
-    scoreText.innerHTML =
-        `55 <span>/100</span>`;
-
-    guideMessage.innerText =
-        "📱 移動手機，讓實景線條貼近白色 V 線";
-
-}
-
-
-/*
-=====================================
-構圖按鈕
-=====================================
-*/
-
-document
-.querySelectorAll(".modeBtn")
-.forEach(btn=>{
-
-    btn.addEventListener("click", function(){
-
-        document
-        .querySelectorAll(".modeBtn")
-        .forEach(b=>{
-            b.classList.remove("active");
-        });
-
-        this.classList.add("active");
-
-        currentMode = this.dataset.mode;
-
-        // =========================
-        // AI 自動
-        // =========================
-        if(currentMode === "auto"){
-
-            guideMessage.innerText =
-                "✨ AI 正在分析構圖...";
-
-            compositionName.innerText =
-                "分析中";
-
-            description.innerText =
-                "正在判斷最佳構圖";
-
-            scoreText.innerHTML =
-                `-- <span>/100</span>`;
-
-            // 稍微延遲，讓畫面看得到「分析中」
-            setTimeout(()=>{
-                analyzeScene();
-            },700);
-
-        }
-
-        // =========================
-        // 手動 V 型
-        // =========================
-        else if(currentMode === "vshape"){
-
-            lockedComposition = "vshape";
-            navigationActive = true;
-
-            compositionName.innerText =
-                "V 型構圖";
-
-            description.innerText =
-                "移動手機，讓實景貼近白色 V 線";
-
-            guideMessage.innerText =
-                "📱 對準白色 V 線移動手機";
-
-        }
-
-        // =========================
-        // 其他構圖暫時提示
-        // =========================
-        else{
-
-            lockedComposition = null;
-            navigationActive = false;
-
-            compositionName.innerText =
-                "尚未完成";
-
-            description.innerText =
-                "此構圖導航下一版加入";
-
-            guideMessage.innerText =
-                "目前先測試 AI 自動與 V 型構圖";
-
-        }
-
-    });
-
-});
-
-/*
-=====================================
-V 型模板
-=====================================
-*/
-
-function drawVShape(){
 
     const w =
-        canvas.clientWidth;
+    canvas.clientWidth;
+
 
     const h =
-        canvas.clientHeight;
+    canvas.clientHeight;
 
-
-    /*
-        V型頂端位置
-    */
 
     const topY =
-        h * 0.26;
+    h * 0.25;
 
-
-    /*
-        V底部消失點
-    */
-
-    const centerX =
-        w * 0.5;
 
     const bottomY =
-        h * 0.78;
+    h * 0.78;
 
 
-    /*
-        左右起點
-    */
+    const centerX =
+    w * 0.50;
+
 
     const leftX =
-        w * 0.19;
+    w * 0.15;
+
 
     const rightX =
-        w * 0.81;
+    w * 0.85;
+
+
+
+    let color =
+    "rgba(255,255,255,.95)";
+
+
+    if(demoScore >= 85){
+
+        color =
+        "#25ff5b";
+
+    }
+
+    else if(demoScore >= 70){
+
+        color =
+        "#ffd400";
+
+    }
+
 
 
     ctx.save();
 
 
-    /*
-        根據分數改顏色
-    */
-
-    let score =
-        calculateDemoScore();
-
-
-    let lineColor;
-
-    if(score >= 85){
-
-        lineColor =
-            "#34ff65";
-
-    }
-
-    else if(score >= 70){
-
-        lineColor =
-            "#ffd629";
-
-    }
-
-    else{
-
-        lineColor =
-            "rgba(255,255,255,.92)";
-
-    }
-
-
     ctx.strokeStyle =
-        lineColor;
+    color;
+
+
+    ctx.fillStyle =
+    color;
+
 
     ctx.lineWidth =
-        3;
+    3;
 
-
-    /*
-        虛線效果
-    */
 
     ctx.setLineDash([
-        12,
+        14,
         10
     ]);
 
 
-    /*
-        左邊 V
-    */
+
+    /* LEFT */
 
     ctx.beginPath();
 
@@ -719,9 +841,8 @@ function drawVShape(){
     ctx.stroke();
 
 
-    /*
-        右邊 V
-    */
+
+    /* RIGHT */
 
     ctx.beginPath();
 
@@ -738,391 +859,170 @@ function drawVShape(){
     ctx.stroke();
 
 
-    /*
-        消失點
-    */
 
     ctx.setLineDash([]);
+
+
+
+    /* 消失點 */
 
     ctx.beginPath();
 
     ctx.arc(
+
         centerX,
         bottomY,
-        7,
+        6,
         0,
         Math.PI*2
-    );
 
-    ctx.fillStyle =
-        lineColor;
+    );
 
     ctx.fill();
 
 
-    /*
-        顯示 V 字
-    */
+
+    /* 標題 */
 
     ctx.font =
-        "bold 20px sans-serif";
+    "bold 18px Arial";
+
 
     ctx.textAlign =
-        "center";
+    "center";
 
-    ctx.fillStyle =
-        lineColor;
 
     ctx.fillText(
+
         "V 型構圖",
+
         centerX,
-        topY - 18
+
+        topY - 15
+
     );
 
 
     ctx.restore();
 
-
-    updateNavigationScore(score);
-
 }
 
 
-/*
-=====================================
-暫時模擬評分
-=====================================
 
-注意：
+function drawLoop(){
 
-現在網頁本身還沒有真正做到
-「看懂建築線條」。
-
-因此V5.3先把：
-1. AI選構圖
-2. 鎖定構圖
-3. 白色模板
-4. 黃/綠回饋
-
-先建立完整。
-
-這裡先使用手機陀螺儀
-模擬移動後分數變化。
-
-下一版再換成真正
-影像線條偵測。
-
-=====================================
-*/
-
-
-let phoneX = 0;
-let phoneY = 0;
-
-
-window.addEventListener(
-    "deviceorientation",
-    function(e){
-
-        if(e.gamma !== null){
-
-            phoneX = e.gamma;
-
-        }
-
-        if(e.beta !== null){
-
-            phoneY = e.beta;
-
-        }
-
-    }
-);
-
-
-function calculateDemoScore(){
-
-    /*
-        越接近手機正，
-        分數越高。
-
-        只是目前測UI流程，
-        不是最終AI。
-    */
-
-    let xPenalty =
-        Math.min(
-            Math.abs(phoneX),
-            25
-        );
-
-    let yTarget =
-        70;
-
-    let yPenalty =
-        Math.min(
-            Math.abs(
-                phoneY - yTarget
-            ),
-            25
-        );
-
-
-    let score =
-        100
-        - xPenalty * 1.1
-        - yPenalty * 0.7;
-
-
-    score =
-        Math.round(score);
-
-
-    score =
-        Math.max(
-            45,
-            Math.min(
-                96,
-                score
-            )
-        );
-
-
-    return score;
-
-}
-
-
-/*
-=====================================
-更新提示
-=====================================
-*/
-
-function updateNavigationScore(score){
-
-    scoreText.innerHTML =
-        `${score} <span>/100</span>`;
-
-
-    if(score >= 85){
-
-        guideMessage.innerText =
-            "✅ V 型構圖完成，可以拍了";
-
-    }
-
-    else if(score >= 70){
-
-        guideMessage.innerText =
-            "🟡 很接近了，再微調一下";
-
-    }
-
-    else{
-
-        guideMessage.innerText =
-            "📱 對準白色 V 線移動手機";
-
-    }
-
-}
-
-
-/*
-=====================================
-繪圖循環
-=====================================
-*/
-
-function draw(){
 
     ctx.clearRect(
+
         0,
         0,
         canvas.clientWidth,
         canvas.clientHeight
+
     );
 
 
     if(
-        navigationActive &&
-        lockedComposition === "vshape"
+        navigation &&
+        selectedComposition === "vshape"
     ){
 
-        drawVShape();
+        drawV();
 
     }
 
 
     requestAnimationFrame(
-        draw
+        drawLoop
     );
 
 }
 
-draw();
 
 
-/*
-=====================================
-倍率
-=====================================
-*/
+/* =========================
 
-zoomSlider.addEventListener(
-    "input",
-    async function(){
+   ZOOM
 
-        const zoom =
-            parseFloat(
-                this.value
-            );
+========================= */
 
-        zoomValue.innerText =
-            zoom.toFixed(1)
-            +
-            "×";
+zoom.addEventListener(
+"input",
+async function(){
 
 
-        if(!stream) return;
+    const value =
+    Number(this.value);
 
 
-        const track =
-            stream.getVideoTracks()[0];
-
-        const capabilities =
-            track.getCapabilities
-            ?
-            track.getCapabilities()
-            :
-            {};
+    zoomText.innerText =
+    value.toFixed(1) + "×";
 
 
-        if(capabilities.zoom){
+    if(!stream)
+    return;
 
-            try{
 
-                await track.applyConstraints({
+    const track =
+    stream.getVideoTracks()[0];
 
-                    advanced:[
-                        {
-                            zoom:zoom
-                        }
-                    ]
 
-                });
+    if(
+        !track ||
+        !track.getCapabilities
+    )
+    return;
 
-            }
 
-            catch(e){
+    const cap =
+    track.getCapabilities();
 
-                console.log(
-                    "此手機不支援硬體變焦"
-                );
 
-            }
+    if(!cap.zoom)
+    return;
 
-        }
+
+    try{
+
+        await track.applyConstraints({
+
+            advanced:[
+
+                {
+                    zoom:value
+                }
+
+            ]
+
+        });
 
     }
-);
 
+    catch(e){
 
-/*
-=====================================
-拍照
-=====================================
-*/
-
-document
-.getElementById("shutter")
-.addEventListener(
-    "click",
-    takePhoto
-);
-
-
-function takePhoto(){
-
-    const photo =
-        document.createElement(
-            "canvas"
+        console.log(
+            "Zoom unsupported"
         );
 
+    }
 
-    photo.width =
-        video.videoWidth;
-
-    photo.height =
-        video.videoHeight;
+});
 
 
-    const pctx =
-        photo.getContext(
-            "2d"
-        );
-
-
-    /*
-        照片本身不畫白線
-    */
-
-    pctx.drawImage(
-        video,
-        0,
-        0,
-        photo.width,
-        photo.height
-    );
-
-
-    const data =
-        photo.toDataURL(
-            "image/jpeg",
-            0.95
-        );
-
-
-    const link =
-        document.createElement(
-            "a"
-        );
-
-
-    link.href =
-        data;
-
-    link.download =
-        "AI構圖照片.jpg";
-
-
-    link.click();
-
-}
-
-
-/*
-=====================================
-視窗大小改變
-=====================================
-*/
 
 window.addEventListener(
-    "resize",
-    resizeCanvas
+"resize",
+resizeCanvas
 );
 
 
-/*
-=====================================
-開始
-=====================================
-*/
 
 startCamera();
 
+drawLoop();
+
 </script>
+
 
 </body>
 </html>
