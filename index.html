@@ -525,43 +525,83 @@ document
 .querySelectorAll(".modeBtn")
 .forEach(btn=>{
 
-    btn.addEventListener(
-        "click",
-        function(){
+    btn.addEventListener("click", function(){
 
-            document
-            .querySelectorAll(".modeBtn")
-            .forEach(b=>
-                b.classList.remove("active")
-            );
+        document
+        .querySelectorAll(".modeBtn")
+        .forEach(b=>{
+            b.classList.remove("active");
+        });
 
-            this.classList.add("active");
+        this.classList.add("active");
 
-            currentMode =
-                this.dataset.mode;
+        currentMode = this.dataset.mode;
 
+        // =========================
+        // AI 自動
+        // =========================
+        if(currentMode === "auto"){
 
-            if(currentMode==="vshape"){
+            guideMessage.innerText =
+                "✨ AI 正在分析構圖...";
 
-                lockedComposition =
-                    "vshape";
+            compositionName.innerText =
+                "分析中";
 
-                navigationActive =
-                    true;
+            description.innerText =
+                "正在判斷最佳構圖";
 
-                compositionName.innerText =
-                    "V 型構圖";
+            scoreText.innerHTML =
+                `-- <span>/100</span>`;
 
-                description.innerText =
-                    "手動 V 型導航";
-
-            }
+            // 稍微延遲，讓畫面看得到「分析中」
+            setTimeout(()=>{
+                analyzeScene();
+            },700);
 
         }
-    );
+
+        // =========================
+        // 手動 V 型
+        // =========================
+        else if(currentMode === "vshape"){
+
+            lockedComposition = "vshape";
+            navigationActive = true;
+
+            compositionName.innerText =
+                "V 型構圖";
+
+            description.innerText =
+                "移動手機，讓實景貼近白色 V 線";
+
+            guideMessage.innerText =
+                "📱 對準白色 V 線移動手機";
+
+        }
+
+        // =========================
+        // 其他構圖暫時提示
+        // =========================
+        else{
+
+            lockedComposition = null;
+            navigationActive = false;
+
+            compositionName.innerText =
+                "尚未完成";
+
+            description.innerText =
+                "此構圖導航下一版加入";
+
+            guideMessage.innerText =
+                "目前先測試 AI 自動與 V 型構圖";
+
+        }
+
+    });
 
 });
-
 
 /*
 =====================================
