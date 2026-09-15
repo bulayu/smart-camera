@@ -5,7 +5,7 @@
 <meta name="viewport"
       content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 
-<title>AI 構圖助手 V5.8</title>
+<title>AI 構圖助手 V5.8.1</title>
 
 <style>
 *{
@@ -106,7 +106,7 @@ html,body{
     position:absolute;
     left:8px;
     bottom:5px;
-    opacity:.65;
+    opacity:.7;
     font-size:11px;
     z-index:20;
 }
@@ -125,7 +125,7 @@ html,body{
 }
 
 button{
-    color:white;
+    color:#fff;
     border:none;
 }
 
@@ -170,26 +170,22 @@ button{
 
 <div id="cameraArea">
 
-    <video
-        id="video"
-        autoplay
-        playsinline
-        muted>
+    <video id="video"
+           autoplay
+           playsinline
+           muted>
     </video>
 
     <canvas id="overlay"></canvas>
 
-    <canvas
-        id="analysisCanvas"
-        width="240"
-        height="180">
+    <canvas id="analysisCanvas"
+            width="240"
+            height="180">
     </canvas>
 
     <div id="info">
-
         <div id="score">
-            --
-            <small>/100</small>
+            -- <small>/100</small>
         </div>
 
         <div id="composition">
@@ -199,7 +195,6 @@ button{
         <div id="desc">
             對準道路、鐵軌、走廊或街道
         </div>
-
     </div>
 
     <div id="message">
@@ -207,7 +202,7 @@ button{
     </div>
 
     <div id="version">
-        V5.8
+        V5.8.1
     </div>
 
 </div>
@@ -217,23 +212,20 @@ button{
 
     <div id="cameraButtons">
 
-        <button
-            class="cameraBtn"
-            onclick="changeCamera('user')">
+        <button class="cameraBtn"
+                onclick="changeCamera('user')">
             🤳 前鏡頭
         </button>
 
-        <button
-            class="cameraBtn"
-            onclick="changeCamera('environment')">
+        <button class="cameraBtn"
+                onclick="changeCamera('environment')">
             📷 後鏡頭
         </button>
 
     </div>
 
-    <button
-        id="aiButton"
-        onclick="runAI()">
+    <button id="aiButton"
+            onclick="runAI()">
         ✨ AI 自動分析
     </button>
 
@@ -241,13 +233,12 @@ button{
 
         <span>倍率</span>
 
-        <input
-            id="zoom"
-            type="range"
-            min="1"
-            max="3"
-            step=".1"
-            value="1">
+        <input id="zoom"
+               type="range"
+               min="1"
+               max="3"
+               step=".1"
+               value="1">
 
         <span id="zoomText">
             1.0×
@@ -256,7 +247,7 @@ button{
     </div>
 
     <div id="status">
-        V5.8｜單點透視辨識版
+        V5.8.1｜消失點精準版
     </div>
 
 </div>
@@ -268,40 +259,40 @@ button{
    DOM
 ===================================================== */
 
-const video =
+var video =
 document.getElementById("video");
 
-const overlay =
+var overlay =
 document.getElementById("overlay");
 
-const ctx =
+var ctx =
 overlay.getContext("2d");
 
-const ac =
+var ac =
 document.getElementById("analysisCanvas");
 
-const ax =
+var ax =
 ac.getContext(
     "2d",
     {willReadFrequently:true}
 );
 
-const scoreEl =
+var scoreEl =
 document.getElementById("score");
 
-const compositionEl =
+var compositionEl =
 document.getElementById("composition");
 
-const descEl =
+var descEl =
 document.getElementById("desc");
 
-const messageEl =
+var messageEl =
 document.getElementById("message");
 
-const zoom =
+var zoom =
 document.getElementById("zoom");
 
-const zoomText =
+var zoomText =
 document.getElementById("zoomText");
 
 
@@ -309,79 +300,106 @@ document.getElementById("zoomText");
    STATE
 ===================================================== */
 
-let stream = null;
+var stream = null;
 
-let facing =
+var facing =
 "environment";
 
-
-/*
-AI完成第一次分析後：
-
-targetGuide = 白色建議位置
-liveGuide   = 綠色目前消失點
-*/
-
-let targetGuide =
+var targetGuide =
 null;
 
-let liveGuide =
+var liveGuide =
 null;
 
-
-let navigation =
+var navigation =
 false;
 
-let currentScore =
+var currentScore =
 0;
 
-let lastAnalysisTime =
+var lastAnalysisTime =
 0;
 
-
-/*
-每450ms分析一次
-*/
-
-const LIVE_INTERVAL =
+var LIVE_INTERVAL =
 450;
 
-
-/*
-保存最近5次結果
-*/
-
-let liveHistory =
+var liveHistory =
 [];
 
-const HISTORY_SIZE =
+var HISTORY_SIZE =
 5;
 
+var SMOOTH =
+0.30;
 
-/*
-綠點平滑
-*/
+var MAX_STEP =
+0.055;
 
-const SMOOTH =
-0.28;
-
-
-/*
-限制單次跳動
-*/
-
-const MAX_STEP =
-0.06;
-
-
-/*
-連續完成次數
-
-避免一下綠一下黃
-*/
-
-let completeCount =
+var completeCount =
 0;
+
+
+/* =====================================================
+   BASIC
+===================================================== */
+
+function clamp(value,min,max){
+
+    return Math.max(
+        min,
+        Math.min(max,value)
+    );
+
+}
+
+
+function median(array){
+
+    if(
+        !array ||
+        array.length === 0
+    ){
+        return 0;
+    }
+
+    var a =
+    array.slice().sort(
+        function(x,y){
+            return x-y;
+        }
+    );
+
+    var m =
+    Math.floor(a.length/2);
+
+    if(a.length % 2){
+        return a[m];
+    }
+
+    return(
+        a[m-1]+a[m]
+    )/2;
+
+}
+
+
+function normalizeAngle(a){
+
+    while(
+        a > Math.PI/2
+    ){
+        a -= Math.PI;
+    }
+
+    while(
+        a < -Math.PI/2
+    ){
+        a += Math.PI;
+    }
+
+    return a;
+
+}
 
 
 /* =====================================================
@@ -397,11 +415,12 @@ async function startCamera(){
             stream
             .getTracks()
             .forEach(
-                track=>track.stop()
+                function(track){
+                    track.stop();
+                }
             );
 
         }
-
 
         stream =
         await navigator.mediaDevices
@@ -427,32 +446,25 @@ async function startCamera(){
 
         });
 
-
         video.srcObject =
         stream;
 
-
         await video.play();
 
-
         resizeOverlay();
-
 
         resetAnalysis();
 
     }
     catch(error){
 
-        console.error(error);
-
+        console.log(error);
 
         compositionEl.innerText =
         "相機無法開啟";
 
-
         descEl.innerText =
         "請確認 Safari 相機權限";
-
 
         messageEl.innerText =
         "❌ 無法開啟相機";
@@ -462,12 +474,10 @@ async function startCamera(){
 }
 
 
-
 async function changeCamera(mode){
 
     facing =
     mode;
-
 
     await startCamera();
 
@@ -498,90 +508,17 @@ function resetAnalysis(){
     currentScore =
     0;
 
-
     scoreEl.innerHTML =
-    `-- <small>/100</small>`;
-
+    '-- <small>/100</small>';
 
     compositionEl.innerText =
     "等待分析";
 
-
     descEl.innerText =
     "對準道路、鐵軌、走廊或街道";
 
-
     messageEl.innerText =
     "✨ 固定鏡頭後，按 AI 自動分析";
-
-}
-
-
-/* =====================================================
-   MEDIAN
-===================================================== */
-
-function median(array){
-
-    if(
-        !array ||
-        array.length === 0
-    ){
-
-        return 0;
-
-    }
-
-
-    const a =
-    array
-    .slice()
-    .sort(
-        (x,y)=>x-y
-    );
-
-
-    const middle =
-    Math.floor(
-        a.length/2
-    );
-
-
-    if(
-        a.length % 2
-    ){
-
-        return a[middle];
-
-    }
-
-
-    return(
-        a[middle-1]
-        +
-        a[middle]
-    )/2;
-
-}
-
-
-/* =====================================================
-   CLAMP
-===================================================== */
-
-function clamp(
-    value,
-    min,
-    max
-){
-
-    return Math.max(
-        min,
-        Math.min(
-            max,
-            value
-        )
-    );
 
 }
 
@@ -603,7 +540,6 @@ function runAI(){
 
     }
 
-
     navigation =
     false;
 
@@ -619,91 +555,71 @@ function runAI(){
     completeCount =
     0;
 
-
     currentScore =
     0;
 
-
     scoreEl.innerHTML =
-    `-- <small>/100</small>`;
-
+    '-- <small>/100</small>';
 
     compositionEl.innerText =
     "AI 分析中";
 
-
     descEl.innerText =
     "正在尋找主要消失點";
-
 
     messageEl.innerText =
     "✨ 請保持手機不動...";
 
-
-    /*
-    V5.8
-
-    連續分析5張畫面
-    */
-
-    const results =
+    var results =
     [];
 
-
-    let count =
+    var count =
     0;
 
+    /*
+    V5.8.1
+    取7幀。
 
-    const timer =
+    比V5.8的5幀多一點，
+    讓我們有能力排除離群值。
+    */
+
+    var timer =
     setInterval(
         function(){
 
-            const result =
+            var result =
             analyzePerspective();
 
-
             if(result){
-
-                results.push(
-                    result
-                );
-
+                results.push(result);
             }
-
 
             count++;
 
+            if(count >= 7){
 
-            if(
-                count >= 5
-            ){
+                clearInterval(timer);
 
-                clearInterval(
-                    timer
-                );
-
-
-                finishAI(
-                    results
-                );
+                finishAI(results);
 
             }
 
         },
-        170
+        160
     );
 
 }
 
 
 /* =====================================================
-   AI FINISH
+   MULTI FRAME FILTER
 ===================================================== */
 
 function finishAI(results){
 
     if(
-        results.length < 2
+        results.length < 3
     ){
 
         failAnalysis();
@@ -714,58 +630,147 @@ function finishAI(results){
 
 
     /*
-    先算5張照片
-    消失點中位數
+    第一次中位數
     */
 
-    const mx =
+    var mx =
     median(
         results.map(
-            r=>r.vx
+            function(r){
+                return r.vx;
+            }
         )
     );
 
-
-    const my =
+    var my =
     median(
         results.map(
-            r=>r.vy
+            function(r){
+                return r.vy;
+            }
         )
     );
 
 
     /*
-    找最接近中位數的
-    真實分析結果
+    計算每一幀離中心多遠
     */
 
-    let best =
+    var distances =
+    results.map(
+        function(r){
+
+            return Math.hypot(
+                r.vx-mx,
+                r.vy-my
+            );
+
+        }
+    );
+
+
+    var medianDistance =
+    median(distances);
+
+
+    /*
+    V5.8.1：
+    排除明顯離群值。
+
+    最低容許約4.5%畫面，
+    如果整體本來就稍有波動，
+    則依中位距離自動放寬。
+    */
+
+    var limit =
+    Math.max(
+        .045,
+        medianDistance*2.5
+    );
+
+
+    var filtered =
+    results.filter(
+        function(r){
+
+            var d =
+            Math.hypot(
+                r.vx-mx,
+                r.vy-my
+            );
+
+            return d <= limit;
+
+        }
+    );
+
+
+    if(
+        filtered.length < 3
+    ){
+
+        failAnalysis();
+
+        return;
+
+    }
+
+
+    /*
+    排除離群後
+    再重新算一次中心。
+    */
+
+    mx =
+    median(
+        filtered.map(
+            function(r){
+                return r.vx;
+            }
+        )
+    );
+
+    my =
+    median(
+        filtered.map(
+            function(r){
+                return r.vy;
+            }
+        )
+    );
+
+
+    /*
+    找最接近最終中位點、
+    同時信心較好的那一幀。
+    */
+
+    var best =
     null;
 
-    let bestDistance =
+    var bestValue =
     Infinity;
 
 
-    results.forEach(
+    filtered.forEach(
         function(r){
 
-            const d =
+            var d =
             Math.hypot(
-
                 r.vx-mx,
-
                 r.vy-my
-
             );
 
+            var value =
+            d -
+            r.confidence*.012;
 
             if(
-                d <
-                bestDistance
+                value < bestValue
             ){
 
-                bestDistance =
-                d;
+                bestValue =
+                value;
 
                 best =
                 r;
@@ -776,9 +781,7 @@ function finishAI(results){
     );
 
 
-    if(
-        !best
-    ){
+    if(!best){
 
         failAnalysis();
 
@@ -788,33 +791,26 @@ function finishAI(results){
 
 
     /*
-    多幀本身太分散，
-    代表消失點不穩。
+    最後穩定度檢查
     */
 
-    const spread =
-
+    var spread =
     median(
-
-        results.map(
+        filtered.map(
             function(r){
 
                 return Math.hypot(
-
                     r.vx-mx,
-
                     r.vy-my
-
                 );
 
             }
         )
-
     );
 
 
     if(
-        spread > .12
+        spread > .085
     ){
 
         failAnalysis();
@@ -824,33 +820,23 @@ function finishAI(results){
     }
 
 
-    /*
-    V5.8：
-    不再自動分 V / 倒V。
-
-    只要左右主要線
-    朝同一個點收斂，
-    就叫「單點透視」。
-    */
-
     compositionEl.innerText =
     "◎ 單點透視";
-
 
     descEl.innerText =
     "已找到畫面的主要消失點";
 
 
     /*
-    綠點 =
-    AI真正抓到的消失點
+    目前點採用多幀中位數，
+    而不是單一best幀。
     */
 
     liveGuide = {
 
-        vx:best.vx,
+        vx:mx,
 
-        vy:best.vy,
+        vy:my,
 
         confidence:
         best.confidence
@@ -861,31 +847,24 @@ function finishAI(results){
     liveHistory =
     [
         {
-            vx:best.vx,
-            vy:best.vy
+            vx:mx,
+            vy:my
         }
     ];
 
 
     /*
-    ---------------------------------
-    白色建議位置
-    ---------------------------------
+    =================================================
+    建議位置
+    =================================================
 
-    不直接固定死在50%,40%。
+    V5.8.1 暫時維持 V5.8 邏輯。
 
-    先看現在消失點比較靠近：
-    左三分線
-    中央
-    右三分線
-
-    再選最近的構圖位置。
-
-    道路高度則往約40%靠。
+    這版重點不是改構圖美學，
+    而是先驗證目前消失點是否抓準。
     */
 
-
-    const possibleX =
+    var possibleX =
     [
         1/3,
         .5,
@@ -893,26 +872,23 @@ function finishAI(results){
     ];
 
 
-    let idealX =
+    var idealX =
     possibleX[0];
 
-
-    let nearest =
+    var nearest =
     Infinity;
 
 
     possibleX.forEach(
         function(x){
 
-            const d =
+            var d =
             Math.abs(
-                best.vx-x
+                mx-x
             );
 
-
             if(
-                d <
-                nearest
+                d < nearest
             ){
 
                 nearest =
@@ -927,36 +903,19 @@ function finishAI(results){
     );
 
 
-    /*
-    不要要求使用者一次移太多。
-
-    水平最多建議移10%
-    垂直最多建議移10%
-    */
-
-    const dx =
+    var dx =
     clamp(
-
-        idealX -
-        best.vx,
-
+        idealX-mx,
         -.10,
-
         .10
-
     );
 
 
-    const dy =
+    var dy =
     clamp(
-
-        .40 -
-        best.vy,
-
+        .40-my,
         -.10,
-
         .10
-
     );
 
 
@@ -964,14 +923,14 @@ function finishAI(results){
 
         vx:
         clamp(
-            best.vx+dx,
+            mx+dx,
             .12,
             .88
         ),
 
         vy:
         clamp(
-            best.vy+dy,
+            my+dy,
             .18,
             .72
         )
@@ -980,15 +939,15 @@ function finishAI(results){
 
 
     /*
-    鎖死目標。
-
-    後面updateNavigation
-    絕對不能修改它。
+    白圈鎖定
     */
 
-    Object.freeze(
-        targetGuide
-    );
+    try{
+        Object.freeze(
+            targetGuide
+        );
+    }
+    catch(e){}
 
 
     navigation =
@@ -1025,21 +984,302 @@ function failAnalysis(){
     completeCount =
     0;
 
+    currentScore =
+    0;
 
     scoreEl.innerHTML =
-    `-- <small>/100</small>`;
-
+    '-- <small>/100</small>';
 
     compositionEl.innerText =
     "找不到穩定透視";
 
-
     descEl.innerText =
     "目前畫面沒有明確的共同消失點";
 
-
     messageEl.innerText =
     "📱 換個角度後，再按 AI 自動";
+
+}
+
+
+/* =====================================================
+   LINE TEST
+===================================================== */
+
+/*
+V5.8.1 最大修改之一：
+
+不再只看某一個pixel有沒有強邊緣。
+
+從候選點沿著線條方向，
+往前後檢查一段距離。
+
+如果只有局部小線，
+支持率會很低。
+
+如果是道路邊線、鐵軌、
+建築透視線，
+沿線會持續存在強邊緣。
+*/
+
+function measureLineSupport(
+    x,
+    y,
+    angle,
+    edge,
+    W,
+    H,
+    threshold
+){
+
+    var dx =
+    Math.cos(angle);
+
+    var dy =
+    Math.sin(angle);
+
+
+    var total =
+    0;
+
+    var hits =
+    0;
+
+    var weighted =
+    0;
+
+
+    /*
+    往前後各約40pixel
+    */
+
+    for(
+        var s=-40;
+        s<=40;
+        s+=5
+    ){
+
+        if(
+            Math.abs(s) < 5
+        ){
+            continue;
+        }
+
+
+        var px =
+        Math.round(
+            x+dx*s
+        );
+
+        var py =
+        Math.round(
+            y+dy*s
+        );
+
+
+        if(
+            px < 1 ||
+            px >= W-1 ||
+            py < 1 ||
+            py >= H-1
+        ){
+            continue;
+        }
+
+
+        total++;
+
+
+        /*
+        不只看正中心pixel，
+        看附近3x3有沒有強邊緣。
+        */
+
+        var localMax =
+        0;
+
+
+        for(
+            var yy=-1;
+            yy<=1;
+            yy++
+        ){
+
+            for(
+                var xx=-1;
+                xx<=1;
+                xx++
+            ){
+
+                var value =
+                edge[
+                    (py+yy)*W +
+                    (px+xx)
+                ];
+
+                if(
+                    value > localMax
+                ){
+                    localMax =
+                    value;
+                }
+
+            }
+
+        }
+
+
+        if(
+            localMax >
+            threshold*.72
+        ){
+
+            hits++;
+
+            weighted +=
+            Math.min(
+                2,
+                localMax /
+                threshold
+            );
+
+        }
+
+    }
+
+
+    if(
+        total === 0
+    ){
+        return 0;
+    }
+
+
+    var hitRatio =
+    hits/total;
+
+
+    /*
+    持續性比分散的幾個強pixel重要。
+    */
+
+    return(
+        hitRatio*.72
+        +
+        Math.min(
+            1,
+            weighted/total
+        )*.28
+    );
+
+}
+
+
+/* =====================================================
+   DISTANCE TO LINE
+===================================================== */
+
+function distanceToLine(
+    px,
+    py,
+    line
+){
+
+    var dx =
+    Math.cos(
+        line.angle
+    );
+
+    var dy =
+    Math.sin(
+        line.angle
+    );
+
+
+    return Math.abs(
+
+        (px-line.x)*(-dy)
+
+        +
+
+        (py-line.y)*dx
+
+    );
+
+}
+
+
+/* =====================================================
+   INTERSECTION
+===================================================== */
+
+function intersectAngleLines(
+    A,
+    B
+){
+
+    var adx =
+    Math.cos(
+        A.angle
+    );
+
+    var ady =
+    Math.sin(
+        A.angle
+    );
+
+    var bdx =
+    Math.cos(
+        B.angle
+    );
+
+    var bdy =
+    Math.sin(
+        B.angle
+    );
+
+
+    var denominator =
+    adx*bdy -
+    ady*bdx;
+
+
+    if(
+        Math.abs(
+            denominator
+        ) < .0001
+    ){
+
+        return null;
+
+    }
+
+
+    var dx =
+    B.x-A.x;
+
+    var dy =
+    B.y-A.y;
+
+
+    var t =
+    (
+        dx*bdy -
+        dy*bdx
+    )
+    /
+    denominator;
+
+
+    return{
+
+        x:
+        A.x+t*adx,
+
+        y:
+        A.y+t*ady
+
+    };
 
 }
 
@@ -1050,19 +1290,17 @@ function failAnalysis(){
 
 function analyzePerspective(){
 
-    const W =
+    var W =
     ac.width;
 
-    const H =
+    var H =
     ac.height;
 
 
     if(
         video.readyState < 2
     ){
-
         return null;
-
     }
 
 
@@ -1075,7 +1313,7 @@ function analyzePerspective(){
     );
 
 
-    const image =
+    var image =
     ax.getImageData(
         0,
         0,
@@ -1084,148 +1322,117 @@ function analyzePerspective(){
     );
 
 
-    const data =
+    var data =
     image.data;
 
 
-    const gray =
+    var gray =
     new Float32Array(
         W*H
     );
 
 
     /*
+    =================================================
     灰階
+    =================================================
     */
 
     for(
-        let i=0;
+        var i=0;
         i<W*H;
         i++
     ){
 
-        const p =
+        var p =
         i*4;
 
-
         gray[i] =
-
-        data[p]*.299
-
-        +
-
-        data[p+1]*.587
-
-        +
-
+        data[p]*.299 +
+        data[p+1]*.587 +
         data[p+2]*.114;
 
     }
 
 
-    const edge =
+    /*
+    =================================================
+    Sobel
+    =================================================
+    */
+
+    var edge =
     new Float32Array(
         W*H
     );
 
-
-    const direction =
+    var direction =
     new Float32Array(
         W*H
     );
 
-
-    const strengths =
+    var strengths =
     [];
 
 
-    /*
-    Sobel
-    */
-
     for(
-        let y=1;
+        var y=1;
         y<H-1;
         y++
     ){
 
         for(
-            let x=1;
+            var x=1;
             x<W-1;
             x++
         ){
 
-            const p =
+            var index =
             y*W+x;
 
 
-            const gx =
+            var gx =
 
-            -gray[p-W-1]
-
+            -gray[index-W-1]
             +
-
-            gray[p-W+1]
-
+            gray[index-W+1]
             -
-
-            2*gray[p-1]
-
+            2*gray[index-1]
             +
-
-            2*gray[p+1]
-
+            2*gray[index+1]
             -
-
-            gray[p+W-1]
-
+            gray[index+W-1]
             +
+            gray[index+W+1];
 
-            gray[p+W+1];
 
+            var gy =
 
-            const gy =
-
-            -gray[p-W-1]
-
+            -gray[index-W-1]
             -
-
-            2*gray[p-W]
-
+            2*gray[index-W]
             -
-
-            gray[p-W+1]
-
+            gray[index-W+1]
             +
-
-            gray[p+W-1]
-
+            gray[index+W-1]
             +
-
-            2*gray[p+W]
-
+            2*gray[index+W]
             +
+            gray[index+W+1];
 
-            gray[p+W+1];
 
-
-            const mag =
+            var mag =
             Math.hypot(
                 gx,
                 gy
             );
 
 
-            edge[p] =
+            edge[index] =
             mag;
 
 
-            /*
-            gradient旋轉90度
-            得到線條方向
-            */
-
-            direction[p] =
+            direction[index] =
             normalizeAngle(
 
                 Math.atan2(
@@ -1252,153 +1459,147 @@ function analyzePerspective(){
     if(
         strengths.length === 0
     ){
-
         return null;
-
     }
 
 
     strengths.sort(
-        (a,b)=>a-b
+        function(a,b){
+            return a-b;
+        }
     );
 
 
     /*
-    只取最強約8%
+    V5.8是92百分位。
+
+    V5.8.1稍微放寬到90.5%，
+    因為後面還會做長線支持檢查。
+
+    這樣不會只剩非常亮的短邊。
     */
 
-    const threshold =
-
+    var threshold =
     strengths[
         Math.floor(
-            strengths.length*.92
+            strengths.length*.905
         )
     ]
-
     ||
-
-    80;
+    70;
 
 
     /*
-    每10x10格
-    取一條最強斜線
+    =================================================
+    候選線
+    =================================================
     */
 
-    const cell =
+    var cell =
     10;
 
-
-    const candidates =
+    var candidates =
     [];
 
 
     for(
-        let cy=0;
+        var cy=0;
         cy<H;
         cy+=cell
     ){
 
         for(
-            let cx=0;
+            var cx=0;
             cx<W;
             cx+=cell
         ){
 
-            let bestMag =
+            var bestMag =
             0;
 
-            let bx =
+            var bx =
             0;
 
-            let by =
+            var by =
             0;
 
-            let ba =
+            var ba =
             0;
 
 
             for(
-                let y=cy;
-                y<
+                var yy=cy;
+                yy<
                 Math.min(
                     cy+cell,
                     H
                 );
-                y++
+                yy++
             ){
 
                 for(
-                    let x=cx;
-                    x<
+                    var xx=cx;
+                    xx<
                     Math.min(
                         cx+cell,
                         W
                     );
-                    x++
+                    xx++
                 ){
 
-                    const p =
-                    y*W+x;
+                    var idx =
+                    yy*W+xx;
 
 
-                    const mag =
-                    edge[p];
+                    var mag =
+                    edge[idx];
 
 
                     if(
-                        mag <
-                        threshold
+                        mag < threshold
                     ){
-
                         continue;
-
                     }
 
 
-                    const angle =
-                    direction[p];
+                    var angle =
+                    direction[idx];
 
 
-                    const absAngle =
-                    Math.abs(
-                        angle
-                    );
+                    var absAngle =
+                    Math.abs(angle);
 
 
                     /*
-                    排除：
+                    太水平不要。
 
-                    太水平
-                    太垂直
+                    垂直線也不要。
 
-                    保留主要斜線
+                    V5.8.1稍微允許
+                    更接近垂直的透視線。
                     */
 
                     if(
-                        absAngle < .16
+                        absAngle < .14
                         ||
-                        absAngle > 1.40
+                        absAngle > 1.47
                     ){
-
                         continue;
-
                     }
 
 
                     if(
-                        mag >
-                        bestMag
+                        mag > bestMag
                     ){
 
                         bestMag =
                         mag;
 
                         bx =
-                        x;
+                        xx;
 
                         by =
-                        y;
+                        yy;
 
                         ba =
                         angle;
@@ -1411,23 +1612,80 @@ function analyzePerspective(){
 
 
             if(
-                bestMag > 0
+                bestMag <= 0
             ){
-
-                candidates.push({
-
-                    x:bx,
-
-                    y:by,
-
-                    angle:ba,
-
-                    strength:
-                    bestMag
-
-                });
-
+                continue;
             }
+
+
+            /*
+            =================================================
+            長線支持
+            =================================================
+            */
+
+            var support =
+            measureLineSupport(
+                bx,
+                by,
+                ba,
+                edge,
+                W,
+                H,
+                threshold
+            );
+
+
+            /*
+            很短的局部線直接丟掉。
+            */
+
+            if(
+                support < .20
+            ){
+                continue;
+            }
+
+
+            /*
+            位置權重：
+
+            靠近畫面底部的線，
+            對道路透視通常更有價值。
+
+            但只小幅加權，
+            避免強迫所有場景都變道路。
+            */
+
+            var depthWeight =
+            .85 +
+            (by/H)*.30;
+
+
+            candidates.push({
+
+                x:bx,
+
+                y:by,
+
+                angle:ba,
+
+                strength:
+                bestMag,
+
+                continuity:
+                support,
+
+                weight:
+                bestMag *
+                (
+                    .45 +
+                    support*1.20
+                )
+                *
+                depthWeight
+
+            });
 
         }
 
@@ -1435,74 +1693,100 @@ function analyzePerspective(){
 
 
     if(
-        candidates.length <
-        10
+        candidates.length < 8
+    ){
+        return null;
+    }
+
+
+    /*
+    只保留品質較好的候選線。
+
+    防止城市窗戶產生幾十條
+    小斜線淹沒道路。
+    */
+
+    candidates.sort(
+        function(a,b){
+            return b.weight-a.weight;
+        }
+    );
+
+
+    if(
+        candidates.length > 48
     ){
 
-        return null;
+        candidates =
+        candidates.slice(
+            0,
+            48
+        );
 
     }
 
 
     /*
     =================================================
-    消失點候選
+    交點
     =================================================
     */
 
-    const intersections =
+    var intersections =
     [];
 
 
     for(
-        let i=0;
-        i<candidates.length;
-        i++
+        var a=0;
+        a<candidates.length;
+        a++
     ){
 
         for(
-            let j=i+1;
-            j<candidates.length;
-            j++
+            var b=a+1;
+            b<candidates.length;
+            b++
         ){
 
-            const A =
-            candidates[i];
+            var A =
+            candidates[a];
 
-            const B =
-            candidates[j];
+            var B =
+            candidates[b];
 
 
-            /*
-            兩條線方向差太小
-            不算
-            */
-
-            const angleDiff =
+            var angleDiff =
             Math.abs(
 
                 normalizeAngle(
-
-                    A.angle
-                    -
-                    B.angle
-
+                    A.angle-B.angle
                 )
 
             );
 
 
+            /*
+            幾乎平行
+            不拿來算消失點。
+            */
+
             if(
-                angleDiff <
-                .30
+                angleDiff < .24
             ){
-
                 continue;
-
             }
 
 
-            const p =
+            /*
+            V5.8.1：
+            優先一左一右的方向。
+
+            左邊往右上／右下，
+            右邊往左上／左下，
+            才比較像真正收斂。
+            */
+
+            var p =
             intersectAngleLines(
                 A,
                 B
@@ -1510,17 +1794,18 @@ function analyzePerspective(){
 
 
             if(!p){
-
                 continue;
-
             }
 
 
             /*
-            消失點允許區域。
+            消失點搜尋範圍。
 
-            不接受太靠邊
-            或畫面最下面。
+            V5.8.1把下限由78%
+            拉高到72%。
+
+            因為剛才測試最大的錯誤
+            就是消失點被拉到路面太下面。
             */
 
             if(
@@ -1528,31 +1813,26 @@ function analyzePerspective(){
                 ||
                 p.x > W*.95
                 ||
-                p.y < H*.08
+                p.y < H*.06
                 ||
-                p.y > H*.78
+                p.y > H*.72
             ){
-
                 continue;
-
             }
 
 
             /*
-            兩條線最好來自
-            消失點左右兩邊
+            來源線必須分布在
+            消失點左右兩側。
             */
 
-            const opposite =
-
+            var opposite =
             (
                 A.x < p.x
                 &&
                 B.x > p.x
             )
-
             ||
-
             (
                 B.x < p.x
                 &&
@@ -1560,71 +1840,92 @@ function analyzePerspective(){
             );
 
 
-            if(
-                !opposite
-            ){
-
+            if(!opposite){
                 continue;
-
             }
 
 
-            /*
-            水平間距不能太小
-            */
-
-            const spread =
+            var spread =
             Math.abs(
                 A.x-B.x
             );
 
 
             if(
-                spread <
-                W*.13
+                spread < W*.12
             ){
-
                 continue;
-
             }
 
 
             /*
-            強線 + 大間距
-            得較高權重
+            =================================================
+            V5.8.1 新權重
+            =================================================
+
+            1. 原始邊緣強度
+            2. 長線持續性
+            3. 左右間距
+            4. 方向差
+            5. 消失點高度
             */
 
-            const weight =
 
+            var lineQuality =
             Math.sqrt(
-
-                A.strength
-                *
-                B.strength
-
-            )
-
-            *
-
-            Math.min(
-
-                1,
-
-                spread/
-                (W*.45)
-
-            )
-
-            *
-
-            Math.min(
-
-                1,
-
-                angleDiff/
-                .75
-
+                A.weight *
+                B.weight
             );
+
+
+            var spreadWeight =
+            clamp(
+                spread/(W*.42),
+                .25,
+                1
+            );
+
+
+            var angleWeight =
+            clamp(
+                angleDiff/.75,
+                .30,
+                1
+            );
+
+
+            /*
+            輕微偏好畫面上半部。
+
+            注意：
+            不是直接指定消失點在40%。
+
+            只是兩個候選區品質差不多時，
+            避免近景短線交點搶走第一名。
+            */
+
+            var normalizedY =
+            p.y/H;
+
+
+            var horizonWeight =
+            1.12 -
+            normalizedY*.28;
+
+
+            horizonWeight =
+            clamp(
+                horizonWeight,
+                .88,
+                1.10
+            );
+
+
+            var weight =
+            lineQuality *
+            spreadWeight *
+            angleWeight *
+            horizonWeight;
 
 
             intersections.push({
@@ -1643,29 +1944,26 @@ function analyzePerspective(){
 
 
     if(
-        intersections.length <
-        5
+        intersections.length < 5
     ){
-
         return null;
-
     }
 
 
     /*
     =================================================
-    消失點密度投票
+    密度投票
     =================================================
     */
 
-    const gridW =
-    30;
+    var gridW =
+    32;
 
-    const gridH =
-    22;
+    var gridH =
+    24;
 
 
-    const votes =
+    var votes =
     new Float32Array(
         gridW*gridH
     );
@@ -1674,101 +1972,77 @@ function analyzePerspective(){
     intersections.forEach(
         function(p){
 
-            const gx =
+            var gx =
             Math.floor(
                 p.x/W*gridW
             );
 
-
-            const gy =
+            var gy =
             Math.floor(
                 p.y/H*gridH
             );
 
 
             if(
-                gx < 0
-                ||
-                gx >= gridW
-                ||
-                gy < 0
-                ||
+                gx < 0 ||
+                gx >= gridW ||
+                gy < 0 ||
                 gy >= gridH
             ){
-
                 return;
-
             }
 
 
-            /*
-            投票不只投一格，
-            周圍也給少量分數。
-
-            避免消失點只差幾pixel
-            就被分到另一格。
-            */
-
             for(
-                let yy=-1;
+                var yy=-1;
                 yy<=1;
                 yy++
             ){
 
                 for(
-                    let xx=-1;
+                    var xx=-1;
                     xx<=1;
                     xx++
                 ){
 
-                    const nx =
+                    var nx =
                     gx+xx;
 
-                    const ny =
+                    var ny =
                     gy+yy;
 
 
                     if(
-                        nx < 0
-                        ||
-                        nx >= gridW
-                        ||
-                        ny < 0
-                        ||
+                        nx < 0 ||
+                        nx >= gridW ||
+                        ny < 0 ||
                         ny >= gridH
                     ){
-
                         continue;
-
                     }
 
 
-                    const distanceWeight =
+                    var blurWeight =
+                    1;
 
-                    (
-                        xx === 0
-                        &&
-                        yy === 0
-                    )
 
-                    ?
+                    if(
+                        xx !== 0 ||
+                        yy !== 0
+                    ){
 
-                    1
+                        blurWeight =
+                        .42;
 
-                    :
-
-                    .45;
+                    }
 
 
                     votes[
                         ny*gridW+nx
                     ]
-
                     +=
-
-                    p.weight
-                    *
-                    distanceWeight;
+                    p.weight *
+                    blurWeight;
 
                 }
 
@@ -1779,62 +2053,60 @@ function analyzePerspective(){
 
 
     /*
-    找最高票
+    找最高密度區
     */
 
-    let bestIndex =
+    var bestIndex =
     0;
 
 
     for(
-        let i=1;
-        i<votes.length;
-        i++
+        var v=1;
+        v<votes.length;
+        v++
     ){
 
         if(
-            votes[i] >
+            votes[v] >
             votes[bestIndex]
         ){
 
             bestIndex =
-            i;
+            v;
 
         }
 
     }
 
 
-    const bestGX =
+    var bestGX =
     bestIndex %
     gridW;
 
 
-    const bestGY =
+    var bestGY =
     Math.floor(
         bestIndex/gridW
     );
 
 
     /*
-    收集最高票附近
-    真實交點
+    收集最佳區域交點
     */
 
-    const cluster =
+    var cluster =
     [];
 
 
     intersections.forEach(
         function(p){
 
-            const gx =
+            var gx =
             Math.floor(
                 p.x/W*gridW
             );
 
-
-            const gy =
+            var gy =
             Math.floor(
                 p.y/H*gridH
             );
@@ -1844,17 +2116,13 @@ function analyzePerspective(){
                 Math.abs(
                     gx-bestGX
                 ) <= 1
-
                 &&
-
                 Math.abs(
                     gy-bestGY
                 ) <= 1
             ){
 
-                cluster.push(
-                    p
-                );
+                cluster.push(p);
 
             }
 
@@ -1863,59 +2131,174 @@ function analyzePerspective(){
 
 
     if(
-        cluster.length <
-        3
+        cluster.length < 3
     ){
-
         return null;
-
     }
 
 
     /*
     =================================================
-    用中位數，不用平均數
-
-    對錯誤交點更穩
+    加權中位數附近再精修
     =================================================
     */
 
-    const vx =
+    var roughX =
     median(
         cluster.map(
-            p=>p.x
+            function(p){
+                return p.x;
+            }
         )
     );
 
-
-    const vy =
+    var roughY =
     median(
         cluster.map(
-            p=>p.y
+            function(p){
+                return p.y;
+            }
         )
     );
 
 
     /*
-    消失點附近到底有多少
-    候選線真正經過？
+    把離群交點再排一次。
     */
 
-    let supportingLines =
+    var clusterDistances =
+    cluster.map(
+        function(p){
+
+            return Math.hypot(
+                p.x-roughX,
+                p.y-roughY
+            );
+
+        }
+    );
+
+
+    var cd =
+    median(
+        clusterDistances
+    );
+
+
+    var clusterLimit =
+    Math.max(
+        6,
+        cd*2.2
+    );
+
+
+    var cleanCluster =
+    cluster.filter(
+        function(p){
+
+            return(
+                Math.hypot(
+                    p.x-roughX,
+                    p.y-roughY
+                )
+                <=
+                clusterLimit
+            );
+
+        }
+    );
+
+
+    if(
+        cleanCluster.length < 3
+    ){
+
+        cleanCluster =
+        cluster;
+
+    }
+
+
+    /*
+    加權平均。
+
+    因為此時離群值已經排掉，
+    加權平均能比單純median
+    更精細落在主線交會處。
+    */
+
+    var sumX =
+    0;
+
+    var sumY =
+    0;
+
+    var sumW =
     0;
 
 
-    let leftSupport =
+    cleanCluster.forEach(
+        function(p){
+
+            var w =
+            Math.sqrt(
+                Math.max(
+                    1,
+                    p.weight
+                )
+            );
+
+
+            sumX +=
+            p.x*w;
+
+            sumY +=
+            p.y*w;
+
+            sumW +=
+            w;
+
+        }
+    );
+
+
+    if(
+        sumW <= 0
+    ){
+        return null;
+    }
+
+
+    var vx =
+    sumX/sumW;
+
+    var vy =
+    sumY/sumW;
+
+
+    /*
+    =================================================
+    最終線支持驗證
+    =================================================
+    */
+
+    var supportingLines =
     0;
 
-    let rightSupport =
+    var leftSupport =
+    0;
+
+    var rightSupport =
+    0;
+
+    var longSupport =
     0;
 
 
     candidates.forEach(
         function(line){
 
-            const distance =
+            var distance =
             distanceToLine(
                 vx,
                 vy,
@@ -1925,25 +2308,24 @@ function analyzePerspective(){
 
             if(
                 distance <
-                W*.055
+                W*.050
             ){
 
                 supportingLines++;
 
 
                 if(
-                    line.x <
-                    vx
+                    line.x < vx
                 ){
-
                     leftSupport++;
-
                 }
                 else{
-
                     rightSupport++;
-
                 }
+
+
+                longSupport +=
+                line.continuity;
 
             }
 
@@ -1952,7 +2334,7 @@ function analyzePerspective(){
 
 
     /*
-    至少左右都有線支持
+    必須左右都有支持
     */
 
     if(
@@ -1969,68 +2351,97 @@ function analyzePerspective(){
 
 
     /*
-    =================================================
-    信心值
-
-    只是辨識穩定程度，
-    不是照片構圖分數。
-    =================================================
+    平均長線支持太差，
+    代表可能只是大量短紋理
+    偶然相交。
     */
 
-    const supportRatio =
-
-    supportingLines
-
-    /
-
-    candidates.length;
+    var averageContinuity =
+    longSupport /
+    supportingLines;
 
 
-    const clusterRatio =
+    if(
+        averageContinuity < .22
+    ){
 
-    cluster.length
+        return null;
 
-    /
-
-    intersections.length;
+    }
 
 
-    const balance =
+    /*
+    左右平衡
+    */
 
+    var balance =
     Math.min(
         leftSupport,
         rightSupport
     )
-
     /
-
     Math.max(
         leftSupport,
         rightSupport
     );
 
 
-    let confidence =
+    /*
+    交點集中程度
+    */
 
-    .25
+    var clusterRatio =
+    cleanCluster.length /
+    intersections.length;
+
+
+    /*
+    支持線比例
+    */
+
+    var supportRatio =
+    supportingLines /
+    candidates.length;
+
+
+    /*
+    =================================================
+    Confidence
+
+    注意：
+    仍然只是辨識信心，
+    不是構圖分數。
+    =================================================
+    */
+
+    var confidence =
+
+    .20
 
     +
 
     Math.min(
-        .30,
-        supportRatio*1.8
+        .26,
+        supportRatio*1.5
     )
 
     +
 
     Math.min(
-        .25,
-        clusterRatio*3
+        .20,
+        clusterRatio*3.2
     )
 
     +
 
-    balance*.18;
+    Math.min(
+        .18,
+        averageContinuity*.42
+    )
+
+    +
+
+    balance*.16;
 
 
     confidence =
@@ -2053,7 +2464,10 @@ function analyzePerspective(){
         confidence,
 
         support:
-        supportingLines
+        supportingLines,
+
+        continuity:
+        averageContinuity
 
     };
 
@@ -2061,163 +2475,7 @@ function analyzePerspective(){
 
 
 /* =====================================================
-   INTERSECTION
-===================================================== */
-
-function intersectAngleLines(
-    A,
-    B
-){
-
-    const adx =
-    Math.cos(
-        A.angle
-    );
-
-
-    const ady =
-    Math.sin(
-        A.angle
-    );
-
-
-    const bdx =
-    Math.cos(
-        B.angle
-    );
-
-
-    const bdy =
-    Math.sin(
-        B.angle
-    );
-
-
-    const denominator =
-
-    adx*bdy
-
-    -
-
-    ady*bdx;
-
-
-    if(
-        Math.abs(
-            denominator
-        ) <
-        .0001
-    ){
-
-        return null;
-
-    }
-
-
-    const dx =
-    B.x-A.x;
-
-
-    const dy =
-    B.y-A.y;
-
-
-    const t =
-
-    (
-        dx*bdy
-        -
-        dy*bdx
-    )
-
-    /
-
-    denominator;
-
-
-    return{
-
-        x:
-        A.x+t*adx,
-
-        y:
-        A.y+t*ady
-
-    };
-
-}
-
-
-/* =====================================================
-   DISTANCE TO LINE
-===================================================== */
-
-function distanceToLine(
-    px,
-    py,
-    line
-){
-
-    const dx =
-    Math.cos(
-        line.angle
-    );
-
-
-    const dy =
-    Math.sin(
-        line.angle
-    );
-
-
-    return Math.abs(
-
-        (px-line.x)*(-dy)
-
-        +
-
-        (py-line.y)*dx
-
-    );
-
-}
-
-
-/* =====================================================
-   ANGLE
-===================================================== */
-
-function normalizeAngle(a){
-
-    while(
-        a >
-        Math.PI/2
-    ){
-
-        a -=
-        Math.PI;
-
-    }
-
-
-    while(
-        a <
-        -Math.PI/2
-    ){
-
-        a +=
-        Math.PI;
-
-    }
-
-
-    return a;
-
-}
-
-
-/* =====================================================
-   LIVE SMOOTHING
+   LIVE SMOOTH
 ===================================================== */
 
 function smoothLive(now){
@@ -2241,29 +2499,27 @@ function smoothLive(now){
     }
 
 
-    /*
-    最近5次中位數
-    */
-
-    const medianX =
+    var medianX =
     median(
         liveHistory.map(
-            p=>p.vx
+            function(p){
+                return p.vx;
+            }
         )
     );
 
 
-    const medianY =
+    var medianY =
     median(
         liveHistory.map(
-            p=>p.vy
+            function(p){
+                return p.vy;
+            }
         )
     );
 
 
-    if(
-        !liveGuide
-    ){
+    if(!liveGuide){
 
         return{
 
@@ -2279,21 +2535,17 @@ function smoothLive(now){
     }
 
 
-    /*
-    先算新舊差距
-    */
-
-    let dx =
+    var dx =
     medianX -
     liveGuide.vx;
 
 
-    let dy =
+    var dy =
     medianY -
     liveGuide.vy;
 
 
-    const distance =
+    var distance =
     Math.hypot(
         dx,
         dy
@@ -2301,8 +2553,8 @@ function smoothLive(now){
 
 
     /*
-    突然跳太遠
-    限制單次移動
+    突然跳很遠，
+    不讓畫面綠點瞬移。
     */
 
     if(
@@ -2310,17 +2562,12 @@ function smoothLive(now){
         MAX_STEP
     ){
 
-        const ratio =
+        var ratio =
         MAX_STEP /
         distance;
 
-
-        dx *=
-        ratio;
-
-
-        dy *=
-        ratio;
+        dx *= ratio;
+        dy *= ratio;
 
     }
 
@@ -2328,22 +2575,12 @@ function smoothLive(now){
     return{
 
         vx:
-
-        liveGuide.vx
-
-        +
-
+        liveGuide.vx +
         dx*SMOOTH,
 
-
         vy:
-
-        liveGuide.vy
-
-        +
-
+        liveGuide.vy +
         dy*SMOOTH,
-
 
         confidence:
         now.confidence
@@ -2354,7 +2591,7 @@ function smoothLive(now){
 
 
 /* =====================================================
-   LIVE NAVIGATION
+   NAVIGATION
 ===================================================== */
 
 function updateNavigation(){
@@ -2364,20 +2601,13 @@ function updateNavigation(){
         ||
         !targetGuide
     ){
-
         return;
-
     }
 
 
-    const now =
+    var now =
     analyzePerspective();
 
-
-    /*
-    一次抓不到
-    不要把綠點刪掉
-    */
 
     if(!now){
 
@@ -2387,30 +2617,21 @@ function updateNavigation(){
             currentScore-2
         );
 
-
         completeCount =
         0;
 
-
         updateScoreUI();
 
-
         messageEl.innerText =
-        "⚠️ 目前透視線不穩，慢慢移動手機";
+        "⚠️ 消失點暫時不穩，慢慢移動手機";
 
         return;
 
     }
 
 
-    /*
-    綠點平滑後更新
-    */
-
     liveGuide =
-    smoothLive(
-        now
-    );
+    smoothLive(now);
 
 
     calculateScore();
@@ -2429,31 +2650,21 @@ function calculateScore(){
         ||
         !liveGuide
     ){
-
         return;
-
     }
 
 
-    const dx =
-
-    liveGuide.vx
-
-    -
-
+    var dx =
+    liveGuide.vx -
     targetGuide.vx;
 
 
-    const dy =
-
-    liveGuide.vy
-
-    -
-
+    var dy =
+    liveGuide.vy -
     targetGuide.vy;
 
 
-    const distance =
+    var distance =
     Math.hypot(
         dx,
         dy
@@ -2461,21 +2672,11 @@ function calculateScore(){
 
 
     /*
-    V5.8：
-
-    這才是真正的構圖分數。
-
-    綠點和白圈完全重合 = 100
-
-    相差約28%畫面 = 0
+    綠點與白圈重合 = 100
     */
 
-    let score =
-
-    100
-
-    -
-
+    var score =
+    100 -
     (
         distance/.28
         *
@@ -2501,15 +2702,12 @@ function calculateScore(){
 
 
     /*
-    完成必須連續3次
-    都很接近。
-
-    不能單幀碰到就算完成。
+    連續3次接近
+    才算完成
     */
 
     if(
-        distance <
-        .035
+        distance < .035
     ){
 
         completeCount++;
@@ -2535,39 +2733,19 @@ function calculateScore(){
     }
 
 
-    /*
-    導航方向
-    */
-
-    const tolerance =
+    var tolerance =
     .025;
 
 
-    let horizontal =
+    var horizontal =
     "";
 
-
-    let vertical =
+    var vertical =
     "";
 
-
-    /*
-    注意：
-
-    這裡提示的是
-    「手機要怎麼移」
-
-    綠點在目標右側，
-    手機往右移，
-    景物通常會往左移。
-
-    綠點在目標左側，
-    手機往左移。
-    */
 
     if(
-        dx >
-        tolerance
+        dx > tolerance
     ){
 
         horizontal =
@@ -2576,8 +2754,7 @@ function calculateScore(){
     }
     else
     if(
-        dx <
-        -tolerance
+        dx < -tolerance
     ){
 
         horizontal =
@@ -2586,18 +2763,8 @@ function calculateScore(){
     }
 
 
-    /*
-    綠點太低：
-    手機稍微往下取景，
-    景物會往畫面上方移。
-
-    綠點太高：
-    手機稍微往上取景。
-    */
-
     if(
-        dy >
-        tolerance
+        dy > tolerance
     ){
 
         vertical =
@@ -2606,8 +2773,7 @@ function calculateScore(){
     }
     else
     if(
-        dy <
-        -tolerance
+        dy < -tolerance
     ){
 
         vertical =
@@ -2617,21 +2783,13 @@ function calculateScore(){
 
 
     if(
-        horizontal
-        &&
+        horizontal &&
         vertical
     ){
 
         messageEl.innerText =
-
-        horizontal
-
-        +
-
-        "　"
-
-        +
-
+        horizontal +
+        "　" +
         vertical;
 
     }
@@ -2666,18 +2824,14 @@ function calculateScore(){
 function updateScoreUI(){
 
     scoreEl.innerHTML =
-
-    currentScore
-
-    +
-
-    ` <small>/100</small>`;
+    currentScore +
+    ' <small>/100</small>';
 
 }
 
 
 /* =====================================================
-   TARGET COLOR
+   COLOR
 ===================================================== */
 
 function getLiveColor(){
@@ -2685,20 +2839,14 @@ function getLiveColor(){
     if(
         currentScore >= 88
     ){
-
         return "#2cff67";
-
     }
-
 
     if(
         currentScore >= 65
     ){
-
         return "#ffd633";
-
     }
-
 
     return "#ffffff";
 
@@ -2711,54 +2859,45 @@ function getLiveColor(){
 
 function drawTarget(){
 
-    if(
-        !targetGuide
-    ){
-
+    if(!targetGuide){
         return;
-
     }
 
 
-    const w =
+    var w =
     overlay.clientWidth;
 
-
-    const h =
+    var h =
     overlay.clientHeight;
 
 
-    const x =
+    var x =
     targetGuide.vx*w;
 
-
-    const y =
+    var y =
     targetGuide.vy*h;
 
 
     ctx.save();
 
 
-    /*
-    白色目標圈
-    永遠固定
-    */
-
     ctx.strokeStyle =
     "#ffffff";
 
+    ctx.fillStyle =
+    "#ffffff";
 
     ctx.lineWidth =
     3;
 
+    ctx.setLineDash([]);
 
-    ctx.setLineDash(
-        []
-    );
 
+    /*
+    白圈
+    */
 
     ctx.beginPath();
-
 
     ctx.arc(
         x,
@@ -2768,7 +2907,6 @@ function drawTarget(){
         Math.PI*2
     );
 
-
     ctx.stroke();
 
 
@@ -2777,11 +2915,9 @@ function drawTarget(){
     */
 
     ctx.globalAlpha =
-    .5;
-
+    .48;
 
     ctx.beginPath();
-
 
     ctx.arc(
         x,
@@ -2791,9 +2927,7 @@ function drawTarget(){
         Math.PI*2
     );
 
-
     ctx.stroke();
-
 
     ctx.globalAlpha =
     1;
@@ -2804,7 +2938,6 @@ function drawTarget(){
     */
 
     ctx.beginPath();
-
 
     ctx.moveTo(
         x-38,
@@ -2849,21 +2982,14 @@ function drawTarget(){
         y+38
     );
 
-
     ctx.stroke();
-
-
-    ctx.fillStyle =
-    "#fff";
 
 
     ctx.font =
     "bold 14px -apple-system,Arial";
 
-
     ctx.textAlign =
     "center";
-
 
     ctx.fillText(
         "○ 建議位置",
@@ -2888,53 +3014,46 @@ function drawLive(){
         ||
         !liveGuide
     ){
-
         return;
-
     }
 
 
-    const w =
+    var w =
     overlay.clientWidth;
 
-
-    const h =
+    var h =
     overlay.clientHeight;
 
 
-    const x =
+    var x =
     liveGuide.vx*w;
 
-
-    const y =
+    var y =
     liveGuide.vy*h;
 
 
-    const color =
+    var color =
     getLiveColor();
 
 
     ctx.save();
 
 
-    /*
-    目前消失點
-    */
-
     ctx.fillStyle =
     color;
 
-
     ctx.strokeStyle =
     color;
-
 
     ctx.lineWidth =
     3;
 
 
-    ctx.beginPath();
+    /*
+    目前點
+    */
 
+    ctx.beginPath();
 
     ctx.arc(
         x,
@@ -2944,12 +3063,10 @@ function drawLive(){
         Math.PI*2
     );
 
-
     ctx.fill();
 
 
     ctx.beginPath();
-
 
     ctx.arc(
         x,
@@ -2959,17 +3076,14 @@ function drawLive(){
         Math.PI*2
     );
 
-
     ctx.stroke();
 
 
     ctx.font =
     "bold 14px -apple-system,Arial";
 
-
     ctx.textAlign =
     "center";
-
 
     ctx.fillStyle =
     color;
@@ -2983,32 +3097,26 @@ function drawLive(){
 
 
     /*
-    目前點 → 目標
+    目前 → 目標
     */
 
-    if(
-        targetGuide
-    ){
+    if(targetGuide){
 
-        const tx =
+        var tx =
         targetGuide.vx*w;
 
-
-        const ty =
+        var ty =
         targetGuide.vy*h;
 
 
         ctx.strokeStyle =
         color;
 
-
         ctx.lineWidth =
         2;
 
-
         ctx.globalAlpha =
         .85;
-
 
         ctx.setLineDash(
             [7,7]
@@ -3017,39 +3125,34 @@ function drawLive(){
 
         ctx.beginPath();
 
-
         ctx.moveTo(
             x,
             y
         );
-
 
         ctx.lineTo(
             tx,
             ty
         );
 
-
         ctx.stroke();
 
 
-        ctx.setLineDash(
-            []
-        );
+        ctx.setLineDash([]);
 
 
         /*
         箭頭
         */
 
-        const angle =
+        var angle =
         Math.atan2(
             ty-y,
             tx-x
         );
 
 
-        const arrowSize =
+        var arrowSize =
         10;
 
 
@@ -3064,21 +3167,15 @@ function drawLive(){
 
         ctx.lineTo(
 
-            tx
-            -
+            tx -
             Math.cos(
                 angle-.55
-            )
-            *
-            arrowSize,
+            )*arrowSize,
 
-            ty
-            -
+            ty -
             Math.sin(
                 angle-.55
-            )
-            *
-            arrowSize
+            )*arrowSize
 
         );
 
@@ -3091,21 +3188,15 @@ function drawLive(){
 
         ctx.lineTo(
 
-            tx
-            -
+            tx -
             Math.cos(
                 angle+.55
-            )
-            *
-            arrowSize,
+            )*arrowSize,
 
-            ty
-            -
+            ty -
             Math.sin(
                 angle+.55
-            )
-            *
-            arrowSize
+            )*arrowSize
 
         );
 
@@ -3121,33 +3212,27 @@ function drawLive(){
 
 
 /* =====================================================
-   DRAW PERSPECTIVE LINES
+   DRAW PERSPECTIVE HINT
 ===================================================== */
 
 function drawPerspectiveHint(){
 
-    if(
-        !liveGuide
-    ){
-
+    if(!liveGuide){
         return;
-
     }
 
 
-    const w =
+    var w =
     overlay.clientWidth;
 
-
-    const h =
+    var h =
     overlay.clientHeight;
 
 
-    const x =
+    var x =
     liveGuide.vx*w;
 
-
-    const y =
+    var y =
     liveGuide.vy*h;
 
 
@@ -3155,12 +3240,10 @@ function drawPerspectiveHint(){
 
 
     ctx.strokeStyle =
-    "rgba(255,255,255,.55)";
-
+    "rgba(255,255,255,.48)";
 
     ctx.lineWidth =
     2;
-
 
     ctx.setLineDash(
         [10,10]
@@ -3168,45 +3251,39 @@ function drawPerspectiveHint(){
 
 
     /*
-    只當視覺提示。
-
-    不代表AI真的認定
-    這兩條就是實體邊線。
+    左下提示線
     */
 
-
     ctx.beginPath();
-
 
     ctx.moveTo(
         x,
         y
     );
-
 
     ctx.lineTo(
         w*.08,
         h*.94
     );
 
-
     ctx.stroke();
 
 
-    ctx.beginPath();
+    /*
+    右下提示線
+    */
 
+    ctx.beginPath();
 
     ctx.moveTo(
         x,
         y
     );
 
-
     ctx.lineTo(
         w*.92,
         h*.94
     );
-
 
     ctx.stroke();
 
@@ -3217,18 +3294,17 @@ function drawPerspectiveHint(){
 
 
 /* =====================================================
-   OVERLAY RESIZE
+   OVERLAY
 ===================================================== */
 
 function resizeOverlay(){
 
-    const rect =
+    var rect =
     overlay.getBoundingClientRect();
 
 
-    const dpr =
-    window.devicePixelRatio
-    ||
+    var dpr =
+    window.devicePixelRatio ||
     1;
 
 
@@ -3270,14 +3346,6 @@ function loop(time){
     );
 
 
-    /*
-    畫面順序：
-
-    1 透視提示
-    2 白色目標
-    3 目前消失點
-    */
-
     drawPerspectiveHint();
 
     drawTarget();
@@ -3288,14 +3356,12 @@ function loop(time){
     if(
         navigation
         &&
-        time-lastAnalysisTime
-        >
+        time-lastAnalysisTime >
         LIVE_INTERVAL
     ){
 
         lastAnalysisTime =
         time;
-
 
         updateNavigation();
 
@@ -3317,78 +3383,62 @@ zoom.addEventListener(
     "input",
     async function(){
 
-        const value =
+        var value =
         Number(
             this.value
         );
 
 
         zoomText.innerText =
-
-        value.toFixed(1)
-
-        +
-
+        value.toFixed(1) +
         "×";
 
 
         if(!stream){
-
             return;
-
         }
 
 
-        const tracks =
+        var tracks =
         stream.getVideoTracks();
 
 
         if(
             tracks.length === 0
         ){
-
             return;
-
         }
 
 
-        const track =
+        var track =
         tracks[0];
 
 
         if(
             !track.getCapabilities
         ){
-
             return;
-
         }
 
 
-        const capabilities =
+        var capabilities =
         track.getCapabilities();
 
 
         if(
             !capabilities.zoom
         ){
-
             return;
-
         }
 
 
         try{
 
-            const actualZoom =
+            var actualZoom =
             clamp(
-
                 value,
-
                 capabilities.zoom.min,
-
                 capabilities.zoom.max
-
             );
 
 
@@ -3429,7 +3479,7 @@ function(
     line
 ){
 
-    console.error(
+    console.log(
         message,
         source,
         line
@@ -3450,7 +3500,7 @@ window.addEventListener(
     "unhandledrejection",
     function(event){
 
-        console.error(
+        console.log(
             event.reason
         );
 
@@ -3486,7 +3536,6 @@ window.addEventListener(
 
 
 startCamera();
-
 
 requestAnimationFrame(
     loop
