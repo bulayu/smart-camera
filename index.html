@@ -9,13 +9,11 @@ initial-scale=1.0,
 maximum-scale=1.0,
 user-scalable=no">
 
-<title>AI 構圖助手 V5.6</title>
+<title>AI 構圖助手 V5.7</title>
 
 <style>
 
-*{
-    box-sizing:border-box;
-}
+*{box-sizing:border-box}
 
 html,body{
     margin:0;
@@ -23,14 +21,14 @@ html,body{
     height:100%;
     overflow:hidden;
     background:#000;
-    color:#fff;
-    font-family:Arial,sans-serif;
+    color:white;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial;
 }
 
 #cameraArea{
     position:relative;
-    width:100%;
     height:72%;
+    width:100%;
     overflow:hidden;
     background:#111;
 }
@@ -58,20 +56,21 @@ video{
     position:absolute;
     top:18px;
     left:16px;
+
     z-index:10;
 
-    min-width:210px;
+    min-width:225px;
 
-    background:rgba(0,0,0,.70);
+    padding:14px 18px;
 
-    padding:13px 17px;
+    background:rgba(0,0,0,.72);
 
-    border-radius:18px;
+    border-radius:20px;
 }
 
 #score{
-    font-size:40px;
-    font-weight:bold;
+    font-size:42px;
+    font-weight:750;
 }
 
 #score small{
@@ -80,47 +79,47 @@ video{
 }
 
 #composition{
+    font-size:21px;
+    font-weight:700;
     margin-top:4px;
-    font-size:20px;
-    font-weight:bold;
 }
 
 #desc{
-    margin-top:6px;
     font-size:13px;
     opacity:.85;
+    margin-top:6px;
 }
 
 #message{
     position:absolute;
 
+    bottom:18px;
     left:50%;
-    bottom:20px;
 
     transform:translateX(-50%);
 
     width:90%;
 
-    z-index:10;
+    padding:14px;
 
-    background:rgba(0,0,0,.76);
+    background:rgba(0,0,0,.78);
 
     border-radius:18px;
-
-    padding:13px;
 
     text-align:center;
 
     font-size:16px;
-    font-weight:bold;
+    font-weight:700;
+
+    z-index:10;
 }
 
 #version{
     position:absolute;
     left:8px;
     bottom:5px;
+    opacity:.55;
     font-size:11px;
-    opacity:.5;
 }
 
 #controls{
@@ -133,55 +132,52 @@ video{
     display:flex;
     justify-content:center;
     gap:10px;
-    margin-bottom:10px;
+    margin-bottom:11px;
+}
+
+button{
+    color:white;
+    border:none;
 }
 
 .cameraBtn{
-    border:none;
+    padding:10px 18px;
     background:#292929;
-    color:white;
-
-    border-radius:22px;
-
-    padding:10px 17px;
-
+    border-radius:23px;
     font-size:15px;
 }
 
 #modes{
     display:flex;
     gap:8px;
-
     overflow-x:auto;
-
-    margin-bottom:11px;
+    margin-bottom:12px;
 }
 
 .mode{
     flex:none;
+    padding:10px 16px;
 
     border:1px solid #555;
 
     background:#111;
     color:#ddd;
 
-    border-radius:25px;
-
-    padding:10px 16px;
+    border-radius:24px;
 
     font-size:15px;
 }
 
 .mode.active{
-    background:#fff;
-    color:#000;
+    background:white;
+    color:black;
     font-weight:bold;
 }
 
 #zoomRow{
     display:flex;
-    align-items:center;
     gap:10px;
+    align-items:center;
 }
 
 #zoom{
@@ -193,133 +189,128 @@ video{
 
 <body>
 
-
 <div id="cameraArea">
 
-    <video
-        id="video"
-        autoplay
-        playsinline
-        muted>
-    </video>
+<video
+id="video"
+autoplay
+playsinline
+muted>
+</video>
 
-    <canvas id="overlay"></canvas>
+<canvas id="overlay"></canvas>
 
-    <canvas
-        id="analysisCanvas"
-        width="200"
-        height="150">
-    </canvas>
-
-
-    <div id="info">
-
-        <div id="score">
-            --
-            <small>/100</small>
-        </div>
-
-        <div id="composition">
-            等待分析
-        </div>
-
-        <div id="desc">
-            將鏡頭對準想拍的畫面
-        </div>
-
-    </div>
+<canvas
+id="analysisCanvas"
+width="240"
+height="180">
+</canvas>
 
 
-    <div id="message">
-        按「✨ AI 自動」分析構圖
-    </div>
+<div id="info">
 
+<div id="score">
+--
+<small>/100</small>
+</div>
 
-    <div id="version">
-        V5.6
-    </div>
+<div id="composition">
+等待分析
+</div>
+
+<div id="desc">
+先固定鏡頭，再按 AI 自動
+</div>
 
 </div>
 
+
+<div id="message">
+✨ 按 AI 自動分析目前畫面
+</div>
+
+
+<div id="version">
+V5.7
+</div>
+
+</div>
 
 
 <div id="controls">
 
-    <div id="cameraButtons">
+<div id="cameraButtons">
 
-        <button
-            class="cameraBtn"
-            onclick="changeCamera('user')">
-            🤳 前鏡頭
-        </button>
+<button
+class="cameraBtn"
+onclick="changeCamera('user')">
+🤳 前鏡頭
+</button>
 
-        <button
-            class="cameraBtn"
-            onclick="changeCamera('environment')">
-            📷 後鏡頭
-        </button>
-
-    </div>
-
-
-    <div id="modes">
-
-        <button
-            class="mode active"
-            onclick="selectMode('auto',this)">
-            ✨ AI 自動
-        </button>
-
-        <button
-            class="mode"
-            onclick="selectMode('third',this)">
-            # 三分法
-        </button>
-
-        <button
-            class="mode"
-            onclick="selectMode('center',this)">
-            ◎ 居中
-        </button>
-
-        <button
-            class="mode"
-            onclick="selectMode('leading',this)">
-            ↗ 引導線
-        </button>
-
-        <button
-            class="mode"
-            onclick="selectMode('vshape',this)">
-            V 型
-        </button>
-
-    </div>
-
-
-    <div id="zoomRow">
-
-        <span>倍率</span>
-
-        <input
-            id="zoom"
-            type="range"
-            min="1"
-            max="3"
-            step="0.1"
-            value="1">
-
-        <span id="zoomText">
-            1.0×
-        </span>
-
-    </div>
+<button
+class="cameraBtn"
+onclick="changeCamera('environment')">
+📷 後鏡頭
+</button>
 
 </div>
 
 
+<div id="modes">
+
+<button
+class="mode active"
+onclick="runAI(this)">
+✨ AI 自動
+</button>
+
+<button
+class="mode"
+onclick="manualMode('v',this)">
+V 型
+</button>
+
+<button
+class="mode"
+onclick="manualMode('inverseV',this)">
+▽ 倒 V
+</button>
+
+<button
+class="mode"
+onclick="manualMode('leading',this)">
+↗ 引導線
+</button>
+
+</div>
+
+
+<div id="zoomRow">
+
+<span>倍率</span>
+
+<input
+id="zoom"
+type="range"
+min="1"
+max="3"
+step=".1"
+value="1">
+
+<span id="zoomText">
+1.0×
+</span>
+
+</div>
+
+</div>
+
 
 <script>
+
+/* =========================================
+   DOM
+========================================= */
 
 const video =
 document.getElementById("video");
@@ -330,189 +321,153 @@ document.getElementById("overlay");
 const ctx =
 overlay.getContext("2d");
 
-const analysisCanvas =
+const ac =
 document.getElementById("analysisCanvas");
 
-const actx =
-analysisCanvas.getContext(
+const ax =
+ac.getContext(
     "2d",
     {willReadFrequently:true}
 );
 
-const scoreBox =
+const scoreEl =
 document.getElementById("score");
 
-const compositionBox =
+const compositionEl =
 document.getElementById("composition");
 
-const descBox =
+const descEl =
 document.getElementById("desc");
 
-const messageBox =
+const messageEl =
 document.getElementById("message");
 
-const zoomSlider =
+const zoom =
 document.getElementById("zoom");
 
 const zoomText =
 document.getElementById("zoomText");
 
 
+/* =========================================
+   STATE
+========================================= */
+
 let stream = null;
 
-let facingMode =
+let facing =
 "environment";
 
+let navigation =
+false;
 
 let lockedMode =
 null;
 
 
-let navigationActive =
-false;
+/*
+這是關鍵：
+
+AI分析完成後，
+targetGuide 就鎖住。
+
+之後不再每幀亂改消失點。
+*/
+
+let targetGuide = null;
+
+
+/*
+目前畫面重新分析結果
+只拿來算「距離目標多遠」
+*/
+
+let liveGuide = null;
 
 
 let currentScore =
 0;
 
 
-let lastAnalysisTime =
+let lastLiveAnalysis =
 0;
 
 
-const ANALYSIS_INTERVAL =
-350;
+const LIVE_INTERVAL =
+450;
 
 
-/*
-V5.6：
-
-偵測到的 V 資料
-
-不是固定 V
-*/
-
-let detectedV = {
-
-    valid:false,
-
-    vx:0.5,
-
-    vy:0.55,
-
-    leftStart:{
-        x:0.15,
-        y:0.85
-    },
-
-    rightStart:{
-        x:0.85,
-        y:0.85
-    },
-
-    confidence:0
-
-};
-
-
-
-/* ===================================
+/* =========================================
    CAMERA
-=================================== */
+========================================= */
 
 async function startCamera(){
 
-    try{
+try{
 
-        if(stream){
+    if(stream){
 
-            stream
-            .getTracks()
-            .forEach(track=>{
+        stream
+        .getTracks()
+        .forEach(t=>t.stop());
 
-                track.stop();
-
-            });
-
-        }
+    }
 
 
-        stream =
-        await navigator.mediaDevices
-        .getUserMedia({
+    stream =
+    await navigator.mediaDevices
+    .getUserMedia({
 
-            video:{
+        video:{
 
-                facingMode:{
-                    ideal:facingMode
-                },
-
-                width:{
-                    ideal:1280
-                },
-
-                height:{
-                    ideal:720
-                }
-
+            facingMode:{
+                ideal:facing
             },
 
-            audio:false
+            width:{
+                ideal:1280
+            },
 
-        });
+            height:{
+                ideal:720
+            }
 
+        },
 
-        video.srcObject =
-        stream;
+        audio:false
 
-
-        await video.play();
-
-
-        resizeCanvas();
-
-
-        navigationActive =
-        false;
+    });
 
 
-        lockedMode =
-        null;
+    video.srcObject =
+    stream;
 
 
-        scoreBox.innerHTML =
-        `-- <small>/100</small>`;
+    await video.play();
 
 
-        compositionBox.innerText =
-        "等待分析";
+    resizeOverlay();
 
 
-        descBox.innerText =
-        "將鏡頭對準想拍的畫面";
+    resetAnalysis();
 
+}
 
-        messageBox.innerText =
-        "按「✨ AI 自動」分析構圖";
+catch(error){
 
-    }
+    console.error(error);
 
-    catch(err){
+    messageEl.innerText =
+    "❌ 相機無法開啟";
 
-        console.error(err);
-
-        messageBox.innerText =
-        "❌ 無法開啟鏡頭";
-
-    }
+}
 
 }
 
 
-
 async function changeCamera(mode){
 
-    facingMode =
+    facing =
     mode;
 
     await startCamera();
@@ -520,18 +475,53 @@ async function changeCamera(mode){
 }
 
 
+function resetAnalysis(){
 
-/* ===================================
-   MODE
-=================================== */
+    navigation =
+    false;
 
-function selectMode(mode,button){
+    lockedMode =
+    null;
+
+    targetGuide =
+    null;
+
+    liveGuide =
+    null;
+
+    currentScore =
+    0;
+
+
+    scoreEl.innerHTML =
+    `-- <small>/100</small>`;
+
+
+    compositionEl.innerText =
+    "等待分析";
+
+
+    descEl.innerText =
+    "先固定鏡頭，再按 AI 自動";
+
+
+    messageEl.innerText =
+    "✨ 按 AI 自動分析目前畫面";
+
+}
+
+
+/* =========================================
+   BUTTON
+========================================= */
+
+function activateButton(button){
 
     document
     .querySelectorAll(".mode")
-    .forEach(btn=>{
+    .forEach(b=>{
 
-        btn.classList.remove(
+        b.classList.remove(
             "active"
         );
 
@@ -542,209 +532,310 @@ function selectMode(mode,button){
         "active"
     );
 
+}
 
-    if(mode === "auto"){
 
-        runAutoAnalysis();
+/* =========================================
+   AI AUTO
+========================================= */
+
+function runAI(button){
+
+    activateButton(
+        button
+    );
+
+
+    if(
+        video.readyState < 2
+    ){
+
+        messageEl.innerText =
+        "鏡頭還沒準備完成";
 
         return;
 
     }
+
+
+    navigation =
+    false;
+
+
+    targetGuide =
+    null;
+
+
+    compositionEl.innerText =
+    "AI 分析中";
+
+
+    descEl.innerText =
+    "尋找真正的主要透視線";
+
+
+    scoreEl.innerHTML =
+    `-- <small>/100</small>`;
+
+
+    messageEl.innerText =
+    "✨ 請保持手機不動...";
+
+
+    /*
+    連續取3幀
+
+    避免只靠單幀雜訊
+    */
+
+    const results = [];
+
+
+    let count =
+    0;
+
+
+    const timer =
+    setInterval(()=>{
+
+        const result =
+        analyzePerspective();
+
+
+        if(result){
+
+            results.push(
+                result
+            );
+
+        }
+
+
+        count++;
+
+
+        if(
+            count >= 3
+        ){
+
+            clearInterval(
+                timer
+            );
+
+
+            finishAI(
+                results
+            );
+
+        }
+
+    },180);
+
+}
+
+
+/* =========================================
+   FINISH AI
+========================================= */
+
+function finishAI(results){
+
+    if(
+        results.length === 0
+    ){
+
+        failPerspective();
+
+        return;
+
+    }
+
+
+    /*
+    找信心最高的那一幀
+    */
+
+    results.sort(
+        (a,b)=>
+        b.confidence -
+        a.confidence
+    );
+
+
+    const best =
+    results[0];
+
+
+    if(
+        best.confidence < .38
+    ){
+
+        failPerspective();
+
+        return;
+
+    }
+
+
+    /*
+    ★ 鎖定目標
+    */
+
+    targetGuide =
+    JSON.parse(
+        JSON.stringify(best)
+    );
+
+
+    liveGuide =
+    best;
+
+
+    lockedMode =
+    best.type;
+
+
+    navigation =
+    true;
+
+
+    /*
+    初始構圖分數
+
+    注意：
+    confidence不是構圖分數
+    */
+
+    currentScore =
+    72;
+
+
+    updateModeUI();
+
+
+    updateScoreUI();
+
+}
+
+
+/* =========================================
+   FAIL
+========================================= */
+
+function failPerspective(){
+
+    navigation =
+    false;
+
+    lockedMode =
+    null;
+
+    targetGuide =
+    null;
+
+
+    scoreEl.innerHTML =
+    `-- <small>/100</small>`;
+
+
+    compositionEl.innerText =
+    "未找到明確透視";
+
+
+    descEl.innerText =
+    "這個畫面不適合硬套 V 型";
+
+
+    messageEl.innerText =
+    "📱 換個角度，或改用三分法／居中";
+
+}
+
+
+/* =========================================
+   MANUAL
+========================================= */
+
+function manualMode(
+    mode,
+    button
+){
+
+    activateButton(
+        button
+    );
+
+
+    const result =
+    analyzePerspective();
+
+
+    if(!result){
+
+        failPerspective();
+
+        return;
+
+    }
+
+
+    targetGuide =
+    JSON.parse(
+        JSON.stringify(result)
+    );
+
+
+    liveGuide =
+    result;
 
 
     lockedMode =
     mode;
 
 
-    navigationActive =
+    /*
+    手動倒V/V，
+    仍使用實景偵測出的線
+    */
+
+    targetGuide.type =
+    mode;
+
+
+    navigation =
     true;
 
 
-    const result =
-    analyzeFrame();
-
-
     currentScore =
-    result[mode] || 40;
+    70;
 
 
-    updateModeText(
-        mode
-    );
+    updateModeUI();
 
-
-    updateScore(
-        currentScore
-    );
+    updateScoreUI();
 
 }
 
 
-
-/* ===================================
-   AI AUTO
-=================================== */
-
-function runAutoAnalysis(){
-
-    if(
-        video.readyState < 2
-    ){
-
-        messageBox.innerText =
-        "鏡頭尚未準備完成";
-
-        return;
-
-    }
-
-
-    navigationActive =
-    false;
-
-
-    lockedMode =
-    null;
-
-
-    compositionBox.innerText =
-    "AI 分析中";
-
-
-    descBox.innerText =
-    "正在尋找主體、線條與消失點";
-
-
-    scoreBox.innerHTML =
-    `-- <small>/100</small>`;
-
-
-    messageBox.innerText =
-    "✨ 分析目前場景...";
-
-
-    setTimeout(()=>{
-
-        const result =
-        analyzeFrame();
-
-
-        /*
-        V5.6：
-
-        V 型必須有真正有效的
-        消失點才能參加競爭
-        */
-
-        let vScore =
-        result.vshape;
-
-
-        if(
-            !result.vValid
-        ){
-
-            vScore -= 18;
-
-        }
-
-
-        const scores = {
-
-            vshape:
-            vScore,
-
-            leading:
-            result.leading,
-
-            third:
-            result.third,
-
-            center:
-            result.center
-
-        };
-
-
-        console.log(
-            "V5.6 scores",
-            scores
-        );
-
-
-        let bestMode =
-        "center";
-
-
-        let bestScore =
-        -999;
-
-
-        for(
-            const mode in scores
-        ){
-
-            if(
-                scores[mode] >
-                bestScore
-            ){
-
-                bestMode =
-                mode;
-
-                bestScore =
-                scores[mode];
-
-            }
-
-        }
-
-
-        lockedMode =
-        bestMode;
-
-
-        navigationActive =
-        true;
-
-
-        currentScore =
-        clampScore(
-            bestScore
-        );
-
-
-        updateModeText(
-            bestMode
-        );
-
-
-        updateScore(
-            currentScore
-        );
-
-
-    },650);
-
-}
-
-
-
-/* ===================================
-   FRAME
-=================================== */
-
-function analyzeFrame(){
+/* =========================================
+   PERSPECTIVE ANALYSIS
+========================================= */
+
+function analyzePerspective(){
 
     const W =
-    analysisCanvas.width;
-
+    ac.width;
 
     const H =
-    analysisCanvas.height;
+    ac.height;
 
 
-    actx.drawImage(
+    /*
+    object-fit:cover 在分析Canvas
+    這裡先簡化為完整video。
+    */
+
+    ax.drawImage(
         video,
         0,
         0,
@@ -753,8 +844,8 @@ function analyzeFrame(){
     );
 
 
-    const image =
-    actx.getImageData(
+    const img =
+    ax.getImageData(
         0,
         0,
         W,
@@ -763,7 +854,7 @@ function analyzeFrame(){
 
 
     const data =
-    image.data;
+    img.data;
 
 
     const gray =
@@ -772,46 +863,33 @@ function analyzeFrame(){
     );
 
 
-    /*
-    GRAYSCALE
-    */
-
     for(
-        let y=0;
-        y<H;
-        y++
+        let i=0;
+        i<W*H;
+        i++
     ){
 
-        for(
-            let x=0;
-            x<W;
-            x++
-        ){
-
-            const i =
-            (y*W+x)*4;
+        const p =
+        i*4;
 
 
-            gray[y*W+x] =
+        gray[i] =
 
-                data[i] * .299
+        data[p]*.299
 
-                +
+        +
 
-                data[i+1] * .587
+        data[p+1]*.587
 
-                +
+        +
 
-                data[i+2] * .114;
-
-        }
+        data[p+2]*.114;
 
     }
 
 
-
     /*
-    SOBEL
+    Sobel + 方向
     */
 
     const edge =
@@ -820,20 +898,14 @@ function analyzeFrame(){
     );
 
 
-    const gxMap =
+    const direction =
     new Float32Array(
         W*H
     );
 
 
-    const gyMap =
-    new Float32Array(
-        W*H
-    );
-
-
-    let totalEdge =
-    0;
+    let strengths =
+    [];
 
 
     for(
@@ -902,264 +974,202 @@ function analyzeFrame(){
             gray[p+W+1];
 
 
-            const magnitude =
-            Math.sqrt(
-                gx*gx +
-                gy*gy
+            const mag =
+            Math.hypot(
+                gx,
+                gy
             );
 
 
             edge[p] =
-            magnitude;
+            mag;
 
 
-            gxMap[p] =
-            gx;
+            /*
+            線方向 =
+            gradient + 90°
+            */
+
+            direction[p] =
+            normalizeAngle(
+
+                Math.atan2(
+                    gy,
+                    gx
+                )
+
+                +
+
+                Math.PI/2
+
+            );
 
 
-            gyMap[p] =
-            gy;
-
-
-            totalEdge +=
-            magnitude;
+            strengths.push(
+                mag
+            );
 
         }
 
     }
 
 
-
     /*
-    V5.6
-    真正估計消失點
+    自動閾值：
+
+    不再寫死90。
+    取最強約8%的邊緣。
     */
 
-    const vData =
-    findVanishingPoint(
-
-        edge,
-
-        gxMap,
-
-        gyMap,
-
-        W,
-
-        H
-
+    strengths.sort(
+        (a,b)=>a-b
     );
 
 
-    detectedV =
-    vData;
+    const threshold =
+    strengths[
+        Math.floor(
+            strengths.length*.92
+        )
+    ] || 80;
 
-
-
-    const centerScore =
-    calculateCenter(
-
-        edge,
-        W,
-        H,
-        totalEdge
-
-    );
-
-
-    const thirdScore =
-    calculateThird(
-
-        edge,
-        W,
-        H,
-        totalEdge
-
-    );
-
-
-    const leadingScore =
-    calculateLeading(
-
-        edge,
-        gxMap,
-        gyMap,
-        W,
-        H
-
-    );
-
-
-    return{
-
-        center:
-        centerScore,
-
-        third:
-        thirdScore,
-
-        leading:
-        leadingScore,
-
-        vshape:
-        vData.score,
-
-        vValid:
-        vData.valid
-
-    };
-
-}
-
-
-
-/* ===================================
-   VANISHING POINT
-=================================== */
-
-function findVanishingPoint(
-    edge,
-    gxMap,
-    gyMap,
-    W,
-    H
-){
 
     /*
-    抽出候選斜線
+    不再把每個pixel當一條線。
+
+    將畫面切成小格，
+    每格只留一條最強斜線。
     */
 
-    let leftLines = [];
+    const cell =
+    10;
 
-    let rightLines = [];
+
+    let candidates =
+    [];
 
 
     for(
-        let y=5;
-        y<H-5;
-        y+=2
+        let cy=0;
+        cy<H;
+        cy+=cell
     ){
 
         for(
-            let x=5;
-            x<W-5;
-            x+=2
+            let cx=0;
+            cx<W;
+            cx+=cell
         ){
 
-            const p =
-            y*W+x;
+            let bestMag =
+            0;
+
+            let bx =
+            0;
+
+            let by =
+            0;
+
+            let ba =
+            0;
 
 
-            const strength =
-            edge[p];
-
-
-            if(
-                strength < 90
-            )
-            continue;
-
-
-            /*
-            Sobel梯度
-            ↓
-            換算成線的方向
-            */
-
-            const gradientAngle =
-            Math.atan2(
-                gyMap[p],
-                gxMap[p]
-            );
-
-
-            let lineAngle =
-            gradientAngle
-            +
-            Math.PI/2;
-
-
-            lineAngle =
-            normalizeLineAngle(
-                lineAngle
-            );
-
-
-            /*
-            太水平或太垂直
-            不拿來判 V
-            */
-
-            const abs =
-            Math.abs(
-                lineAngle
-            );
-
-
-            if(
-                abs < 0.25
-                ||
-                abs > 1.30
-            )
-            continue;
-
-
-            /*
-            方向向量
-            */
-
-            const dx =
-            Math.cos(
-                lineAngle
-            );
-
-
-            const dy =
-            Math.sin(
-                lineAngle
-            );
-
-
-            const line = {
-
-                x:x,
-
-                y:y,
-
-                dx:dx,
-
-                dy:dy,
-
-                strength:
-                strength
-
-            };
-
-
-            /*
-            \ 方向
-            */
-
-            if(
-                lineAngle > 0
+            for(
+                let y=cy;
+                y<
+                Math.min(
+                    cy+cell,
+                    H
+                );
+                y++
             ){
 
-                leftLines.push(
-                    line
-                );
+                for(
+                    let x=cx;
+                    x<
+                    Math.min(
+                        cx+cell,
+                        W
+                    );
+                    x++
+                ){
+
+                    const p =
+                    y*W+x;
+
+
+                    const mag =
+                    edge[p];
+
+
+                    if(
+                        mag <
+                        threshold
+                    )
+                    continue;
+
+
+                    const a =
+                    direction[p];
+
+
+                    /*
+                    排除近水平
+                    與近垂直
+                    */
+
+                    const aa =
+                    Math.abs(a);
+
+
+                    if(
+                        aa < .18
+                        ||
+                        aa > 1.38
+                    )
+                    continue;
+
+
+                    if(
+                        mag >
+                        bestMag
+                    ){
+
+                        bestMag =
+                        mag;
+
+                        bx =
+                        x;
+
+                        by =
+                        y;
+
+                        ba =
+                        a;
+
+                    }
+
+                }
 
             }
 
 
-            /*
-            / 方向
-            */
+            if(
+                bestMag > 0
+            ){
 
-            else{
+                candidates.push({
 
-                rightLines.push(
-                    line
-                );
+                    x:bx,
+
+                    y:by,
+
+                    angle:ba,
+
+                    strength:
+                    bestMag
+
+                });
 
             }
 
@@ -1168,96 +1178,207 @@ function findVanishingPoint(
     }
 
 
+    if(
+        candidates.length <
+        8
+    ){
 
-    /*
-    只保留較強的線
-    避免手機太慢
-    */
+        return null;
 
-    leftLines.sort(
-        (a,b)=>
-        b.strength-a.strength
-    );
-
-
-    rightLines.sort(
-        (a,b)=>
-        b.strength-a.strength
-    );
-
-
-    leftLines =
-    leftLines.slice(
-        0,
-        55
-    );
-
-
-    rightLines =
-    rightLines.slice(
-        0,
-        55
-    );
-
+    }
 
 
     /*
-    左右線交點
+    ★ 消失點投票
+
+    不先猜左/右，
+    直接讓候選線延伸，
+    對合理交點投票。
     */
 
-    let intersections = [];
+    const gridW =
+    24;
+
+    const gridH =
+    18;
+
+
+    const votes =
+    new Float32Array(
+        gridW*gridH
+    );
+
+
+    const pairs =
+    [];
 
 
     for(
-        const L of leftLines
+        let i=0;
+        i<candidates.length;
+        i++
     ){
 
         for(
-            const R of rightLines
+            let j=i+1;
+            j<candidates.length;
+            j++
         ){
 
-            const pt =
-            lineIntersection(
-                L,
-                R
-            );
+            const A =
+            candidates[i];
 
 
-            if(!pt)
-            continue;
+            const B =
+            candidates[j];
 
 
             /*
-            交點不能離畫面太誇張
+            方向至少有差異
             */
 
+            let diff =
+            Math.abs(
+                normalizeAngle(
+                    A.angle -
+                    B.angle
+                )
+            );
+
+
             if(
-                pt.x < -W*.15
-                ||
-                pt.x > W*1.15
-                ||
-                pt.y < H*.05
-                ||
-                pt.y > H*.95
+                diff < .32
             )
             continue;
 
 
-            intersections.push({
+            const p =
+            intersectAngleLines(
+                A,
+                B
+            );
 
-                x:pt.x,
 
-                y:pt.y,
+            if(!p)
+            continue;
 
-                weight:
-                Math.sqrt(
-                    L.strength *
-                    R.strength
-                ),
 
-                L:L,
+            /*
+            消失點限制在畫面內，
+            並排除最底下25%。
 
-                R:R
+            這就是V5.6道路
+            抓到黃線附近的重要修正。
+            */
+
+            if(
+                p.x < 0
+                ||
+                p.x > W
+                ||
+                p.y < H*.10
+                ||
+                p.y > H*.76
+            )
+            continue;
+
+
+            /*
+            兩條線最好來自
+            消失點左右兩側。
+            */
+
+            const opposite =
+
+            (
+                A.x < p.x
+                &&
+                B.x > p.x
+            )
+
+            ||
+
+            (
+                B.x < p.x
+                &&
+                A.x > p.x
+            );
+
+
+            if(!opposite)
+            continue;
+
+
+            /*
+            線必須從交點向外張開
+            */
+
+            const spread =
+            Math.abs(
+                A.x-B.x
+            );
+
+
+            if(
+                spread <
+                W*.12
+            )
+            continue;
+
+
+            const gx =
+            Math.floor(
+                p.x/W*gridW
+            );
+
+
+            const gy =
+            Math.floor(
+                p.y/H*gridH
+            );
+
+
+            if(
+                gx<0 ||
+                gx>=gridW ||
+                gy<0 ||
+                gy>=gridH
+            )
+            continue;
+
+
+            const weight =
+
+            Math.sqrt(
+                A.strength*
+                B.strength
+            )
+
+            *
+
+            Math.min(
+                1,
+                spread/(W*.5)
+            );
+
+
+            votes[
+                gy*gridW+gx
+            ] +=
+            weight;
+
+
+            pairs.push({
+
+                x:p.x,
+
+                y:p.y,
+
+                weight:weight,
+
+                A:A,
+
+                B:B
 
             });
 
@@ -1266,87 +1387,18 @@ function findVanishingPoint(
     }
 
 
-
-    /*
-    沒有足夠交點
-    */
-
     if(
-        intersections.length <
-        8
+        pairs.length < 4
     ){
 
-        return defaultV();
+        return null;
 
     }
-
 
 
     /*
-    找交點最密集區域
-
-    使用格子投票
+    找票數最高區域
     */
-
-    const COLS =
-    10;
-
-
-    const ROWS =
-    10;
-
-
-    let grid =
-    new Array(
-        COLS*ROWS
-    ).fill(0);
-
-
-    for(
-        const p
-        of intersections
-    ){
-
-        let gx =
-        Math.floor(
-            p.x/W*COLS
-        );
-
-
-        let gy =
-        Math.floor(
-            p.y/H*ROWS
-        );
-
-
-        gx =
-        Math.max(
-            0,
-            Math.min(
-                COLS-1,
-                gx
-            )
-        );
-
-
-        gy =
-        Math.max(
-            0,
-            Math.min(
-                ROWS-1,
-                gy
-            )
-        );
-
-
-        grid[
-            gy*COLS+gx
-        ] +=
-        p.weight;
-
-    }
-
-
 
     let bestIndex =
     0;
@@ -1354,13 +1406,13 @@ function findVanishingPoint(
 
     for(
         let i=1;
-        i<grid.length;
+        i<votes.length;
         i++
     ){
 
         if(
-            grid[i] >
-            grid[bestIndex]
+            votes[i] >
+            votes[bestIndex]
         ){
 
             bestIndex =
@@ -1371,49 +1423,49 @@ function findVanishingPoint(
     }
 
 
+    const bgx =
+    bestIndex %
+    gridW;
 
-    const bestGX =
-    bestIndex % COLS;
 
-
-    const bestGY =
+    const bgy =
     Math.floor(
-        bestIndex/COLS
+        bestIndex/gridW
     );
 
 
-
     /*
-    收集最佳區附近交點
+    收集附近交點
     */
 
-    let cluster = [];
+    let cluster =
+    [];
 
 
     for(
         const p
-        of intersections
+        of pairs
     ){
 
         const gx =
         Math.floor(
-            p.x/W*COLS
+            p.x/W*gridW
         );
 
 
         const gy =
         Math.floor(
-            p.y/H*ROWS
+            p.y/H*gridH
         );
 
 
         if(
             Math.abs(
-                gx-bestGX
+                gx-bgx
             ) <= 1
             &&
             Math.abs(
-                gy-bestGY
+                gy-bgy
             ) <= 1
         ){
 
@@ -1426,424 +1478,8 @@ function findVanishingPoint(
     }
 
 
-
     if(
-        cluster.length <
-        6
-    ){
-
-        return defaultV();
-
-    }
-
-
-
-    /*
-    加權平均交點
-    */
-
-    let sumX = 0;
-
-    let sumY = 0;
-
-    let sumWeight = 0;
-
-
-    for(
-        const p
-        of cluster
-    ){
-
-        sumX +=
-        p.x *
-        p.weight;
-
-
-        sumY +=
-        p.y *
-        p.weight;
-
-
-        sumWeight +=
-        p.weight;
-
-    }
-
-
-    const vx =
-    sumX /
-    sumWeight;
-
-
-    const vy =
-    sumY /
-    sumWeight;
-
-
-
-    /*
-    看左右有多少不同線
-    真正支持這個交點
-    */
-
-    let leftSupport = 0;
-
-    let rightSupport = 0;
-
-
-    let leftStartX = 0;
-
-    let leftStartY = 0;
-
-    let rightStartX = 0;
-
-    let rightStartY = 0;
-
-
-    let leftWeight = 0;
-
-    let rightWeight = 0;
-
-
-    for(
-        const L
-        of leftLines
-    ){
-
-        const d =
-        distancePointToInfiniteLine(
-            vx,
-            vy,
-            L
-        );
-
-
-        if(
-            d < W*.075
-        ){
-
-            leftSupport++;
-
-
-            leftStartX +=
-            L.x *
-            L.strength;
-
-
-            leftStartY +=
-            L.y *
-            L.strength;
-
-
-            leftWeight +=
-            L.strength;
-
-        }
-
-    }
-
-
-    for(
-        const R
-        of rightLines
-    ){
-
-        const d =
-        distancePointToInfiniteLine(
-            vx,
-            vy,
-            R
-        );
-
-
-        if(
-            d < W*.075
-        ){
-
-            rightSupport++;
-
-
-            rightStartX +=
-            R.x *
-            R.strength;
-
-
-            rightStartY +=
-            R.y *
-            R.strength;
-
-
-            rightWeight +=
-            R.strength;
-
-        }
-
-    }
-
-
-
-    /*
-    左右兩邊都必須存在
-    */
-
-    const weakest =
-    Math.min(
-        leftSupport,
-        rightSupport
-    );
-
-
-    const strongest =
-    Math.max(
-        leftSupport,
-        rightSupport
-    );
-
-
-    const balance =
-    strongest > 0
-    ?
-    weakest/strongest
-    :
-    0;
-
-
-
-    /*
-    交點集中程度
-    */
-
-    const concentration =
-
-    cluster.length
-    /
-    intersections.length;
-
-
-
-    /*
-    V 型可信度
-    */
-
-    let confidence =
-
-        weakest * 0.055
-
-        +
-
-        balance * 0.32
-
-        +
-
-        Math.min(
-            concentration*3,
-            0.30
-        );
-
-
-    confidence =
-    Math.max(
-        0,
-        Math.min(
-            1,
-            confidence
-        )
-    );
-
-
-
-    /*
-    必須左右都有一定線數
-    且不能嚴重失衡
-    */
-
-    const valid =
-
-        leftSupport >= 4
-
-        &&
-
-        rightSupport >= 4
-
-        &&
-
-        balance >= .32
-
-        &&
-
-        confidence >= .42;
-
-
-
-    let score =
-
-        35
-
-        +
-
-        confidence * 60;
-
-
-
-    if(!valid){
-
-        score -= 12;
-
-    }
-
-
-
-    /*
-    導航線起點
-    */
-
-    let lsx =
-    W*.15;
-
-    let lsy =
-    H*.82;
-
-
-    let rsx =
-    W*.85;
-
-    let rsy =
-    H*.82;
-
-
-    if(
-        leftWeight > 0
-    ){
-
-        lsx =
-        leftStartX /
-        leftWeight;
-
-
-        lsy =
-        leftStartY /
-        leftWeight;
-
-    }
-
-
-    if(
-        rightWeight > 0
-    ){
-
-        rsx =
-        rightStartX /
-        rightWeight;
-
-
-        rsy =
-        rightStartY /
-        rightWeight;
-
-    }
-
-
-
-    return{
-
-        valid:valid,
-
-        score:
-        clampScore(
-            score
-        ),
-
-        vx:
-        vx/W,
-
-        vy:
-        vy/H,
-
-        leftStart:{
-
-            x:
-            lsx/W,
-
-            y:
-            lsy/H
-
-        },
-
-        rightStart:{
-
-            x:
-            rsx/W,
-
-            y:
-            rsy/H
-
-        },
-
-        confidence:
-        confidence
-
-    };
-
-}
-
-
-
-/* ===================================
-   DEFAULT V
-=================================== */
-
-function defaultV(){
-
-    return{
-
-        valid:false,
-
-        score:32,
-
-        vx:.5,
-
-        vy:.55,
-
-        leftStart:{
-            x:.15,
-            y:.82
-        },
-
-        rightStart:{
-            x:.85,
-            y:.82
-        },
-
-        confidence:0
-
-    };
-
-}
-
-
-
-/* ===================================
-   LINE INTERSECTION
-=================================== */
-
-function lineIntersection(
-    a,
-    b
-){
-
-    const denominator =
-
-        a.dx*b.dy
-
-        -
-
-        a.dy*b.dx;
-
-
-    if(
-        Math.abs(
-            denominator
-        ) < .0001
+        cluster.length < 3
     ){
 
         return null;
@@ -1851,96 +1487,468 @@ function lineIntersection(
     }
 
 
-    const rx =
-    b.x-a.x;
+    /*
+    加權消失點
+    */
+
+    let sx =
+    0;
+
+    let sy =
+    0;
+
+    let sw =
+    0;
 
 
-    const ry =
-    b.y-a.y;
+    for(
+        const p
+        of cluster
+    ){
+
+        sx +=
+        p.x*p.weight;
+
+        sy +=
+        p.y*p.weight;
+
+        sw +=
+        p.weight;
+
+    }
 
 
-    const t =
+    const vx =
+    sx/sw;
+
+
+    const vy =
+    sy/sw;
+
+
+    /*
+    找最能代表左右兩側的線。
+    */
+
+    let bestLeft =
+    null;
+
+    let bestRight =
+    null;
+
+    let bestLeftScore =
+    0;
+
+    let bestRightScore =
+    0;
+
+
+    for(
+        const c
+        of candidates
+    ){
+
+        const d =
+        distanceToLine(
+            vx,
+            vy,
+            c
+        );
+
+
+        /*
+        必須真的接近消失點
+        */
+
+        if(
+            d >
+            W*.055
+        )
+        continue;
+
+
+        const verticalDistance =
+        Math.abs(
+            c.y-vy
+        );
+
+
+        const horizontalDistance =
+        Math.abs(
+            c.x-vx
+        );
+
+
+        /*
+        太靠近消失點的短線
+        不適合當主透視線。
+        */
+
+        if(
+            horizontalDistance <
+            W*.12
+            &&
+            verticalDistance <
+            H*.12
+        )
+        continue;
+
+
+        const score =
+
+        c.strength
+
+        *
+
+        (
+            1 +
+            verticalDistance/H
+        )
+
+        *
+
+        (
+            1 +
+            horizontalDistance/W
+        );
+
+
+        if(
+            c.x < vx
+        ){
+
+            if(
+                score >
+                bestLeftScore
+            ){
+
+                bestLeftScore =
+                score;
+
+                bestLeft =
+                c;
+
+            }
+
+        }
+
+        else{
+
+            if(
+                score >
+                bestRightScore
+            ){
+
+                bestRightScore =
+                score;
+
+                bestRight =
+                c;
+
+            }
+
+        }
+
+    }
+
+
+    if(
+        !bestLeft
+        ||
+        !bestRight
+    ){
+
+        return null;
+
+    }
+
+
+    /*
+    判斷 V 或倒V。
+
+    如果主要線的外端
+    在消失點下方，
+    就是道路常見的倒V/透視。
+
+    如果外端在上方，
+    就是V型。
+    */
+
+    const avgY =
 
     (
-        rx*b.dy
-
-        -
-
-        ry*b.dx
-
+        bestLeft.y
+        +
+        bestRight.y
     )
+    /2;
+
+
+    let type;
+
+
+    if(
+        avgY >
+        vy
+    ){
+
+        type =
+        "inverseV";
+
+    }
+
+    else{
+
+        type =
+        "v";
+
+    }
+
+
+    /*
+    信心值
+
+    這不是構圖分數。
+    */
+
+    const concentration =
+    cluster.length /
+    pairs.length;
+
+
+    const sideBalance =
+
+    Math.min(
+        bestLeftScore,
+        bestRightScore
+    )
+
     /
-    denominator;
+
+    Math.max(
+        bestLeftScore,
+        bestRightScore
+    );
+
+
+    let confidence =
+
+    .25
+
+    +
+
+    Math.min(
+        .40,
+        concentration*2.5
+    )
+
+    +
+
+    sideBalance*.30;
+
+
+    /*
+    道路這種消失點通常
+    在中上區，比下方合理。
+    */
+
+    if(
+        vy <
+        H*.65
+    ){
+
+        confidence +=
+        .08;
+
+    }
+
+
+    confidence =
+    Math.max(
+        0,
+        Math.min(
+            .98,
+            confidence
+        )
+    );
 
 
     return{
 
-        x:
-        a.x +
-        t*a.dx,
+        type:type,
 
-        y:
-        a.y +
-        t*a.dy
+        confidence:
+        confidence,
+
+        vx:
+        vx/W,
+
+        vy:
+        vy/H,
+
+        left:{
+
+            x:
+            bestLeft.x/W,
+
+            y:
+            bestLeft.y/H
+
+        },
+
+        right:{
+
+            x:
+            bestRight.x/W,
+
+            y:
+            bestRight.y/H
+
+        }
 
     };
 
 }
 
 
+/* =========================================
+   LINE INTERSECTION
+========================================= */
 
-/* ===================================
-   DISTANCE TO LINE
-=================================== */
+function intersectAngleLines(
+    A,
+    B
+){
 
-function distancePointToInfiniteLine(
+    const adx =
+    Math.cos(A.angle);
+
+    const ady =
+    Math.sin(A.angle);
+
+
+    const bdx =
+    Math.cos(B.angle);
+
+    const bdy =
+    Math.sin(B.angle);
+
+
+    const den =
+
+    adx*bdy
+
+    -
+
+    ady*bdx;
+
+
+    if(
+        Math.abs(den) <
+        .0001
+    ){
+
+        return null;
+
+    }
+
+
+    const dx =
+    B.x-A.x;
+
+
+    const dy =
+    B.y-A.y;
+
+
+    const t =
+
+    (
+        dx*bdy
+
+        -
+
+        dy*bdx
+    )
+
+    /
+    den;
+
+
+    return{
+
+        x:
+        A.x +
+        t*adx,
+
+        y:
+        A.y +
+        t*ady
+
+    };
+
+}
+
+
+/* =========================================
+   DISTANCE POINT -> LINE
+========================================= */
+
+function distanceToLine(
     px,
     py,
     line
 ){
 
-    const nx =
-    -line.dy;
+    const dx =
+    Math.cos(
+        line.angle
+    );
 
 
-    const ny =
-    line.dx;
+    const dy =
+    Math.sin(
+        line.angle
+    );
 
 
     return Math.abs(
 
-        (px-line.x)*nx
+        (px-line.x)*(-dy)
 
         +
 
-        (py-line.y)*ny
+        (py-line.y)*dx
 
     );
 
 }
 
 
-
-/* ===================================
+/* =========================================
    ANGLE
-=================================== */
+========================================= */
 
-function normalizeLineAngle(a){
+function normalizeAngle(a){
 
     while(
-        a > Math.PI/2
+        a >
+        Math.PI/2
     ){
 
-        a -= Math.PI;
+        a -=
+        Math.PI;
 
     }
 
 
     while(
-        a < -Math.PI/2
+        a <
+        -Math.PI/2
     ){
 
-        a += Math.PI;
+        a +=
+        Math.PI;
 
     }
 
@@ -1950,562 +1958,289 @@ function normalizeLineAngle(a){
 }
 
 
+/* =========================================
+   LIVE NAVIGATION
+========================================= */
 
-/* ===================================
-   CENTER
-=================================== */
+function updateNavigation(){
 
-function calculateCenter(
-    edge,
-    W,
-    H,
-    total
-){
-
-    if(total <= 0)
-    return 35;
-
-
-    let center =
-    0;
-
-
-    let outer =
-    0;
-
-
-    for(
-        let y=0;
-        y<H;
-        y++
+    if(
+        !navigation
+        ||
+        !targetGuide
     ){
 
-        for(
-            let x=0;
-            x<W;
-            x++
-        ){
-
-            const e =
-            edge[y*W+x];
-
-
-            if(
-
-                x > W*.34
-
-                &&
-
-                x < W*.66
-
-                &&
-
-                y > H*.30
-
-                &&
-
-                y < H*.70
-
-            ){
-
-                center +=
-                e;
-
-            }
-
-            else{
-
-                outer +=
-                e;
-
-            }
-
-        }
+        return;
 
     }
 
 
-    const ratio =
-    center /
-    total;
+    const now =
+    analyzePerspective();
+
+
+    if(!now){
+
+        currentScore =
+        Math.max(
+            35,
+            currentScore-4
+        );
+
+
+        updateScoreUI();
+
+        return;
+
+    }
+
+
+    liveGuide =
+    now;
 
 
     /*
-    V5.6降低居中
-    因雜亂場景容易誤判
+    ★ 目標消失點永遠不動。
+
+    這裡只比較：
+    現在偵測點 vs 鎖定目標。
     */
 
-    return clampScore(
+    const dx =
 
-        38
+    now.vx -
+    targetGuide.vx;
 
-        +
 
-        ratio*150
+    const dy =
 
-        -
+    now.vy -
+    targetGuide.vy;
 
-        (outer/total)*15
+
+    const distance =
+    Math.sqrt(
+        dx*dx +
+        dy*dy
+    );
+
+
+    /*
+    線方向差
+    */
+
+    const leftAngleTarget =
+    Math.atan2(
+
+        targetGuide.left.y -
+        targetGuide.vy,
+
+        targetGuide.left.x -
+        targetGuide.vx
 
     );
 
-}
 
+    const leftAngleNow =
+    Math.atan2(
 
+        now.left.y -
+        now.vy,
 
-/* ===================================
-   THIRD
-=================================== */
-
-function calculateThird(
-    edge,
-    W,
-    H,
-    total
-){
-
-    if(total <= 0)
-    return 35;
-
-
-    const points = [
-
-        [W/3,H/3],
-
-        [W*2/3,H/3],
-
-        [W/3,H*2/3],
-
-        [W*2/3,H*2/3]
-
-    ];
-
-
-    const radius =
-    Math.min(
-        W,
-        H
-    )*.11;
-
-
-    let best =
-    0;
-
-
-    for(
-        const point
-        of points
-    ){
-
-        let energy =
-        0;
-
-
-        for(
-            let y=0;
-            y<H;
-            y++
-        ){
-
-            for(
-                let x=0;
-                x<W;
-                x++
-            ){
-
-                const dx =
-                x-point[0];
-
-
-                const dy =
-                y-point[1];
-
-
-                if(
-                    dx*dx +
-                    dy*dy <
-                    radius*radius
-                ){
-
-                    energy +=
-                    edge[y*W+x];
-
-                }
-
-            }
-
-        }
-
-
-        best =
-        Math.max(
-            best,
-            energy
-        );
-
-    }
-
-
-    const ratio =
-    best /
-    total;
-
-
-    return clampScore(
-
-        38
-
-        +
-
-        ratio*230
+        now.left.x -
+        now.vx
 
     );
 
-}
 
+    const rightAngleTarget =
+    Math.atan2(
 
+        targetGuide.right.y -
+        targetGuide.vy,
 
-/* ===================================
-   LEADING LINE
-=================================== */
-
-function calculateLeading(
-    edge,
-    gxMap,
-    gyMap,
-    W,
-    H
-){
-
-    let strong =
-    0;
-
-
-    let diagonal =
-    0;
-
-
-    for(
-        let y=0;
-        y<H;
-        y++
-    ){
-
-        for(
-            let x=0;
-            x<W;
-            x++
-        ){
-
-            const p =
-            y*W+x;
-
-
-            const e =
-            edge[p];
-
-
-            if(
-                e < 80
-            )
-            continue;
-
-
-            strong +=
-            e;
-
-
-            let angle =
-            Math.atan2(
-                gyMap[p],
-                gxMap[p]
-            )
-            +
-            Math.PI/2;
-
-
-            angle =
-            normalizeLineAngle(
-                angle
-            );
-
-
-            const a =
-            Math.abs(
-                angle
-            );
-
-
-            /*
-            斜線
-            */
-
-            if(
-                a > .25
-                &&
-                a < 1.25
-            ){
-
-                /*
-                下方線條權重較高
-                */
-
-                const weight =
-
-                .7
-                +
-                y/H*.6;
-
-
-                diagonal +=
-                e*weight;
-
-            }
-
-        }
-
-    }
-
-
-    if(
-        strong <= 0
-    )
-    return 35;
-
-
-    const ratio =
-    diagonal /
-    strong;
-
-
-    return clampScore(
-
-        36
-
-        +
-
-        ratio*62
+        targetGuide.right.x -
+        targetGuide.vx
 
     );
 
-}
+
+    const rightAngleNow =
+    Math.atan2(
+
+        now.right.y -
+        now.vy,
+
+        now.right.x -
+        now.vx
+
+    );
 
 
+    const angleError =
 
-/* ===================================
-   SCORE LIMIT
-=================================== */
-
-function clampScore(v){
-
-    return Math.round(
-
-        Math.max(
-            30,
-            Math.min(
-                96,
-                v
+    (
+        Math.abs(
+            normalizeAngle(
+                leftAngleNow -
+                leftAngleTarget
             )
         )
 
-    );
+        +
 
-}
+        Math.abs(
+            normalizeAngle(
+                rightAngleNow -
+                rightAngleTarget
+            )
+        )
 
-
-
-/* ===================================
-   LIVE SCORE
-=================================== */
-
-function updateLiveScore(){
-
-    if(
-        !navigationActive
-        ||
-        !lockedMode
-    )
-    return;
-
-
-    const result =
-    analyzeFrame();
-
-
-    let newScore =
-    result[lockedMode];
-
-
-    if(
-        newScore === undefined
-    )
-    return;
+    ) / 2;
 
 
     /*
-    如果目前鎖定V型
-    但V消失點失效
-    分數快速下降
+    構圖完成度：
+
+    消失點位置 + 線角度
+
+    不再用辨識confidence當分數。
     */
 
-    if(
-        lockedMode === "vshape"
-        &&
-        !result.vValid
-    ){
+    let score =
 
-        newScore =
+    100
+
+    -
+
+    distance*180
+
+    -
+
+    angleError*35;
+
+
+    /*
+    即使剛分析完，
+    也不要隨便直接94。
+    */
+
+    score =
+    Math.max(
+        35,
         Math.min(
-            newScore,
-            48
-        );
-
-    }
+            96,
+            score
+        )
+    );
 
 
     currentScore =
-
     Math.round(
 
-        currentScore*.70
+        currentScore*.65
 
         +
 
-        newScore*.30
+        score*.35
 
     );
 
 
-    updateScore(
-        currentScore
+    updateScoreUI();
+
+
+    updateDirection(
+        dx,
+        dy
     );
 
 }
 
 
+/* =========================================
+   NAVIGATION TEXT
+========================================= */
 
-/* ===================================
-   TEXT
-=================================== */
-
-function updateModeText(mode){
-
-    const names = {
-
-        vshape:
-        "V 型構圖",
-
-        leading:
-        "引導線構圖",
-
-        third:
-        "三分法",
-
-        center:
-        "居中構圖"
-
-    };
-
-
-    compositionBox.innerText =
-    names[mode];
-
+function updateDirection(
+    dx,
+    dy
+){
 
     if(
-        mode === "vshape"
+        currentScore >= 88
     ){
 
-        descBox.innerText =
-        "AI 已找到左右線條的收斂位置";
-
-        messageBox.innerText =
-        "📱 微調手機，讓實景線條更集中";
-
-    }
-
-
-    else if(
-        mode === "leading"
-    ){
-
-        descBox.innerText =
-        "畫面有明顯方向性線條";
-
-        messageBox.innerText =
-        "📱 調整角度，強化線條延伸感";
-
-    }
-
-
-    else if(
-        mode === "third"
-    ){
-
-        descBox.innerText =
-        "主體適合放在三分線附近";
-
-        messageBox.innerText =
-        "📱 將主體靠近白色交點";
-
-    }
-
-
-    else if(
-        mode === "center"
-    ){
-
-        descBox.innerText =
-        "主體較適合置中";
-
-        messageBox.innerText =
-        "📱 將主要主體移到中央";
-
-    }
-
-}
-
-
-
-/* ===================================
-   SCORE UI
-=================================== */
-
-function updateScore(score){
-
-    scoreBox.innerHTML =
-
-    `${score} <small>/100</small>`;
-
-
-    if(
-        score >= 85
-    ){
-
-        messageBox.innerText =
+        messageEl.innerText =
         "✅ 構圖完成，可以拍了";
 
+        return;
+
     }
 
 
-    else if(
-        score >= 72
+    /*
+    現在消失點在目標右邊：
+    使用者需要稍往右取景，
+    讓景物在畫面中相對往左。
+    */
+
+    if(
+        Math.abs(dx) >
+        Math.abs(dy)
     ){
 
-        messageBox.innerText =
-        "🟡 很接近，再微調一下";
+        if(
+            dx > .035
+        ){
+
+            messageEl.innerText =
+            "➡️ 手機稍微往右移";
+
+        }
+
+        else if(
+            dx < -.035
+        ){
+
+            messageEl.innerText =
+            "⬅️ 手機稍微往左移";
+
+        }
+
+        else{
+
+            messageEl.innerText =
+            "🟡 左右位置接近，微調角度";
+
+        }
 
     }
-
 
     else{
 
         if(
-            lockedMode ===
-            "vshape"
+            dy > .035
         ){
 
-            messageBox.innerText =
-            "📱 尋找更明顯的左右收斂線條";
+            messageEl.innerText =
+            "⬆️ 鏡頭稍微抬高";
+
+        }
+
+        else if(
+            dy < -.035
+        ){
+
+            messageEl.innerText =
+            "⬇️ 鏡頭稍微降低";
+
+        }
+
+        else{
+
+            messageEl.innerText =
+            "🟡 很接近，再微調一下";
 
         }
 
@@ -2514,12 +2249,85 @@ function updateScore(score){
 }
 
 
+/* =========================================
+   UI
+========================================= */
 
-/* ===================================
-   CANVAS
-=================================== */
+function updateModeUI(){
 
-function resizeCanvas(){
+    if(
+        lockedMode ===
+        "inverseV"
+    ){
+
+        compositionEl.innerText =
+        "▽ 倒 V・透視";
+
+
+        descEl.innerText =
+        "左右線條往遠方消失點收斂";
+
+    }
+
+    else if(
+        lockedMode === "v"
+    ){
+
+        compositionEl.innerText =
+        "V 型構圖";
+
+
+        descEl.innerText =
+        "左右線條往下方集中";
+
+    }
+
+    else if(
+        lockedMode ===
+        "leading"
+    ){
+
+        compositionEl.innerText =
+        "引導線構圖";
+
+
+        descEl.innerText =
+        "利用線條將視線帶向主體";
+
+    }
+
+
+    messageEl.innerText =
+    "🔒 目標已鎖定，開始導航";
+
+}
+
+
+function updateScoreUI(){
+
+    scoreEl.innerHTML =
+
+    `${currentScore}
+    <small>/100</small>`;
+
+
+    if(
+        currentScore >= 88
+    ){
+
+        messageEl.innerText =
+        "✅ 構圖完成，可以拍了";
+
+    }
+
+}
+
+
+/* =========================================
+   DRAW
+========================================= */
+
+function resizeOverlay(){
 
     const rect =
     overlay.getBoundingClientRect();
@@ -2538,63 +2346,50 @@ function resizeCanvas(){
 
 
     ctx.setTransform(
-
         dpr,
         0,
         0,
         dpr,
         0,
         0
-
     );
 
 }
 
 
-
-/* ===================================
-   GUIDE COLOR
-=================================== */
-
-function getGuideColor(){
+function guideColor(){
 
     if(
-        currentScore >= 85
+        currentScore >= 88
     ){
 
-        return "#28ff62";
+        return "#25ff62";
 
     }
 
 
     if(
-        currentScore >= 72
+        currentScore >= 75
     ){
 
-        return "#ffd429";
+        return "#ffd428";
 
     }
 
 
-    return "rgba(255,255,255,.92)";
+    return "rgba(255,255,255,.95)";
 
 }
 
 
+/* =========================================
+   DRAW LOCKED TARGET
+========================================= */
 
-/* ===================================
-   V DRAW
-=================================== */
+function drawTarget(){
 
-function drawDetectedV(){
-
-    if(
-        !detectedV.valid
-    ){
-
-        return;
-
-    }
+    if(!targetGuide)
+    return;
 
 
     const w =
@@ -2605,87 +2400,53 @@ function drawDetectedV(){
     overlay.clientHeight;
 
 
-    /*
-    分析Canvas座標
-    轉成螢幕座標
-    */
-
     const vx =
-    detectedV.vx*w;
+    targetGuide.vx*w;
 
 
     const vy =
-    detectedV.vy*h;
+    targetGuide.vy*h;
 
 
-    let lx =
-    detectedV.leftStart.x*w;
+    const left =
+    extendFromPoint(
+
+        vx,
+        vy,
+
+        targetGuide.left.x*w,
+
+        targetGuide.left.y*h,
+
+        4
+
+    );
 
 
-    let ly =
-    detectedV.leftStart.y*h;
+    const right =
+    extendFromPoint(
 
+        vx,
+        vy,
 
-    let rx =
-    detectedV.rightStart.x*w;
+        targetGuide.right.x*w,
 
+        targetGuide.right.y*h,
 
-    let ry =
-    detectedV.rightStart.y*h;
+        4
 
-
-
-    /*
-    為了讓導航線容易看，
-    從交點向兩側延伸
-    */
-
-    const leftVectorX =
-    lx-vx;
-
-
-    const leftVectorY =
-    ly-vy;
-
-
-    const rightVectorX =
-    rx-vx;
-
-
-    const rightVectorY =
-    ry-vy;
-
-
-    lx =
-    vx +
-    leftVectorX*2.1;
-
-
-    ly =
-    vy +
-    leftVectorY*2.1;
-
-
-    rx =
-    vx +
-    rightVectorX*2.1;
-
-
-    ry =
-    vy +
-    rightVectorY*2.1;
-
+    );
 
 
     ctx.save();
 
 
     ctx.strokeStyle =
-    getGuideColor();
+    guideColor();
 
 
     ctx.fillStyle =
-    getGuideColor();
+    guideColor();
 
 
     ctx.lineWidth =
@@ -2698,53 +2459,51 @@ function drawDetectedV(){
     ]);
 
 
-
     /*
-    左實景線
+    左目標線
     */
 
     ctx.beginPath();
 
     ctx.moveTo(
-        lx,
-        ly
+        vx,
+        vy
     );
 
     ctx.lineTo(
-        vx,
-        vy
+        left.x,
+        left.y
     );
 
     ctx.stroke();
 
 
-
     /*
-    右實景線
+    右目標線
     */
 
     ctx.beginPath();
 
     ctx.moveTo(
-        rx,
-        ry
-    );
-
-    ctx.lineTo(
         vx,
         vy
     );
 
+    ctx.lineTo(
+        right.x,
+        right.y
+    );
+
     ctx.stroke();
 
-
-
-    /*
-    消失點
-    */
 
     ctx.setLineDash([]);
 
+
+    /*
+    ★ 這個點是鎖死的，
+    不會再亂跑
+    */
 
     ctx.beginPath();
 
@@ -2759,11 +2518,6 @@ function drawDetectedV(){
     ctx.fill();
 
 
-
-    /*
-    消失點外圈
-    */
-
     ctx.lineWidth =
     2;
 
@@ -2773,7 +2527,7 @@ function drawDetectedV(){
     ctx.arc(
         vx,
         vy,
-        14,
+        15,
         0,
         Math.PI*2
     );
@@ -2790,9 +2544,9 @@ function drawDetectedV(){
 
 
     ctx.fillText(
-        "消失點",
+        "目標消失點",
         vx,
-        vy-20
+        vy-22
     );
 
 
@@ -2801,318 +2555,63 @@ function drawDetectedV(){
 }
 
 
+function extendFromPoint(
+    x1,
+    y1,
+    x2,
+    y2,
+    scale
+){
 
-/* ===================================
-   THIRD
-=================================== */
+    return{
 
-function drawThird(){
+        x:
+        x1 +
+        (x2-x1)*scale,
 
-    const w =
-    overlay.clientWidth;
+        y:
+        y1 +
+        (y2-y1)*scale
 
-
-    const h =
-    overlay.clientHeight;
-
-
-    ctx.save();
-
-
-    ctx.strokeStyle =
-    getGuideColor();
-
-
-    ctx.fillStyle =
-    getGuideColor();
-
-
-    ctx.lineWidth =
-    2;
-
-
-    ctx.setLineDash([
-        10,
-        8
-    ]);
-
-
-    for(
-        let i=1;
-        i<=2;
-        i++
-    ){
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            w*i/3,
-            0
-        );
-
-        ctx.lineTo(
-            w*i/3,
-            h
-        );
-
-        ctx.stroke();
-
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            0,
-            h*i/3
-        );
-
-        ctx.lineTo(
-            w,
-            h*i/3
-        );
-
-        ctx.stroke();
-
-    }
-
-
-    ctx.setLineDash([]);
-
-
-    const points = [
-
-        [w/3,h/3],
-
-        [w*2/3,h/3],
-
-        [w/3,h*2/3],
-
-        [w*2/3,h*2/3]
-
-    ];
-
-
-    for(
-        const p
-        of points
-    ){
-
-        ctx.beginPath();
-
-        ctx.arc(
-            p[0],
-            p[1],
-            5,
-            0,
-            Math.PI*2
-        );
-
-        ctx.fill();
-
-    }
-
-
-    ctx.restore();
+    };
 
 }
 
 
+/* =========================================
+   LOOP
+========================================= */
 
-/* ===================================
-   CENTER
-=================================== */
-
-function drawCenter(){
-
-    const w =
-    overlay.clientWidth;
-
-
-    const h =
-    overlay.clientHeight;
-
-
-    ctx.save();
-
-
-    ctx.strokeStyle =
-    getGuideColor();
-
-
-    ctx.lineWidth =
-    3;
-
-
-    ctx.setLineDash([
-        12,
-        8
-    ]);
-
-
-    ctx.beginPath();
-
-
-    ctx.ellipse(
-
-        w*.5,
-
-        h*.5,
-
-        w*.20,
-
-        h*.23,
-
-        0,
-
-        0,
-
-        Math.PI*2
-
-    );
-
-
-    ctx.stroke();
-
-
-    ctx.restore();
-
-}
-
-
-
-/* ===================================
-   LEADING
-=================================== */
-
-function drawLeading(){
-
-    const w =
-    overlay.clientWidth;
-
-
-    const h =
-    overlay.clientHeight;
-
-
-    ctx.save();
-
-
-    ctx.strokeStyle =
-    getGuideColor();
-
-
-    ctx.lineWidth =
-    3;
-
-
-    ctx.setLineDash([
-        12,
-        9
-    ]);
-
-
-    /*
-    V5.6 引導線先維持提示線
-    V5.7再改成實景線追蹤
-    */
-
-    ctx.beginPath();
-
-
-    ctx.moveTo(
-        w*.10,
-        h*.88
-    );
-
-
-    ctx.lineTo(
-        w*.55,
-        h*.45
-    );
-
-
-    ctx.stroke();
-
-
-    ctx.restore();
-
-}
-
-
-
-/* ===================================
-   DRAW LOOP
-=================================== */
-
-function drawLoop(time){
+function loop(time){
 
     ctx.clearRect(
-
         0,
         0,
-
         overlay.clientWidth,
-
         overlay.clientHeight
-
     );
 
 
     if(
-        navigationActive
+        navigation
+        &&
+        targetGuide
     ){
 
-        if(
-            lockedMode ===
-            "vshape"
-        ){
-
-            drawDetectedV();
-
-        }
-
-
-        if(
-            lockedMode ===
-            "third"
-        ){
-
-            drawThird();
-
-        }
-
-
-        if(
-            lockedMode ===
-            "center"
-        ){
-
-            drawCenter();
-
-        }
-
-
-        if(
-            lockedMode ===
-            "leading"
-        ){
-
-            drawLeading();
-
-        }
-
+        drawTarget();
 
 
         if(
             time -
-            lastAnalysisTime
+            lastLiveAnalysis
             >
-            ANALYSIS_INTERVAL
+            LIVE_INTERVAL
         ){
 
-            updateLiveScore();
+            updateNavigation();
 
 
-            lastAnalysisTime =
+            lastLiveAnalysis =
             time;
 
         }
@@ -3121,18 +2620,17 @@ function drawLoop(time){
 
 
     requestAnimationFrame(
-        drawLoop
+        loop
     );
 
 }
 
 
-
-/* ===================================
+/* =========================================
    ZOOM
-=================================== */
+========================================= */
 
-zoomSlider.addEventListener(
+zoom.addEventListener(
 "input",
 async function(){
 
@@ -3143,7 +2641,6 @@ async function(){
 
 
     zoomText.innerText =
-
     value.toFixed(1)
     +
     "×";
@@ -3176,8 +2673,7 @@ async function(){
 
     try{
 
-        await track
-        .applyConstraints({
+        await track.applyConstraints({
 
             advanced:[
                 {
@@ -3189,7 +2685,7 @@ async function(){
 
     }
 
-    catch(e){
+    catch(error){
 
         console.log(
             "Zoom unsupported"
@@ -3200,19 +2696,17 @@ async function(){
 });
 
 
-
 window.addEventListener(
     "resize",
-    resizeCanvas
+    resizeOverlay
 );
-
 
 
 startCamera();
 
 
 requestAnimationFrame(
-    drawLoop
+    loop
 );
 
 </script>
