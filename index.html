@@ -1,37 +1,26 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
-
 <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 
-<meta
-name="viewport"
-content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-
-<title>AI 構圖助手 V5.7.2 修正版</title>
+<title>AI 構圖助手 V5.8</title>
 
 <style>
-
 *{
     box-sizing:border-box;
     -webkit-tap-highlight-color:transparent;
 }
 
-html,
-body{
+html,body{
     margin:0;
     width:100%;
     height:100%;
     overflow:hidden;
     background:#000;
     color:#fff;
-    font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Arial,
-    sans-serif;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
 }
 
 #cameraArea{
@@ -45,22 +34,17 @@ body{
 #video{
     position:absolute;
     inset:0;
-
     width:100%;
     height:100%;
-
     object-fit:cover;
 }
 
 #overlay{
     position:absolute;
     inset:0;
-
     width:100%;
     height:100%;
-
     pointer-events:none;
-
     z-index:5;
 }
 
@@ -70,19 +54,12 @@ body{
 
 #info{
     position:absolute;
-
     top:18px;
     left:16px;
-
-    width:235px;
-
+    width:245px;
     padding:15px 17px;
-
     border-radius:20px;
-
-    background:
-    rgba(0,0,0,.72);
-
+    background:rgba(0,0,0,.74);
     z-index:10;
 }
 
@@ -99,7 +76,6 @@ body{
 
 #composition{
     margin-top:12px;
-
     font-size:21px;
     font-weight:750;
 }
@@ -107,65 +83,44 @@ body{
 #desc{
     font-size:14px;
     line-height:1.4;
-
     opacity:.85;
     margin-top:6px;
 }
 
 #message{
     position:absolute;
-
     bottom:18px;
     left:50%;
-
-    transform:
-    translateX(-50%);
-
-    width:90%;
-
+    transform:translateX(-50%);
+    width:92%;
     padding:14px;
-
-    background:
-    rgba(0,0,0,.78);
-
+    background:rgba(0,0,0,.80);
     border-radius:18px;
-
     text-align:center;
-
     font-size:16px;
     font-weight:700;
-
     z-index:10;
 }
 
 #version{
     position:absolute;
-
     left:8px;
     bottom:5px;
-
     opacity:.65;
-
     font-size:11px;
-
     z-index:20;
 }
 
 #controls{
     height:28%;
-
     padding:13px;
-
     background:#000;
 }
 
 #cameraButtons{
     display:flex;
-
     justify-content:center;
-
     gap:10px;
-
     margin-bottom:11px;
 }
 
@@ -176,53 +131,25 @@ button{
 
 .cameraBtn{
     padding:10px 18px;
-
     background:#292929;
-
     border-radius:23px;
-
     font-size:15px;
 }
 
-#modes{
-    display:flex;
-
-    gap:8px;
-
-    overflow-x:auto;
-
-    margin-bottom:12px;
-}
-
-.mode{
-    flex:none;
-
-    padding:10px 16px;
-
-    border:1px solid #555;
-
-    background:#111;
-
-    color:#ddd;
-
-    border-radius:24px;
-
-    font-size:15px;
-}
-
-.mode.active{
-    background:white;
-
-    color:black;
-
+#aiButton{
+    width:100%;
+    padding:13px;
+    background:#fff;
+    color:#000;
+    border-radius:25px;
+    font-size:17px;
     font-weight:bold;
+    margin-bottom:13px;
 }
 
 #zoomRow{
     display:flex;
-
     gap:10px;
-
     align-items:center;
 }
 
@@ -230,143 +157,116 @@ button{
     flex:1;
 }
 
+#status{
+    margin-top:15px;
+    text-align:center;
+    font-size:12px;
+    opacity:.45;
+}
 </style>
-
 </head>
-
 
 <body>
 
-
 <div id="cameraArea">
 
+    <video
+        id="video"
+        autoplay
+        playsinline
+        muted>
+    </video>
 
-<video
-id="video"
-autoplay
-playsinline
-muted>
-</video>
+    <canvas id="overlay"></canvas>
 
+    <canvas
+        id="analysisCanvas"
+        width="240"
+        height="180">
+    </canvas>
 
-<canvas id="overlay"></canvas>
+    <div id="info">
 
+        <div id="score">
+            --
+            <small>/100</small>
+        </div>
 
-<canvas
-id="analysisCanvas"
-width="240"
-height="180">
-</canvas>
+        <div id="composition">
+            等待分析
+        </div>
 
+        <div id="desc">
+            對準道路、鐵軌、走廊或街道
+        </div>
 
-<div id="info">
+    </div>
 
-<div id="score">
---
-<small>/100</small>
-</div>
+    <div id="message">
+        ✨ 固定鏡頭後，按 AI 自動分析
+    </div>
 
-<div id="composition">
-等待分析
-</div>
-
-<div id="desc">
-先固定鏡頭，再按 AI 自動
-</div>
-
-</div>
-
-
-<div id="message">
-✨ 按 AI 自動分析目前畫面
-</div>
-
-
-<div id="version">
-V5.7.2 修正版
-</div>
-
+    <div id="version">
+        V5.8
+    </div>
 
 </div>
 
 
 <div id="controls">
 
+    <div id="cameraButtons">
 
-<div id="cameraButtons">
+        <button
+            class="cameraBtn"
+            onclick="changeCamera('user')">
+            🤳 前鏡頭
+        </button>
 
-<button
-class="cameraBtn"
-onclick="changeCamera('user')">
-🤳 前鏡頭
-</button>
+        <button
+            class="cameraBtn"
+            onclick="changeCamera('environment')">
+            📷 後鏡頭
+        </button>
 
-<button
-class="cameraBtn"
-onclick="changeCamera('environment')">
-📷 後鏡頭
-</button>
+    </div>
 
-</div>
+    <button
+        id="aiButton"
+        onclick="runAI()">
+        ✨ AI 自動分析
+    </button>
 
+    <div id="zoomRow">
 
-<div id="modes">
+        <span>倍率</span>
 
-<button
-class="mode active"
-onclick="runAI(this)">
-✨ AI 自動
-</button>
+        <input
+            id="zoom"
+            type="range"
+            min="1"
+            max="3"
+            step=".1"
+            value="1">
 
-<button
-class="mode"
-onclick="manualMode('v',this)">
-V 型
-</button>
+        <span id="zoomText">
+            1.0×
+        </span>
 
-<button
-class="mode"
-onclick="manualMode('inverseV',this)">
-▽ 倒 V
-</button>
+    </div>
 
-<button
-class="mode"
-onclick="manualMode('leading',this)">
-↗ 引導線
-</button>
-
-</div>
-
-
-<div id="zoomRow">
-
-<span>倍率</span>
-
-<input
-id="zoom"
-type="range"
-min="1"
-max="3"
-step=".1"
-value="1">
-
-<span id="zoomText">
-1.0×
-</span>
+    <div id="status">
+        V5.8｜單點透視辨識版
+    </div>
 
 </div>
-
-
-</div>
-
 
 
 <script>
 
-/* =========================================
+/* =====================================================
    DOM
-========================================= */
+===================================================== */
 
 const video =
 document.getElementById("video");
@@ -405,51 +305,42 @@ const zoomText =
 document.getElementById("zoomText");
 
 
-/* =========================================
+/* =====================================================
    STATE
-========================================= */
+===================================================== */
 
 let stream = null;
 
 let facing =
 "environment";
 
-let navigation =
-false;
 
-let lockedMode =
+/*
+AI完成第一次分析後：
+
+targetGuide = 白色建議位置
+liveGuide   = 綠色目前消失點
+*/
+
+let targetGuide =
+null;
+
+let liveGuide =
 null;
 
 
-/*
-白色目標：
-AI第一次分析完成後鎖定。
-*/
-
-let targetGuide = null;
-
-
-/*
-綠色目前位置：
-導航期間重新分析。
-*/
-
-let liveGuide = null;
-
+let navigation =
+false;
 
 let currentScore =
 0;
 
-
-let lastLiveAnalysis =
+let lastAnalysisTime =
 0;
 
 
 /*
-不要分析太快。
-
-450ms一次，
-避免手機負擔太重。
+每450ms分析一次
 */
 
 const LIVE_INTERVAL =
@@ -457,108 +348,116 @@ const LIVE_INTERVAL =
 
 
 /*
-V5.7.2 防抖。
-
-保留最近5次有效偵測。
+保存最近5次結果
 */
 
-let liveHistory = [];
+let liveHistory =
+[];
 
-const LIVE_HISTORY_SIZE =
+const HISTORY_SIZE =
 5;
 
 
 /*
-限制綠點單次最大移動量。
-
-避免突然飛走。
+綠點平滑
 */
 
-const MAX_LIVE_STEP =
-0.055;
+const SMOOTH =
+0.28;
 
 
 /*
-平滑比例。
-
-數字越小越穩，
-但反應越慢。
+限制單次跳動
 */
 
-const LIVE_SMOOTH =
-0.32;
+const MAX_STEP =
+0.06;
 
 
-/* =========================================
+/*
+連續完成次數
+
+避免一下綠一下黃
+*/
+
+let completeCount =
+0;
+
+
+/* =====================================================
    CAMERA
-========================================= */
+===================================================== */
 
 async function startCamera(){
 
-try{
+    try{
 
-    if(stream){
+        if(stream){
 
-        stream
-        .getTracks()
-        .forEach(
-            t=>t.stop()
-        );
+            stream
+            .getTracks()
+            .forEach(
+                track=>track.stop()
+            );
+
+        }
+
+
+        stream =
+        await navigator.mediaDevices
+        .getUserMedia({
+
+            video:{
+
+                facingMode:{
+                    ideal:facing
+                },
+
+                width:{
+                    ideal:1280
+                },
+
+                height:{
+                    ideal:720
+                }
+
+            },
+
+            audio:false
+
+        });
+
+
+        video.srcObject =
+        stream;
+
+
+        await video.play();
+
+
+        resizeOverlay();
+
+
+        resetAnalysis();
+
     }
+    catch(error){
+
+        console.error(error);
 
 
-    stream =
-    await navigator.mediaDevices
-    .getUserMedia({
-
-        video:{
-
-            facingMode:{
-                ideal:facing
-            },
-
-            width:{
-                ideal:1280
-            },
-
-            height:{
-                ideal:720
-            }
-
-        },
-
-        audio:false
-
-    });
+        compositionEl.innerText =
+        "相機無法開啟";
 
 
-    video.srcObject =
-    stream;
+        descEl.innerText =
+        "請確認 Safari 相機權限";
 
 
-    await video.play();
+        messageEl.innerText =
+        "❌ 無法開啟相機";
 
-
-    resizeOverlay();
-
-
-    resetAnalysis();
-
-}
-catch(error){
-
-    console.error(error);
-
-    messageEl.innerText =
-    "❌ 相機無法開啟";
-
-    compositionEl.innerText =
-    "相機錯誤";
-
-    descEl.innerText =
-    "請確認 Safari 已允許相機權限";
-
-}
+    }
 
 }
 
@@ -569,23 +468,20 @@ async function changeCamera(mode){
     facing =
     mode;
 
+
     await startCamera();
 
 }
 
 
-
-/* =========================================
+/* =====================================================
    RESET
-========================================= */
+===================================================== */
 
 function resetAnalysis(){
 
     navigation =
     false;
-
-    lockedMode =
-    null;
 
     targetGuide =
     null;
@@ -595,6 +491,9 @@ function resetAnalysis(){
 
     liveHistory =
     [];
+
+    completeCount =
+    0;
 
     currentScore =
     0;
@@ -609,153 +508,24 @@ function resetAnalysis(){
 
 
     descEl.innerText =
-    "先固定鏡頭，再按 AI 自動";
+    "對準道路、鐵軌、走廊或街道";
 
 
     messageEl.innerText =
-    "✨ 按 AI 自動分析目前畫面";
+    "✨ 固定鏡頭後，按 AI 自動分析";
 
 }
 
 
-
-/* =========================================
-   BUTTON
-========================================= */
-
-function activateButton(button){
-
-    document
-    .querySelectorAll(".mode")
-    .forEach(b=>{
-
-        b.classList.remove(
-            "active"
-        );
-
-    });
-
-
-    button.classList.add(
-        "active"
-    );
-
-}
-
-
-
-/* =========================================
-   AI AUTO
-========================================= */
-
-function runAI(button){
-
-    activateButton(
-        button
-    );
-
-
-    if(
-        video.readyState < 2
-    ){
-
-        messageEl.innerText =
-        "鏡頭還沒準備完成";
-
-        return;
-    }
-
-
-    navigation =
-    false;
-
-
-    targetGuide =
-    null;
-
-    liveGuide =
-    null;
-
-    liveHistory =
-    [];
-
-
-    compositionEl.innerText =
-    "AI 分析中";
-
-
-    descEl.innerText =
-    "尋找穩定的主要透視線";
-
-
-    scoreEl.innerHTML =
-    `-- <small>/100</small>`;
-
-
-    messageEl.innerText =
-    "✨ 請保持手機不動...";
-
-
-    /*
-    V5.7.2：
-    從3幀增加為5幀。
-    */
-
-    const results = [];
-
-    let count =
-    0;
-
-
-    const timer =
-    setInterval(()=>{
-
-        const result =
-        analyzePerspective();
-
-
-        if(result){
-
-            results.push(
-                result
-            );
-
-        }
-
-
-        count++;
-
-
-        if(
-            count >= 5
-        ){
-
-            clearInterval(
-                timer
-            );
-
-
-            finishAI(
-                results
-            );
-
-        }
-
-    },150);
-
-}
-
-
-
-/* =========================================
+/* =====================================================
    MEDIAN
-========================================= */
+===================================================== */
 
-function median(values){
+function median(array){
 
     if(
-        !values ||
-        values.length === 0
+        !array ||
+        array.length === 0
     ){
 
         return 0;
@@ -763,303 +533,76 @@ function median(values){
     }
 
 
-    const sorted =
-    values
+    const a =
+    array
     .slice()
     .sort(
-        (a,b)=>a-b
+        (x,y)=>x-y
     );
 
 
     const middle =
     Math.floor(
-        sorted.length/2
+        a.length/2
     );
 
 
     if(
-        sorted.length % 2
+        a.length % 2
     ){
 
-        return sorted[
-            middle
-        ];
+        return a[middle];
 
     }
 
 
     return(
-        sorted[middle-1]
+        a[middle-1]
         +
-        sorted[middle]
+        a[middle]
     )/2;
 
 }
 
 
+/* =====================================================
+   CLAMP
+===================================================== */
 
-/* =========================================
-   FINISH AI
-========================================= */
+function clamp(
+    value,
+    min,
+    max
+){
 
-function finishAI(results){
-
-    if(
-        results.length < 2
-    ){
-
-        failPerspective();
-
-        return;
-    }
-
-
-    /*
-    V5.7.2：
-    不再只挑 confidence 最高的單幀。
-
-    先找5幀的中位消失點，
-    再選最接近中位位置的結果。
-
-    這樣比較不會被單幀雜訊騙走。
-    */
-
-
-    const medianX =
-    median(
-        results.map(
-            r=>r.vx
+    return Math.max(
+        min,
+        Math.min(
+            max,
+            value
         )
     );
-
-
-    const medianY =
-    median(
-        results.map(
-            r=>r.vy
-        )
-    );
-
-
-    let best =
-    null;
-
-
-    let bestDistance =
-    Infinity;
-
-
-    results.forEach(r=>{
-
-        const d =
-        Math.hypot(
-
-            r.vx -
-            medianX,
-
-            r.vy -
-            medianY
-
-        );
-
-
-        if(
-            d <
-            bestDistance
-        ){
-
-            bestDistance =
-            d;
-
-            best =
-            r;
-
-        }
-
-    });
-
-
-    if(
-        !best ||
-        best.confidence < .32
-    ){
-
-        failPerspective();
-
-        return;
-    }
-
-
-    /*
-    判斷構圖類型後鎖住。
-
-    AI導航途中不再切換模式。
-    */
-
-    lockedMode =
-    best.type;
-
-
-    /*
-    ★ V5.7.2 最大修改
-
-    targetGuide 不再等於
-    「目前的消失點」。
-
-    目前消失點 = liveGuide。
-
-    目標消失點則放在
-    畫面理想構圖區。
-
-    這樣才會真的有：
-    綠點 → 白圈
-    的導航意義。
-    */
-
-
-    let targetX =
-    .50;
-
-
-    let targetY =
-    .40;
-
-
-    if(
-        lockedMode ===
-        "v"
-    ){
-
-        /*
-        V型構圖的匯聚點
-        可以稍低一些。
-        */
-
-        targetY =
-        .58;
-
-    }
-
-
-    if(
-        lockedMode ===
-        "inverseV"
-    ){
-
-        /*
-        道路 / 走廊透視
-        消失點通常放在
-        中上區域。
-        */
-
-        targetY =
-        .40;
-
-    }
-
-
-    /*
-    白色目標線的方向，
-    保留第一次穩定分析的
-    左右線幾何。
-    */
-
-    targetGuide = {
-
-        type:
-        lockedMode,
-
-        confidence:
-        best.confidence,
-
-        vx:
-        targetX,
-
-        vy:
-        targetY,
-
-        left:{
-            x:
-            best.left.x,
-
-            y:
-            best.left.y
-        },
-
-        right:{
-            x:
-            best.right.x,
-
-            y:
-            best.right.y
-        }
-
-    };
-
-
-    /*
-    目標資料硬鎖。
-    */
-
-    Object.freeze(
-        targetGuide.left
-    );
-
-    Object.freeze(
-        targetGuide.right
-    );
-
-    Object.freeze(
-        targetGuide
-    );
-
-
-    /*
-    現在位置 =
-    AI分析當下真正消失點。
-    */
-
-    liveGuide =
-    JSON.parse(
-        JSON.stringify(best)
-    );
-
-
-    liveHistory =
-    [
-        JSON.parse(
-            JSON.stringify(best)
-        )
-    ];
-
-
-    navigation =
-    true;
-
-
-    /*
-    一開始就依距離算分數，
-    不再拿 confidence 當分數。
-    */
-
-    updateNavigationScore();
-
-
-    updateModeUI();
-
-
-    messageEl.innerText =
-    "🔒 白圈是目標，移動手機讓綠點靠近白圈";
 
 }
 
 
+/* =====================================================
+   AI AUTO
+===================================================== */
 
-/* =========================================
-   FAIL
-========================================= */
+function runAI(){
 
-function failPerspective(){
+    if(
+        video.readyState < 2
+    ){
+
+        messageEl.innerText =
+        "⏳ 鏡頭還沒準備完成";
+
+        return;
+
+    }
+
 
     navigation =
     false;
@@ -1073,6 +616,9 @@ function failPerspective(){
     liveHistory =
     [];
 
+    completeCount =
+    0;
+
 
     currentScore =
     0;
@@ -1083,84 +629,392 @@ function failPerspective(){
 
 
     compositionEl.innerText =
-    "未找到明確透視";
+    "AI 分析中";
 
 
     descEl.innerText =
-    "請對準道路、走廊或明顯收斂線";
+    "正在尋找主要消失點";
 
 
     messageEl.innerText =
-    "📱 換個角度，再按 AI 自動";
+    "✨ 請保持手機不動...";
+
+
+    /*
+    V5.8
+
+    連續分析5張畫面
+    */
+
+    const results =
+    [];
+
+
+    let count =
+    0;
+
+
+    const timer =
+    setInterval(
+        function(){
+
+            const result =
+            analyzePerspective();
+
+
+            if(result){
+
+                results.push(
+                    result
+                );
+
+            }
+
+
+            count++;
+
+
+            if(
+                count >= 5
+            ){
+
+                clearInterval(
+                    timer
+                );
+
+
+                finishAI(
+                    results
+                );
+
+            }
+
+        },
+        170
+    );
 
 }
 
 
+/* =====================================================
+   AI FINISH
+===================================================== */
 
-/* =========================================
-   MODE UI
-========================================= */
-
-function updateModeUI(){
+function finishAI(results){
 
     if(
-        lockedMode ===
-        "inverseV"
+        results.length < 2
     ){
 
-        compositionEl.innerText =
-        "▽ 倒 V・透視";
+        failAnalysis();
 
-
-        descEl.innerText =
-        "讓綠色目前點移向白色目標點";
+        return;
 
     }
-    else
+
+
+    /*
+    先算5張照片
+    消失點中位數
+    */
+
+    const mx =
+    median(
+        results.map(
+            r=>r.vx
+        )
+    );
+
+
+    const my =
+    median(
+        results.map(
+            r=>r.vy
+        )
+    );
+
+
+    /*
+    找最接近中位數的
+    真實分析結果
+    */
+
+    let best =
+    null;
+
+    let bestDistance =
+    Infinity;
+
+
+    results.forEach(
+        function(r){
+
+            const d =
+            Math.hypot(
+
+                r.vx-mx,
+
+                r.vy-my
+
+            );
+
+
+            if(
+                d <
+                bestDistance
+            ){
+
+                bestDistance =
+                d;
+
+                best =
+                r;
+
+            }
+
+        }
+    );
+
+
     if(
-        lockedMode ===
-        "v"
+        !best
     ){
 
-        compositionEl.innerText =
-        "V 型構圖";
+        failAnalysis();
 
-
-        descEl.innerText =
-        "讓綠色目前點移向白色目標點";
-
-    }
-    else{
-
-        compositionEl.innerText =
-        "引導線";
-
-
-        descEl.innerText =
-        "沿著畫面提示調整";
+        return;
 
     }
 
-}
+
+    /*
+    多幀本身太分散，
+    代表消失點不穩。
+    */
+
+    const spread =
+
+    median(
+
+        results.map(
+            function(r){
+
+                return Math.hypot(
+
+                    r.vx-mx,
+
+                    r.vy-my
+
+                );
+
+            }
+        )
+
+    );
 
 
+    if(
+        spread > .12
+    ){
 
-/* =========================================
-   MANUAL MODE
-========================================= */
+        failAnalysis();
 
-function manualMode(
-    mode,
-    button
-){
+        return;
 
-    activateButton(
-        button
+    }
+
+
+    /*
+    V5.8：
+    不再自動分 V / 倒V。
+
+    只要左右主要線
+    朝同一個點收斂，
+    就叫「單點透視」。
+    */
+
+    compositionEl.innerText =
+    "◎ 單點透視";
+
+
+    descEl.innerText =
+    "已找到畫面的主要消失點";
+
+
+    /*
+    綠點 =
+    AI真正抓到的消失點
+    */
+
+    liveGuide = {
+
+        vx:best.vx,
+
+        vy:best.vy,
+
+        confidence:
+        best.confidence
+
+    };
+
+
+    liveHistory =
+    [
+        {
+            vx:best.vx,
+            vy:best.vy
+        }
+    ];
+
+
+    /*
+    ---------------------------------
+    白色建議位置
+    ---------------------------------
+
+    不直接固定死在50%,40%。
+
+    先看現在消失點比較靠近：
+    左三分線
+    中央
+    右三分線
+
+    再選最近的構圖位置。
+
+    道路高度則往約40%靠。
+    */
+
+
+    const possibleX =
+    [
+        1/3,
+        .5,
+        2/3
+    ];
+
+
+    let idealX =
+    possibleX[0];
+
+
+    let nearest =
+    Infinity;
+
+
+    possibleX.forEach(
+        function(x){
+
+            const d =
+            Math.abs(
+                best.vx-x
+            );
+
+
+            if(
+                d <
+                nearest
+            ){
+
+                nearest =
+                d;
+
+                idealX =
+                x;
+
+            }
+
+        }
+    );
+
+
+    /*
+    不要要求使用者一次移太多。
+
+    水平最多建議移10%
+    垂直最多建議移10%
+    */
+
+    const dx =
+    clamp(
+
+        idealX -
+        best.vx,
+
+        -.10,
+
+        .10
+
+    );
+
+
+    const dy =
+    clamp(
+
+        .40 -
+        best.vy,
+
+        -.10,
+
+        .10
+
+    );
+
+
+    targetGuide = {
+
+        vx:
+        clamp(
+            best.vx+dx,
+            .12,
+            .88
+        ),
+
+        vy:
+        clamp(
+            best.vy+dy,
+            .18,
+            .72
+        )
+
+    };
+
+
+    /*
+    鎖死目標。
+
+    後面updateNavigation
+    絕對不能修改它。
+    */
+
+    Object.freeze(
+        targetGuide
     );
 
 
     navigation =
+    true;
+
+
+    calculateScore();
+
+
+    messageEl.innerText =
+    "○ 白圈是建議位置，● 是目前消失點";
+
+}
+
+
+/* =====================================================
+   FAIL
+===================================================== */
+
+function failAnalysis(){
+
+    navigation =
     false;
+
+    targetGuide =
+    null;
 
     liveGuide =
     null;
@@ -1168,123 +1022,31 @@ function manualMode(
     liveHistory =
     [];
 
-
-    lockedMode =
-    mode;
-
-
-    if(
-        mode ===
-        "v"
-    ){
-
-        targetGuide = {
-
-            type:"v",
-
-            vx:.50,
-            vy:.58,
-
-            confidence:1,
-
-            left:{
-                x:.18,
-                y:.15
-            },
-
-            right:{
-                x:.82,
-                y:.15
-            }
-
-        };
+    completeCount =
+    0;
 
 
-        compositionEl.innerText =
-        "V 型構圖";
+    scoreEl.innerHTML =
+    `-- <small>/100</small>`;
 
 
-        descEl.innerText =
-        "手動構圖模板";
+    compositionEl.innerText =
+    "找不到穩定透視";
 
 
-        messageEl.innerText =
-        "V 型構圖模板";
-
-    }
-    else
-    if(
-        mode ===
-        "inverseV"
-    ){
-
-        targetGuide = {
-
-            type:"inverseV",
-
-            vx:.50,
-            vy:.40,
-
-            confidence:1,
-
-            left:{
-                x:.08,
-                y:.95
-            },
-
-            right:{
-                x:.92,
-                y:.95
-            }
-
-        };
+    descEl.innerText =
+    "目前畫面沒有明確的共同消失點";
 
 
-        compositionEl.innerText =
-        "▽ 倒 V・透視";
-
-
-        descEl.innerText =
-        "道路、走廊、鐵軌透視";
-
-
-        messageEl.innerText =
-        "倒 V 透視模板";
-
-    }
-    else{
-
-        targetGuide =
-        null;
-
-
-        compositionEl.innerText =
-        "引導線";
-
-
-        descEl.innerText =
-        "功能後續加入";
-
-
-        messageEl.innerText =
-        "↗ 引導線模式";
-
-    }
-
-
-    currentScore =
-    70;
-
-
-    updateScoreUI();
+    messageEl.innerText =
+    "📱 換個角度後，再按 AI 自動";
 
 }
 
 
-
-/* =========================================
+/* =====================================================
    ANALYZE PERSPECTIVE
-========================================= */
+===================================================== */
 
 function analyzePerspective(){
 
@@ -1331,6 +1093,10 @@ function analyzePerspective(){
         W*H
     );
 
+
+    /*
+    灰階
+    */
 
     for(
         let i=0;
@@ -1455,9 +1221,8 @@ function analyzePerspective(){
 
 
             /*
-            Sobel gradient方向
-            旋轉90度 =
-            真正線方向。
+            gradient旋轉90度
+            得到線條方向
             */
 
             direction[p] =
@@ -1484,27 +1249,40 @@ function analyzePerspective(){
     }
 
 
+    if(
+        strengths.length === 0
+    ){
+
+        return null;
+
+    }
+
+
     strengths.sort(
         (a,b)=>a-b
     );
 
 
     /*
-    只取較強的8%邊緣。
+    只取最強約8%
     */
 
     const threshold =
+
     strengths[
         Math.floor(
             strengths.length*.92
         )
-    ] || 80;
+    ]
 
+    ||
+
+    80;
 
 
     /*
-    每10x10區塊
-    只取最強的斜線候選。
+    每10x10格
+    取一條最強斜線
     */
 
     const cell =
@@ -1571,29 +1349,41 @@ function analyzePerspective(){
                     if(
                         mag <
                         threshold
-                    )
-                    continue;
+                    ){
+
+                        continue;
+
+                    }
 
 
-                    const a =
+                    const angle =
                     direction[p];
 
 
+                    const absAngle =
+                    Math.abs(
+                        angle
+                    );
+
+
                     /*
-                    排除近水平
-                    與近垂直。
+                    排除：
+
+                    太水平
+                    太垂直
+
+                    保留主要斜線
                     */
 
-                    const aa =
-                    Math.abs(a);
-
-
                     if(
-                        aa < .18
+                        absAngle < .16
                         ||
-                        aa > 1.38
-                    )
-                    continue;
+                        absAngle > 1.40
+                    ){
+
+                        continue;
+
+                    }
 
 
                     if(
@@ -1611,7 +1401,7 @@ function analyzePerspective(){
                         y;
 
                         ba =
-                        a;
+                        angle;
 
                     }
 
@@ -1646,7 +1436,7 @@ function analyzePerspective(){
 
     if(
         candidates.length <
-        8
+        10
     ){
 
         return null;
@@ -1654,25 +1444,13 @@ function analyzePerspective(){
     }
 
 
-
     /*
-    消失點投票。
+    =================================================
+    消失點候選
+    =================================================
     */
 
-    const gridW =
-    24;
-
-    const gridH =
-    18;
-
-
-    const votes =
-    new Float32Array(
-        gridW*gridH
-    );
-
-
-    const pairs =
+    const intersections =
     [];
 
 
@@ -1695,7 +1473,12 @@ function analyzePerspective(){
             candidates[j];
 
 
-            let diff =
+            /*
+            兩條線方向差太小
+            不算
+            */
+
+            const angleDiff =
             Math.abs(
 
                 normalizeAngle(
@@ -1710,9 +1493,13 @@ function analyzePerspective(){
 
 
             if(
-                diff < .32
-            )
-            continue;
+                angleDiff <
+                .30
+            ){
+
+                continue;
+
+            }
 
 
             const p =
@@ -1722,29 +1509,38 @@ function analyzePerspective(){
             );
 
 
-            if(!p)
-            continue;
+            if(!p){
+
+                continue;
+
+            }
 
 
             /*
-            消失點必須在畫面內，
-            排除最底下24%。
+            消失點允許區域。
+
+            不接受太靠邊
+            或畫面最下面。
             */
 
             if(
-                p.x < 0
+                p.x < W*.05
                 ||
-                p.x > W
+                p.x > W*.95
                 ||
-                p.y < H*.10
+                p.y < H*.08
                 ||
-                p.y > H*.76
-            )
-            continue;
+                p.y > H*.78
+            ){
+
+                continue;
+
+            }
 
 
             /*
-            兩條線分居交點左右。
+            兩條線最好來自
+            消失點左右兩邊
             */
 
             const opposite =
@@ -1764,9 +1560,18 @@ function analyzePerspective(){
             );
 
 
-            if(!opposite)
-            continue;
+            if(
+                !opposite
+            ){
 
+                continue;
+
+            }
+
+
+            /*
+            水平間距不能太小
+            */
 
             const spread =
             Math.abs(
@@ -1776,42 +1581,18 @@ function analyzePerspective(){
 
             if(
                 spread <
-                W*.12
-            )
-            continue;
+                W*.13
+            ){
+
+                continue;
+
+            }
 
 
-            const gx =
-            Math.floor(
-
-                p.x/W
-                *
-                gridW
-
-            );
-
-
-            const gy =
-            Math.floor(
-
-                p.y/H
-                *
-                gridH
-
-            );
-
-
-            if(
-                gx < 0
-                ||
-                gx >= gridW
-                ||
-                gy < 0
-                ||
-                gy >= gridH
-            )
-            continue;
-
+            /*
+            強線 + 大間距
+            得較高權重
+            */
 
             const weight =
 
@@ -1832,16 +1613,21 @@ function analyzePerspective(){
                 spread/
                 (W*.45)
 
+            )
+
+            *
+
+            Math.min(
+
+                1,
+
+                angleDiff/
+                .75
+
             );
 
 
-            votes[
-                gy*gridW+gx
-            ] +=
-            weight;
-
-
-            pairs.push({
+            intersections.push({
 
                 x:p.x,
 
@@ -1857,8 +1643,8 @@ function analyzePerspective(){
 
 
     if(
-        pairs.length <
-        4
+        intersections.length <
+        5
     ){
 
         return null;
@@ -1866,9 +1652,134 @@ function analyzePerspective(){
     }
 
 
+    /*
+    =================================================
+    消失點密度投票
+    =================================================
+    */
+
+    const gridW =
+    30;
+
+    const gridH =
+    22;
+
+
+    const votes =
+    new Float32Array(
+        gridW*gridH
+    );
+
+
+    intersections.forEach(
+        function(p){
+
+            const gx =
+            Math.floor(
+                p.x/W*gridW
+            );
+
+
+            const gy =
+            Math.floor(
+                p.y/H*gridH
+            );
+
+
+            if(
+                gx < 0
+                ||
+                gx >= gridW
+                ||
+                gy < 0
+                ||
+                gy >= gridH
+            ){
+
+                return;
+
+            }
+
+
+            /*
+            投票不只投一格，
+            周圍也給少量分數。
+
+            避免消失點只差幾pixel
+            就被分到另一格。
+            */
+
+            for(
+                let yy=-1;
+                yy<=1;
+                yy++
+            ){
+
+                for(
+                    let xx=-1;
+                    xx<=1;
+                    xx++
+                ){
+
+                    const nx =
+                    gx+xx;
+
+                    const ny =
+                    gy+yy;
+
+
+                    if(
+                        nx < 0
+                        ||
+                        nx >= gridW
+                        ||
+                        ny < 0
+                        ||
+                        ny >= gridH
+                    ){
+
+                        continue;
+
+                    }
+
+
+                    const distanceWeight =
+
+                    (
+                        xx === 0
+                        &&
+                        yy === 0
+                    )
+
+                    ?
+
+                    1
+
+                    :
+
+                    .45;
+
+
+                    votes[
+                        ny*gridW+nx
+                    ]
+
+                    +=
+
+                    p.weight
+                    *
+                    distanceWeight;
+
+                }
+
+            }
+
+        }
+    );
+
 
     /*
-    找投票最高區。
+    找最高票
     */
 
     let bestIndex =
@@ -1905,48 +1816,50 @@ function analyzePerspective(){
     );
 
 
-
     /*
-    收集附近交點。
+    收集最高票附近
+    真實交點
     */
 
     const cluster =
     [];
 
 
-    pairs.forEach(p=>{
+    intersections.forEach(
+        function(p){
 
-        const gx =
-        Math.floor(
-            p.x/W*gridW
-        );
-
-
-        const gy =
-        Math.floor(
-            p.y/H*gridH
-        );
-
-
-        if(
-            Math.abs(
-                gx-bestGX
-            ) <= 1
-
-            &&
-
-            Math.abs(
-                gy-bestGY
-            ) <= 1
-        ){
-
-            cluster.push(
-                p
+            const gx =
+            Math.floor(
+                p.x/W*gridW
             );
 
-        }
 
-    });
+            const gy =
+            Math.floor(
+                p.y/H*gridH
+            );
+
+
+            if(
+                Math.abs(
+                    gx-bestGX
+                ) <= 1
+
+                &&
+
+                Math.abs(
+                    gy-bestGY
+                ) <= 1
+            ){
+
+                cluster.push(
+                    p
+                );
+
+            }
+
+        }
+    );
 
 
     if(
@@ -1959,166 +1872,95 @@ function analyzePerspective(){
     }
 
 
-
     /*
-    加權平均消失點。
+    =================================================
+    用中位數，不用平均數
+
+    對錯誤交點更穩
+    =================================================
     */
 
-    let sumX =
-    0;
-
-    let sumY =
-    0;
-
-    let sumWeight =
-    0;
-
-
-    cluster.forEach(p=>{
-
-        sumX +=
-        p.x*p.weight;
-
-
-        sumY +=
-        p.y*p.weight;
-
-
-        sumWeight +=
-        p.weight;
-
-    });
-
-
     const vx =
-    sumX/sumWeight;
+    median(
+        cluster.map(
+            p=>p.x
+        )
+    );
 
 
     const vy =
-    sumY/sumWeight;
-
+    median(
+        cluster.map(
+            p=>p.y
+        )
+    );
 
 
     /*
-    找通過消失點附近
-    最有代表性的左右線。
+    消失點附近到底有多少
+    候選線真正經過？
     */
 
-    let bestLeft =
-    null;
-
-    let bestRight =
-    null;
-
-
-    let bestLeftScore =
-    0;
-
-    let bestRightScore =
+    let supportingLines =
     0;
 
 
-    candidates.forEach(line=>{
+    let leftSupport =
+    0;
 
-        const distance =
-        distanceToLine(
-            vx,
-            vy,
-            line
-        );
+    let rightSupport =
+    0;
 
 
-        if(
-            distance >
-            W*.06
-        )
-        return;
+    candidates.forEach(
+        function(line){
 
+            const distance =
+            distanceToLine(
+                vx,
+                vy,
+                line
+            );
 
-        const horizontal =
-        Math.abs(
-            line.x-vx
-        );
-
-
-        const vertical =
-        Math.abs(
-            line.y-vy
-        );
-
-
-        if(
-            horizontal <
-            W*.10
-            &&
-            vertical <
-            H*.10
-        )
-        return;
-
-
-        const s =
-
-        line.strength
-
-        *
-
-        (
-            1+
-            horizontal/W
-        )
-
-        *
-
-        (
-            1+
-            vertical/H
-        );
-
-
-        if(
-            line.x <
-            vx
-        ){
 
             if(
-                s >
-                bestLeftScore
+                distance <
+                W*.055
             ){
 
-                bestLeftScore =
-                s;
+                supportingLines++;
 
-                bestLeft =
-                line;
+
+                if(
+                    line.x <
+                    vx
+                ){
+
+                    leftSupport++;
+
+                }
+                else{
+
+                    rightSupport++;
+
+                }
 
             }
 
         }
-        else{
+    );
 
-            if(
-                s >
-                bestRightScore
-            ){
 
-                bestRightScore =
-                s;
-
-                bestRight =
-                line;
-
-            }
-
-        }
-
-    });
-
+    /*
+    至少左右都有線支持
+    */
 
     if(
-        !bestLeft
+        supportingLines < 4
         ||
-        !bestRight
+        leftSupport < 1
+        ||
+        rightSupport < 1
     ){
 
         return null;
@@ -2126,74 +1968,45 @@ function analyzePerspective(){
     }
 
 
-
     /*
-    V / 倒V判斷。
+    =================================================
+    信心值
 
-    左右線主要部分
-    在消失點下方 =
-    道路、走廊式倒V透視。
+    只是辨識穩定程度，
+    不是照片構圖分數。
+    =================================================
     */
 
-    const avgY =
+    const supportRatio =
 
-    (
-        bestLeft.y
-        +
-        bestRight.y
-    )/2;
+    supportingLines
 
+    /
 
-    const type =
-
-    avgY >
-    vy
-
-    ?
-
-    "inverseV"
-
-    :
-
-    "v";
+    candidates.length;
 
 
-
-    /*
-    confidence =
-    辨識可靠度。
-
-    注意：
-    這不是構圖分數。
-    */
-
-    const concentration =
+    const clusterRatio =
 
     cluster.length
 
     /
 
-    pairs.length;
+    intersections.length;
 
 
-    const sideBalance =
+    const balance =
 
     Math.min(
-
-        bestLeftScore,
-
-        bestRightScore
-
+        leftSupport,
+        rightSupport
     )
 
     /
 
     Math.max(
-
-        bestLeftScore,
-
-        bestRightScore
-
+        leftSupport,
+        rightSupport
     );
 
 
@@ -2204,45 +2017,31 @@ function analyzePerspective(){
     +
 
     Math.min(
-        .40,
-        concentration*2.5
+        .30,
+        supportRatio*1.8
     )
 
     +
 
-    sideBalance*.30;
+    Math.min(
+        .25,
+        clusterRatio*3
+    )
 
+    +
 
-    if(
-        vy <
-        H*.65
-    ){
-
-        confidence +=
-        .08;
-
-    }
+    balance*.18;
 
 
     confidence =
-    Math.max(
-
+    clamp(
+        confidence,
         0,
-
-        Math.min(
-            .98,
-            confidence
-        )
-
+        .98
     );
 
 
     return{
-
-        type:type,
-
-        confidence:
-        confidence,
 
         vx:
         vx/W,
@@ -2250,35 +2049,20 @@ function analyzePerspective(){
         vy:
         vy/H,
 
-        left:{
+        confidence:
+        confidence,
 
-            x:
-            bestLeft.x/W,
-
-            y:
-            bestLeft.y/H
-
-        },
-
-        right:{
-
-            x:
-            bestRight.x/W,
-
-            y:
-            bestRight.y/H
-
-        }
+        support:
+        supportingLines
 
     };
 
 }
 
 
-
-/* =========================================
-   LINE INTERSECTION
-========================================= */
+/* =====================================================
+   INTERSECTION
+===================================================== */
 
 function intersectAngleLines(
     A,
@@ -2309,7 +2093,7 @@ function intersectAngleLines(
     );
 
 
-    const den =
+    const denominator =
 
     adx*bdy
 
@@ -2319,7 +2103,9 @@ function intersectAngleLines(
 
 
     if(
-        Math.abs(den) <
+        Math.abs(
+            denominator
+        ) <
         .0001
     ){
 
@@ -2340,36 +2126,31 @@ function intersectAngleLines(
 
     (
         dx*bdy
-
         -
-
         dy*bdx
     )
 
     /
 
-    den;
+    denominator;
 
 
     return{
 
         x:
-        A.x +
-        t*adx,
+        A.x+t*adx,
 
         y:
-        A.y +
-        t*ady
+        A.y+t*ady
 
     };
 
 }
 
 
-
-/* =========================================
-   DISTANCE POINT -> LINE
-========================================= */
+/* =====================================================
+   DISTANCE TO LINE
+===================================================== */
 
 function distanceToLine(
     px,
@@ -2402,10 +2183,9 @@ function distanceToLine(
 }
 
 
-
-/* =========================================
+/* =====================================================
    ANGLE
-========================================= */
+===================================================== */
 
 function normalizeAngle(a){
 
@@ -2436,29 +2216,24 @@ function normalizeAngle(a){
 }
 
 
+/* =====================================================
+   LIVE SMOOTHING
+===================================================== */
 
-/* =========================================
-   V5.7.2 LIVE 防抖
-========================================= */
+function smoothLive(now){
 
-function smoothLiveGuide(now){
+    liveHistory.push({
 
-    /*
-    保存最近5次。
-    */
+        vx:now.vx,
 
-    liveHistory.push(
+        vy:now.vy
 
-        JSON.parse(
-            JSON.stringify(now)
-        )
-
-    );
+    });
 
 
     if(
         liveHistory.length >
-        LIVE_HISTORY_SIZE
+        HISTORY_SIZE
     ){
 
         liveHistory.shift();
@@ -2467,101 +2242,54 @@ function smoothLiveGuide(now){
 
 
     /*
-    用中位數消除突然跳點。
+    最近5次中位數
     */
 
-    const stable = {
-
-        type:
-        lockedMode,
-
-        confidence:
-        median(
-            liveHistory.map(
-                r=>r.confidence
-            )
-        ),
-
-        vx:
-        median(
-            liveHistory.map(
-                r=>r.vx
-            )
-        ),
-
-        vy:
-        median(
-            liveHistory.map(
-                r=>r.vy
-            )
-        ),
-
-        left:{
-
-            x:
-            median(
-                liveHistory.map(
-                    r=>r.left.x
-                )
-            ),
-
-            y:
-            median(
-                liveHistory.map(
-                    r=>r.left.y
-                )
-            )
-
-        },
-
-        right:{
-
-            x:
-            median(
-                liveHistory.map(
-                    r=>r.right.x
-                )
-            ),
-
-            y:
-            median(
-                liveHistory.map(
-                    r=>r.right.y
-                )
-            )
-
-        }
-
-    };
+    const medianX =
+    median(
+        liveHistory.map(
+            p=>p.vx
+        )
+    );
 
 
-    /*
-    第一次直接使用。
-    */
+    const medianY =
+    median(
+        liveHistory.map(
+            p=>p.vy
+        )
+    );
+
 
     if(
         !liveGuide
     ){
 
-        return stable;
+        return{
+
+            vx:medianX,
+
+            vy:medianY,
+
+            confidence:
+            now.confidence
+
+        };
 
     }
 
 
     /*
-    限制綠點每次最多移動多少。
-
-    防止突然從畫面左邊
-    飛到右邊。
+    先算新舊差距
     */
 
     let dx =
-    stable.vx -
+    medianX -
     liveGuide.vx;
 
 
     let dy =
-    stable.vy -
+    medianY -
     liveGuide.vy;
 
 
@@ -2572,13 +2300,18 @@ function smoothLiveGuide(now){
     );
 
 
+    /*
+    突然跳太遠
+    限制單次移動
+    */
+
     if(
         distance >
-        MAX_LIVE_STEP
+        MAX_STEP
     ){
 
         const ratio =
-        MAX_LIVE_STEP /
+        MAX_STEP /
         distance;
 
 
@@ -2592,97 +2325,37 @@ function smoothLiveGuide(now){
     }
 
 
-    /*
-    再做一次平滑。
-    */
+    return{
 
-    stable.vx =
+        vx:
 
-    liveGuide.vx
+        liveGuide.vx
 
-    +
+        +
 
-    dx*LIVE_SMOOTH;
+        dx*SMOOTH,
 
 
-    stable.vy =
+        vy:
 
-    liveGuide.vy
+        liveGuide.vy
 
-    +
+        +
 
-    dy*LIVE_SMOOTH;
-
-
-    stable.left.x =
-
-    liveGuide.left.x
-
-    +
-
-    (
-        stable.left.x
-        -
-        liveGuide.left.x
-    )
-    *
-    LIVE_SMOOTH;
+        dy*SMOOTH,
 
 
-    stable.left.y =
+        confidence:
+        now.confidence
 
-    liveGuide.left.y
-
-    +
-
-    (
-        stable.left.y
-        -
-        liveGuide.left.y
-    )
-    *
-    LIVE_SMOOTH;
-
-
-    stable.right.x =
-
-    liveGuide.right.x
-
-    +
-
-    (
-        stable.right.x
-        -
-        liveGuide.right.x
-    )
-    *
-    LIVE_SMOOTH;
-
-
-    stable.right.y =
-
-    liveGuide.right.y
-
-    +
-
-    (
-        stable.right.y
-        -
-        liveGuide.right.y
-    )
-    *
-    LIVE_SMOOTH;
-
-
-    return stable;
+    };
 
 }
 
 
-
-/* =========================================
+/* =====================================================
    LIVE NAVIGATION
-========================================= */
+===================================================== */
 
 function updateNavigation(){
 
@@ -2701,23 +2374,29 @@ function updateNavigation(){
     analyzePerspective();
 
 
+    /*
+    一次抓不到
+    不要把綠點刪掉
+    */
+
     if(!now){
-
-        /*
-        單次抓不到，
-        不要立刻把綠點清掉。
-
-        保留上一個位置。
-        */
 
         currentScore =
         Math.max(
-            20,
+            0,
             currentScore-2
         );
 
 
+        completeCount =
+        0;
+
+
         updateScoreUI();
+
+
+        messageEl.innerText =
+        "⚠️ 目前透視線不穩，慢慢移動手機";
 
         return;
 
@@ -2725,53 +2404,25 @@ function updateNavigation(){
 
 
     /*
-    AI已經選好模式。
-
-    導航途中如果單幀
-    被判成另一種構圖，
-    不要立刻跳模式。
-    */
-
-    if(
-        now.type !==
-        lockedMode
-    ){
-
-        /*
-        仍然可以使用它的
-        消失點位置，
-
-        但type強制維持
-        原本鎖定模式。
-        */
-
-        now.type =
-        lockedMode;
-
-    }
-
-
-    /*
-    ★ 防抖後才給 liveGuide。
+    綠點平滑後更新
     */
 
     liveGuide =
-    smoothLiveGuide(
+    smoothLive(
         now
     );
 
 
-    updateNavigationScore();
+    calculateScore();
 
 }
 
 
-
-/* =========================================
+/* =====================================================
    SCORE
-========================================= */
+===================================================== */
 
-function updateNavigationScore(){
+function calculateScore(){
 
     if(
         !targetGuide
@@ -2783,15 +2434,6 @@ function updateNavigationScore(){
 
     }
 
-
-    /*
-    真正構圖分數：
-
-    現在消失點
-    與
-    白色目標點
-    的距離。
-    */
 
     const dx =
 
@@ -2819,58 +2461,74 @@ function updateNavigationScore(){
 
 
     /*
-    約距離0.35時接近0分，
-    越靠近目標越高。
+    V5.8：
+
+    這才是真正的構圖分數。
+
+    綠點和白圈完全重合 = 100
+
+    相差約28%畫面 = 0
     */
 
-    currentScore =
-    Math.round(
+    let score =
 
+    100
+
+    -
+
+    (
+        distance/.28
+        *
         100
+    );
 
-        -
 
-        Math.min(
-            100,
-            distance/.35*100
+    score =
+    Math.round(
+        clamp(
+            score,
+            0,
+            100
         )
-
     );
 
 
     currentScore =
-    Math.max(
-        0,
-        Math.min(
-            100,
-            currentScore
-        )
-    );
+    score;
 
 
     updateScoreUI();
 
 
     /*
-    導航提示。
+    完成必須連續3次
+    都很接近。
+
+    不能單幀碰到就算完成。
     */
 
-    const tolerance =
-    .035;
+    if(
+        distance <
+        .035
+    ){
+
+        completeCount++;
+
+    }
+    else{
+
+        completeCount =
+        0;
+
+    }
 
 
     if(
-        Math.abs(dx) <
-        tolerance
-
-        &&
-
-        Math.abs(dy) <
-        tolerance
+        completeCount >= 3
     ){
 
         messageEl.innerText =
-        "✅ 兩點重合，構圖完成，可以拍了";
+        "✅ 構圖完成，可以拍了";
 
         return;
 
@@ -2878,12 +2536,12 @@ function updateNavigationScore(){
 
 
     /*
-    dx > 0：
-    綠點在白圈右側。
-
-    畫面導航直接告訴使用者
-    往哪邊調。
+    導航方向
     */
+
+    const tolerance =
+    .025;
+
 
     let horizontal =
     "";
@@ -2893,13 +2551,27 @@ function updateNavigationScore(){
     "";
 
 
+    /*
+    注意：
+
+    這裡提示的是
+    「手機要怎麼移」
+
+    綠點在目標右側，
+    手機往右移，
+    景物通常會往左移。
+
+    綠點在目標左側，
+    手機往左移。
+    */
+
     if(
         dx >
         tolerance
     ){
 
         horizontal =
-        "⬅️ 往左調";
+        "➡️ 手機往右";
 
     }
     else
@@ -2909,10 +2581,19 @@ function updateNavigationScore(){
     ){
 
         horizontal =
-        "➡️ 往右調";
+        "⬅️ 手機往左";
 
     }
 
+
+    /*
+    綠點太低：
+    手機稍微往下取景，
+    景物會往畫面上方移。
+
+    綠點太高：
+    手機稍微往上取景。
+    */
 
     if(
         dy >
@@ -2920,7 +2601,7 @@ function updateNavigationScore(){
     ){
 
         vertical =
-        "⬆️ 往上調";
+        "⬇️ 鏡頭稍微往下";
 
     }
     else
@@ -2930,7 +2611,7 @@ function updateNavigationScore(){
     ){
 
         vertical =
-        "⬇️ 往下調";
+        "⬆️ 鏡頭稍微往上";
 
     }
 
@@ -2954,43 +2635,590 @@ function updateNavigationScore(){
         vertical;
 
     }
+    else
+    if(horizontal){
+
+        messageEl.innerText =
+        horizontal;
+
+    }
+    else
+    if(vertical){
+
+        messageEl.innerText =
+        vertical;
+
+    }
     else{
 
         messageEl.innerText =
-
-        horizontal
-
-        ||
-
-        vertical
-
-        ||
-
-        "微調手機";
+        "👌 很接近了，微調一下";
 
     }
 
 }
 
 
-
-/* =========================================
+/* =====================================================
    SCORE UI
-========================================= */
+===================================================== */
 
 function updateScoreUI(){
 
     scoreEl.innerHTML =
 
-    `${currentScore} <small>/100</small>`;
+    currentScore
+
+    +
+
+    ` <small>/100</small>`;
 
 }
 
 
+/* =====================================================
+   TARGET COLOR
+===================================================== */
 
-/* =========================================
-   RESIZE
-========================================= */
+function getLiveColor(){
+
+    if(
+        currentScore >= 88
+    ){
+
+        return "#2cff67";
+
+    }
+
+
+    if(
+        currentScore >= 65
+    ){
+
+        return "#ffd633";
+
+    }
+
+
+    return "#ffffff";
+
+}
+
+
+/* =====================================================
+   DRAW TARGET
+===================================================== */
+
+function drawTarget(){
+
+    if(
+        !targetGuide
+    ){
+
+        return;
+
+    }
+
+
+    const w =
+    overlay.clientWidth;
+
+
+    const h =
+    overlay.clientHeight;
+
+
+    const x =
+    targetGuide.vx*w;
+
+
+    const y =
+    targetGuide.vy*h;
+
+
+    ctx.save();
+
+
+    /*
+    白色目標圈
+    永遠固定
+    */
+
+    ctx.strokeStyle =
+    "#ffffff";
+
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.setLineDash(
+        []
+    );
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+        x,
+        y,
+        20,
+        0,
+        Math.PI*2
+    );
+
+
+    ctx.stroke();
+
+
+    /*
+    外圈
+    */
+
+    ctx.globalAlpha =
+    .5;
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+        x,
+        y,
+        29,
+        0,
+        Math.PI*2
+    );
+
+
+    ctx.stroke();
+
+
+    ctx.globalAlpha =
+    1;
+
+
+    /*
+    十字
+    */
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        x-38,
+        y
+    );
+
+    ctx.lineTo(
+        x-24,
+        y
+    );
+
+
+    ctx.moveTo(
+        x+24,
+        y
+    );
+
+    ctx.lineTo(
+        x+38,
+        y
+    );
+
+
+    ctx.moveTo(
+        x,
+        y-38
+    );
+
+    ctx.lineTo(
+        x,
+        y-24
+    );
+
+
+    ctx.moveTo(
+        x,
+        y+24
+    );
+
+    ctx.lineTo(
+        x,
+        y+38
+    );
+
+
+    ctx.stroke();
+
+
+    ctx.fillStyle =
+    "#fff";
+
+
+    ctx.font =
+    "bold 14px -apple-system,Arial";
+
+
+    ctx.textAlign =
+    "center";
+
+
+    ctx.fillText(
+        "○ 建議位置",
+        x,
+        y-43
+    );
+
+
+    ctx.restore();
+
+}
+
+
+/* =====================================================
+   DRAW LIVE
+===================================================== */
+
+function drawLive(){
+
+    if(
+        !navigation
+        ||
+        !liveGuide
+    ){
+
+        return;
+
+    }
+
+
+    const w =
+    overlay.clientWidth;
+
+
+    const h =
+    overlay.clientHeight;
+
+
+    const x =
+    liveGuide.vx*w;
+
+
+    const y =
+    liveGuide.vy*h;
+
+
+    const color =
+    getLiveColor();
+
+
+    ctx.save();
+
+
+    /*
+    目前消失點
+    */
+
+    ctx.fillStyle =
+    color;
+
+
+    ctx.strokeStyle =
+    color;
+
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+        x,
+        y,
+        8,
+        0,
+        Math.PI*2
+    );
+
+
+    ctx.fill();
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+        x,
+        y,
+        15,
+        0,
+        Math.PI*2
+    );
+
+
+    ctx.stroke();
+
+
+    ctx.font =
+    "bold 14px -apple-system,Arial";
+
+
+    ctx.textAlign =
+    "center";
+
+
+    ctx.fillStyle =
+    color;
+
+
+    ctx.fillText(
+        "● 目前消失點",
+        x,
+        y-23
+    );
+
+
+    /*
+    目前點 → 目標
+    */
+
+    if(
+        targetGuide
+    ){
+
+        const tx =
+        targetGuide.vx*w;
+
+
+        const ty =
+        targetGuide.vy*h;
+
+
+        ctx.strokeStyle =
+        color;
+
+
+        ctx.lineWidth =
+        2;
+
+
+        ctx.globalAlpha =
+        .85;
+
+
+        ctx.setLineDash(
+            [7,7]
+        );
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            x,
+            y
+        );
+
+
+        ctx.lineTo(
+            tx,
+            ty
+        );
+
+
+        ctx.stroke();
+
+
+        ctx.setLineDash(
+            []
+        );
+
+
+        /*
+        箭頭
+        */
+
+        const angle =
+        Math.atan2(
+            ty-y,
+            tx-x
+        );
+
+
+        const arrowSize =
+        10;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            tx,
+            ty
+        );
+
+
+        ctx.lineTo(
+
+            tx
+            -
+            Math.cos(
+                angle-.55
+            )
+            *
+            arrowSize,
+
+            ty
+            -
+            Math.sin(
+                angle-.55
+            )
+            *
+            arrowSize
+
+        );
+
+
+        ctx.moveTo(
+            tx,
+            ty
+        );
+
+
+        ctx.lineTo(
+
+            tx
+            -
+            Math.cos(
+                angle+.55
+            )
+            *
+            arrowSize,
+
+            ty
+            -
+            Math.sin(
+                angle+.55
+            )
+            *
+            arrowSize
+
+        );
+
+
+        ctx.stroke();
+
+    }
+
+
+    ctx.restore();
+
+}
+
+
+/* =====================================================
+   DRAW PERSPECTIVE LINES
+===================================================== */
+
+function drawPerspectiveHint(){
+
+    if(
+        !liveGuide
+    ){
+
+        return;
+
+    }
+
+
+    const w =
+    overlay.clientWidth;
+
+
+    const h =
+    overlay.clientHeight;
+
+
+    const x =
+    liveGuide.vx*w;
+
+
+    const y =
+    liveGuide.vy*h;
+
+
+    ctx.save();
+
+
+    ctx.strokeStyle =
+    "rgba(255,255,255,.55)";
+
+
+    ctx.lineWidth =
+    2;
+
+
+    ctx.setLineDash(
+        [10,10]
+    );
+
+
+    /*
+    只當視覺提示。
+
+    不代表AI真的認定
+    這兩條就是實體邊線。
+    */
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        x,
+        y
+    );
+
+
+    ctx.lineTo(
+        w*.08,
+        h*.94
+    );
+
+
+    ctx.stroke();
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        x,
+        y
+    );
+
+
+    ctx.lineTo(
+        w*.92,
+        h*.94
+    );
+
+
+    ctx.stroke();
+
+
+    ctx.restore();
+
+}
+
+
+/* =====================================================
+   OVERLAY RESIZE
+===================================================== */
 
 function resizeOverlay(){
 
@@ -3028,423 +3256,11 @@ function resizeOverlay(){
 }
 
 
-
-/* =========================================
-   DRAW TARGET GUIDE
-========================================= */
-
-function drawTargetGuide(){
-
-    if(
-        !targetGuide
-    ){
-
-        return;
-
-    }
-
-
-    const w =
-    overlay.clientWidth;
-
-
-    const h =
-    overlay.clientHeight;
-
-
-    const vx =
-    targetGuide.vx*w;
-
-
-    const vy =
-    targetGuide.vy*h;
-
-
-    /*
-    白色目標線。
-
-    依構圖類型畫，
-    不讓它跟liveGuide跑。
-    */
-
-    let leftEnd;
-
-    let rightEnd;
-
-
-    if(
-        targetGuide.type ===
-        "inverseV"
-    ){
-
-        leftEnd = {
-            x:w*.06,
-            y:h*.94
-        };
-
-
-        rightEnd = {
-            x:w*.94,
-            y:h*.94
-        };
-
-    }
-    else{
-
-        leftEnd = {
-            x:w*.12,
-            y:h*.10
-        };
-
-
-        rightEnd = {
-            x:w*.88,
-            y:h*.10
-        };
-
-    }
-
-
-    ctx.save();
-
-
-    /*
-    白色虛線。
-    */
-
-    ctx.strokeStyle =
-    "rgba(255,255,255,.95)";
-
-
-    ctx.lineWidth =
-    3;
-
-
-    ctx.setLineDash(
-        [12,9]
-    );
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        vx,
-        vy
-    );
-
-    ctx.lineTo(
-        leftEnd.x,
-        leftEnd.y
-    );
-
-    ctx.stroke();
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        vx,
-        vy
-    );
-
-    ctx.lineTo(
-        rightEnd.x,
-        rightEnd.y
-    );
-
-    ctx.stroke();
-
-
-
-    /*
-    白色目標圈。
-    */
-
-    ctx.setLineDash(
-        []
-    );
-
-
-    ctx.strokeStyle =
-    "#ffffff";
-
-
-    ctx.lineWidth =
-    3;
-
-
-    ctx.beginPath();
-
-
-    ctx.arc(
-        vx,
-        vy,
-        18,
-        0,
-        Math.PI*2
-    );
-
-
-    ctx.stroke();
-
-
-
-    /*
-    白色十字。
-    */
-
-    ctx.beginPath();
-
-
-    ctx.moveTo(
-        vx-28,
-        vy
-    );
-
-
-    ctx.lineTo(
-        vx-20,
-        vy
-    );
-
-
-    ctx.moveTo(
-        vx+20,
-        vy
-    );
-
-
-    ctx.lineTo(
-        vx+28,
-        vy
-    );
-
-
-    ctx.moveTo(
-        vx,
-        vy-28
-    );
-
-
-    ctx.lineTo(
-        vx,
-        vy-20
-    );
-
-
-    ctx.moveTo(
-        vx,
-        vy+20
-    );
-
-
-    ctx.lineTo(
-        vx,
-        vy+28
-    );
-
-
-    ctx.stroke();
-
-
-
-    ctx.font =
-    "bold 14px -apple-system,Arial";
-
-
-    ctx.textAlign =
-    "center";
-
-
-    ctx.fillStyle =
-    "#fff";
-
-
-    ctx.fillText(
-        "○ 目標",
-        vx,
-        vy-34
-    );
-
-
-    ctx.restore();
-
-}
-
-
-
-/* =========================================
-   DRAW LIVE GUIDE
-========================================= */
-
-function drawLiveGuide(){
-
-    if(
-        !navigation
-        ||
-        !liveGuide
-    ){
-
-        return;
-
-    }
-
-
-    const w =
-    overlay.clientWidth;
-
-
-    const h =
-    overlay.clientHeight;
-
-
-    const x =
-    liveGuide.vx*w;
-
-
-    const y =
-    liveGuide.vy*h;
-
-
-    ctx.save();
-
-
-    /*
-    綠色目前點。
-    */
-
-    ctx.fillStyle =
-    "#2cff67";
-
-
-    ctx.strokeStyle =
-    "#2cff67";
-
-
-    ctx.lineWidth =
-    2;
-
-
-    ctx.beginPath();
-
-
-    ctx.arc(
-        x,
-        y,
-        7,
-        0,
-        Math.PI*2
-    );
-
-
-    ctx.fill();
-
-
-
-    ctx.beginPath();
-
-
-    ctx.arc(
-        x,
-        y,
-        13,
-        0,
-        Math.PI*2
-    );
-
-
-    ctx.stroke();
-
-
-
-    ctx.font =
-    "bold 14px -apple-system,Arial";
-
-
-    ctx.textAlign =
-    "center";
-
-
-    ctx.fillStyle =
-    "#2cff67";
-
-
-    ctx.fillText(
-        "● 目前",
-        x,
-        y-20
-    );
-
-
-
-    /*
-    從目前點連到目標點。
-
-    使用者一眼就知道
-    綠點要往哪裡去。
-    */
-
-    if(
-        targetGuide
-    ){
-
-        const tx =
-        targetGuide.vx*w;
-
-
-        const ty =
-        targetGuide.vy*h;
-
-
-        ctx.strokeStyle =
-        "rgba(44,255,103,.75)";
-
-
-        ctx.lineWidth =
-        2;
-
-
-        ctx.setLineDash(
-            [6,7]
-        );
-
-
-        ctx.beginPath();
-
-
-        ctx.moveTo(
-            x,
-            y
-        );
-
-
-        ctx.lineTo(
-            tx,
-            ty
-        );
-
-
-        ctx.stroke();
-
-
-        ctx.setLineDash(
-            []
-        );
-
-    }
-
-
-    ctx.restore();
-
-}
-
-
-
-/* =========================================
-   DRAW LOOP
-========================================= */
-
-function drawLoop(time){
+/* =====================================================
+   LOOP
+===================================================== */
+
+function loop(time){
 
     ctx.clearRect(
         0,
@@ -3454,31 +3270,30 @@ function drawLoop(time){
     );
 
 
-    drawTargetGuide();
-
-
-    drawLiveGuide();
-
-
     /*
-    只有導航狀態
-    才重新分析目前畫面。
+    畫面順序：
 
-    targetGuide完全不改。
+    1 透視提示
+    2 白色目標
+    3 目前消失點
     */
+
+    drawPerspectiveHint();
+
+    drawTarget();
+
+    drawLive();
+
 
     if(
         navigation
-
         &&
-
-        time -
-        lastLiveAnalysis
+        time-lastAnalysisTime
         >
         LIVE_INTERVAL
     ){
 
-        lastLiveAnalysis =
+        lastAnalysisTime =
         time;
 
 
@@ -3488,16 +3303,15 @@ function drawLoop(time){
 
 
     requestAnimationFrame(
-        drawLoop
+        loop
     );
 
 }
 
 
-
-/* =========================================
+/* =====================================================
    ZOOM
-========================================= */
+===================================================== */
 
 zoom.addEventListener(
     "input",
@@ -3510,13 +3324,27 @@ zoom.addEventListener(
 
 
         zoomText.innerText =
+
         value.toFixed(1)
+
         +
+
         "×";
 
 
+        if(!stream){
+
+            return;
+
+        }
+
+
+        const tracks =
+        stream.getVideoTracks();
+
+
         if(
-            !stream
+            tracks.length === 0
         ){
 
             return;
@@ -3525,13 +3353,10 @@ zoom.addEventListener(
 
 
         const track =
-        stream
-        .getVideoTracks()[0];
+        tracks[0];
 
 
         if(
-            !track
-            ||
             !track.getCapabilities
         ){
 
@@ -3556,17 +3381,13 @@ zoom.addEventListener(
         try{
 
             const actualZoom =
-            Math.min(
+            clamp(
 
-                capabilities.zoom.max,
+                value,
 
-                Math.max(
+                capabilities.zoom.min,
 
-                    capabilities.zoom.min,
-
-                    value
-
-                )
+                capabilities.zoom.max
 
             );
 
@@ -3587,7 +3408,7 @@ zoom.addEventListener(
         catch(error){
 
             console.log(
-                "zoom not supported",
+                "Zoom unsupported",
                 error
             );
 
@@ -3597,10 +3418,9 @@ zoom.addEventListener(
 );
 
 
-
-/* =========================================
-   ERROR DISPLAY
-========================================= */
+/* =====================================================
+   ERROR
+===================================================== */
 
 window.onerror =
 function(
@@ -3626,7 +3446,6 @@ function(
 };
 
 
-
 window.addEventListener(
     "unhandledrejection",
     function(event){
@@ -3643,10 +3462,9 @@ window.addEventListener(
 );
 
 
-
-/* =========================================
+/* =====================================================
    START
-========================================= */
+===================================================== */
 
 window.addEventListener(
     "resize",
@@ -3671,12 +3489,10 @@ startCamera();
 
 
 requestAnimationFrame(
-    drawLoop
+    loop
 );
 
 </script>
 
-
 </body>
-
 </html>
