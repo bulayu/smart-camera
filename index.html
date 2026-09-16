@@ -2,12 +2,17 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 
-<title>構圖導航 V6.1</title>
+<meta name="viewport"
+content="width=device-width,
+initial-scale=1,
+maximum-scale=1,
+user-scalable=no">
+
+<title>構圖導航 V6.2</title>
 
 <style>
+
 *{
     box-sizing:border-box;
     -webkit-tap-highlight-color:transparent;
@@ -20,13 +25,22 @@ html,body{
     overflow:hidden;
     background:#000;
     color:#fff;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+    font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Arial,
+    sans-serif;
 }
 
 body{
     display:flex;
     flex-direction:column;
 }
+
+/* =========================
+   CAMERA
+========================= */
 
 #cameraArea{
     position:relative;
@@ -54,14 +68,18 @@ body{
     z-index:5;
 }
 
+/* =========================
+   INFO
+========================= */
+
 #info{
     position:absolute;
     top:14px;
     left:14px;
-    max-width:270px;
+    width:265px;
     padding:13px 16px;
     border-radius:18px;
-    background:rgba(0,0,0,.70);
+    background:rgba(0,0,0,.72);
     backdrop-filter:blur(7px);
     z-index:10;
 }
@@ -81,21 +99,31 @@ body{
     margin-top:5px;
     font-size:13px;
     line-height:1.45;
-    opacity:.85;
+    opacity:.86;
 }
+
+#detectStatus{
+    margin-top:7px;
+    font-size:11px;
+    color:#ffd400;
+}
+
+/* =========================
+   MESSAGE
+========================= */
 
 #message{
     position:absolute;
     left:50%;
-    bottom:14px;
+    bottom:15px;
     transform:translateX(-50%);
     width:92%;
     padding:12px;
     border-radius:17px;
-    background:rgba(0,0,0,.78);
+    background:rgba(0,0,0,.80);
     text-align:center;
-    font-size:14px;
-    font-weight:700;
+    font-size:15px;
+    font-weight:800;
     z-index:10;
 }
 
@@ -108,18 +136,32 @@ body{
     z-index:20;
 }
 
+/* =========================
+   CONTROLS
+========================= */
+
 #controls{
     flex:0 0 auto;
-    padding:9px 11px calc(11px + env(safe-area-inset-bottom));
+    padding:
+    9px 11px
+    calc(11px + env(safe-area-inset-bottom));
     background:#000;
 }
 
-#modeRow{
+#modeRow,
+#compositionRow{
     display:flex;
     gap:7px;
     overflow-x:auto;
-    padding-bottom:8px;
     scrollbar-width:none;
+}
+
+#modeRow{
+    padding-bottom:8px;
+}
+
+#compositionRow{
+    padding-bottom:8px;
 }
 
 #modeRow::-webkit-scrollbar,
@@ -127,10 +169,14 @@ body{
     display:none;
 }
 
+/* =========================
+   MODE BUTTON
+========================= */
+
 .modeBtn{
     flex:0 0 auto;
     min-width:67px;
-    padding:8px 8px;
+    padding:8px;
     border:0;
     border-radius:17px;
     background:#242424;
@@ -144,27 +190,20 @@ body{
     color:#000;
 }
 
+.autoBtn.active{
+    background:#ffd400;
+    color:#000;
+}
+
 .modeIcon{
     display:block;
     font-size:19px;
     margin-bottom:2px;
 }
 
-.autoBtn{
-    background:#292929;
-}
-
-.autoBtn.active{
-    background:#ffd400;
-    color:#000;
-}
-
-#compositionRow{
-    display:flex;
-    gap:7px;
-    overflow-x:auto;
-    padding-bottom:8px;
-}
+/* =========================
+   COMPOSITION BUTTON
+========================= */
 
 .compBtn{
     flex:0 0 auto;
@@ -181,7 +220,11 @@ body{
     color:#ffd400;
 }
 
-#autoButton{
+/* =========================
+   MAIN BUTTON
+========================= */
+
+#mainButton{
     width:100%;
     padding:12px;
     border:0;
@@ -192,6 +235,10 @@ body{
     font-weight:800;
     margin-bottom:8px;
 }
+
+/* =========================
+   CAMERA CONTROL
+========================= */
 
 #bottomRow{
     display:flex;
@@ -230,363 +277,941 @@ body{
     margin-top:6px;
     text-align:center;
     font-size:10px;
-    opacity:.40;
+    opacity:.42;
 }
+
 </style>
 </head>
 
 <body>
 
+
 <div id="cameraArea">
 
-    <video id="video" autoplay playsinline muted></video>
+    <video
+    id="video"
+    autoplay
+    playsinline
+    muted>
+    </video>
+
     <canvas id="overlay"></canvas>
 
     <div id="info">
-        <div id="modeTitle">✨ 自動構圖</div>
-        <div id="composition">準備分析</div>
-        <div id="desc">選擇拍攝模式，或使用自動構圖</div>
+
+        <div id="modeTitle">
+            ✨ 自動構圖
+        </div>
+
+        <div id="composition">
+            準備
+        </div>
+
+        <div id="desc">
+            選擇拍攝模式
+        </div>
+
+        <div id="detectStatus">
+            V6.2
+        </div>
+
     </div>
 
     <div id="message">
         📷 對準想拍攝的畫面
     </div>
 
-    <div id="version">V6.1</div>
+    <div id="version">
+        V6.2
+    </div>
 
 </div>
 
+
 <div id="controls">
+
+    <!-- =========================
+         MODES
+    ========================= -->
 
     <div id="modeRow">
 
-        <button class="modeBtn autoBtn active"
+        <button
+        class="modeBtn autoBtn active"
+        data-mode="auto"
         onclick="selectMode('auto',this)">
-            <span class="modeIcon">✨</span>自動
+            <span class="modeIcon">✨</span>
+            自動
         </button>
 
-        <button class="modeBtn"
+        <button
+        class="modeBtn"
+        data-mode="landscape"
         onclick="selectMode('landscape',this)">
-            <span class="modeIcon">🏞️</span>風景
+            <span class="modeIcon">🏞️</span>
+            風景
         </button>
 
-        <button class="modeBtn"
+        <button
+        class="modeBtn"
+        data-mode="street"
         onclick="selectMode('street',this)">
-            <span class="modeIcon">🏙️</span>街景
+            <span class="modeIcon">🏙️</span>
+            街景
         </button>
 
-        <button class="modeBtn"
+        <button
+        class="modeBtn"
+        data-mode="portrait"
         onclick="selectMode('portrait',this)">
-            <span class="modeIcon">👤</span>人像
+            <span class="modeIcon">👤</span>
+            人像
         </button>
 
-        <button class="modeBtn"
+        <button
+        class="modeBtn"
+        data-mode="night"
         onclick="selectMode('night',this)">
-            <span class="modeIcon">🌙</span>夜景
+            <span class="modeIcon">🌙</span>
+            夜景
         </button>
 
-        <button class="modeBtn"
+        <button
+        class="modeBtn"
+        data-mode="indoor"
         onclick="selectMode('indoor',this)">
-            <span class="modeIcon">🏠</span>室內
+            <span class="modeIcon">🏠</span>
+            室內
         </button>
 
-        <button class="modeBtn"
+        <button
+        class="modeBtn"
+        data-mode="food"
         onclick="selectMode('food',this)">
-            <span class="modeIcon">🍜</span>美食
+            <span class="modeIcon">🍜</span>
+            美食
         </button>
 
-        <button class="modeBtn"
+        <button
+        class="modeBtn"
+        data-mode="macro"
         onclick="selectMode('macro',this)">
-            <span class="modeIcon">🌸</span>近拍
+            <span class="modeIcon">🌸</span>
+            近拍
         </button>
 
-        <button class="modeBtn"
+        <button
+        class="modeBtn"
+        data-mode="pet"
         onclick="selectMode('pet',this)">
-            <span class="modeIcon">🐶</span>寵物
+            <span class="modeIcon">🐶</span>
+            寵物
         </button>
 
-        <button class="modeBtn"
+        <button
+        class="modeBtn"
+        data-mode="product"
         onclick="selectMode('product',this)">
-            <span class="modeIcon">📦</span>商品
+            <span class="modeIcon">📦</span>
+            商品
         </button>
 
     </div>
 
+
     <div id="compositionRow"></div>
 
-    <button id="autoButton" onclick="runComposition()">
+
+    <button
+    id="mainButton"
+    onclick="runComposition()">
         ✨ 自動構圖
     </button>
 
+
     <div id="bottomRow">
 
-        <button class="cameraBtn"
+        <button
+        class="cameraBtn"
         onclick="changeCamera('user')">
             🤳 前鏡
         </button>
 
-        <button class="cameraBtn"
+        <button
+        class="cameraBtn"
         onclick="changeCamera('environment')">
             📷 後鏡
         </button>
 
         <div id="zoomArea">
-            <span style="font-size:11px">倍率</span>
 
-            <input id="zoom"
+            <span style="font-size:11px">
+                倍率
+            </span>
+
+            <input
+            id="zoom"
             type="range"
             min="1"
             max="3"
             step=".1"
             value="1">
 
-            <span id="zoomText">1.0×</span>
+            <span id="zoomText">
+                1.0×
+            </span>
+
         </div>
 
     </div>
 
+
     <div id="status">
-        V6.1｜智慧構圖架構版
+        V6.2｜人像構圖導航測試版
     </div>
 
 </div>
 
-<script>
+
+<script type="module">
 
 /* =========================================================
-   構圖導航 V6.1
-   AI 字樣全面移除
 
-   架構：
-   自動 + 9 大拍攝模式
+   構圖導航 V6.2
 
-   V6.1：
-   1. 六大模式擴充為九大模式
-   2. 加入「自動」
-   3. 建立各模式構圖知識庫
-   4. 建立構圖推薦流程
-   5. 保留相機 / Zoom / 輔助線
+   新功能：
+
+   ★ 人像模式
+   ★ MediaPipe Face Detector
+   ★ 即時臉部位置
+   ★ 三分構圖目標
+   ★ 左右 / 上下導航
+   ★ 到位變綠
+
 ========================================================= */
-
-var video=document.getElementById("video");
-var overlay=document.getElementById("overlay");
-var ctx=overlay.getContext("2d");
-var messageEl=document.getElementById("message");
-var modeTitle=document.getElementById("modeTitle");
-var compositionEl=document.getElementById("composition");
-var descEl=document.getElementById("desc");
-var compositionRow=document.getElementById("compositionRow");
-var zoom=document.getElementById("zoom");
-var zoomText=document.getElementById("zoomText");
-
-var stream=null;
-var facing="environment";
-
-var currentMode="auto";
-var currentComposition=null;
 
 
 /* =========================================================
-   構圖知識庫
+   MEDIAPIPE
 ========================================================= */
 
-var database={
+import {
+    FaceDetector,
+    FilesetResolver
+}
+from
+"https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304";
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const video =
+document.getElementById("video");
+
+const overlay =
+document.getElementById("overlay");
+
+const ctx =
+overlay.getContext("2d");
+
+const cameraArea =
+document.getElementById("cameraArea");
+
+const messageEl =
+document.getElementById("message");
+
+const modeTitle =
+document.getElementById("modeTitle");
+
+const compositionEl =
+document.getElementById("composition");
+
+const descEl =
+document.getElementById("desc");
+
+const detectStatus =
+document.getElementById("detectStatus");
+
+const compositionRow =
+document.getElementById("compositionRow");
+
+const mainButton =
+document.getElementById("mainButton");
+
+const zoom =
+document.getElementById("zoom");
+
+const zoomText =
+document.getElementById("zoomText");
+
+
+/* =========================================================
+   STATE
+========================================================= */
+
+let stream=null;
+
+let facing="environment";
+
+let currentMode="auto";
+
+let currentComposition=null;
+
+
+/* Face Detector */
+
+let faceDetector=null;
+
+let detectorReady=false;
+
+let portraitNavigation=false;
+
+let detecting=false;
+
+let lastVideoTime=-1;
+
+let latestFace=null;
+
+
+/* =========================================================
+   DATABASE
+========================================================= */
+
+const database={
+
 
 landscape:{
+
     icon:"🏞️",
     name:"風景",
     default:"thirds",
+
     comps:[
-        ["thirds","三分法","安排天空、地面與主要景物的比例"],
-        ["golden","黃金比例","讓主要視覺重心落在自然舒適的位置"],
-        ["leading","引導線","利用道路、河流或地形引導視線"],
-        ["center","中央構圖","適合明確而突出的單一主體"],
-        ["frame","框景","利用樹木或前景形成天然畫框"]
+
+        [
+            "thirds",
+            "三分法",
+            "安排天空、地面與主要景物比例"
+        ],
+
+        [
+            "golden",
+            "黃金比例",
+            "讓主要視覺重心落在自然位置"
+        ],
+
+        [
+            "leading",
+            "引導線",
+            "利用道路、河流或地形引導視線"
+        ],
+
+        [
+            "center",
+            "中央構圖",
+            "適合明確突出的單一主體"
+        ],
+
+        [
+            "frame",
+            "框景",
+            "利用前景形成天然畫框"
+        ]
+
     ]
+
 },
 
+
 street:{
+
     icon:"🏙️",
     name:"街景",
     default:"leading",
+
     comps:[
-        ["leading","引導線","利用道路與建築線條引導視線"],
-        ["perspective","單點透視","利用收斂線條強化空間深度"],
-        ["symmetry","對稱","適合左右結構明顯的街景"],
-        ["thirds","三分法","讓主要街景主體避開死板置中"],
-        ["diagonal","對角線","利用斜向結構增加動態感"]
+
+        [
+            "leading",
+            "引導線",
+            "利用道路與建築線條引導視線"
+        ],
+
+        [
+            "perspective",
+            "單點透視",
+            "利用收斂線條表現空間深度"
+        ],
+
+        [
+            "symmetry",
+            "對稱",
+            "適合左右結構明顯的街景"
+        ],
+
+        [
+            "thirds",
+            "三分法",
+            "安排街景主體位置"
+        ],
+
+        [
+            "diagonal",
+            "對角線",
+            "利用斜向結構增加動態感"
+        ]
+
     ]
+
 },
 
+
 portrait:{
+
     icon:"👤",
     name:"人像",
     default:"portraitThirds",
+
     comps:[
-        ["portraitThirds","三分人像","將人物安排在三分位置"],
-        ["portraitCenter","中央人像","適合正面人物與強烈視線"],
-        ["lookSpace","視線留白","人物面向哪裡，就在前方保留空間"],
-        ["fullbody","全身構圖","保留頭頂與腳部並避免關節裁切"],
-        ["environment","環境人像","人物與背景共同說明場景"]
+
+        [
+            "portraitThirds",
+            "三分人像",
+            "將人物臉部安排在三分位置"
+        ],
+
+        [
+            "portraitCenter",
+            "中央人像",
+            "適合正面人物"
+        ],
+
+        [
+            "lookSpace",
+            "視線留白",
+            "人物視線方向保留空間"
+        ],
+
+        [
+            "fullbody",
+            "全身構圖",
+            "完整保留人物頭部與腳部"
+        ],
+
+        [
+            "environment",
+            "環境人像",
+            "人物與背景共同構圖"
+        ]
+
     ]
+
 },
 
+
 night:{
+
     icon:"🌙",
     name:"夜景",
     default:"thirds",
+
     comps:[
-        ["thirds","三分夜景","平衡天空、建築與燈光"],
-        ["leading","燈光引導","利用路燈或光軌引導視線"],
-        ["reflection","倒影","利用水面或玻璃形成上下呼應"],
-        ["symmetry","對稱","適合夜間建築與倒影"],
-        ["center","中央構圖","突出單一夜景主體"]
+
+        [
+            "thirds",
+            "三分夜景",
+            "平衡天空、建築與燈光"
+        ],
+
+        [
+            "leading",
+            "燈光引導",
+            "利用路燈與光線引導視線"
+        ],
+
+        [
+            "reflection",
+            "倒影",
+            "利用倒影形成上下呼應"
+        ],
+
+        [
+            "symmetry",
+            "對稱",
+            "適合夜間建築"
+        ],
+
+        [
+            "center",
+            "中央構圖",
+            "突出主要夜景主體"
+        ]
+
     ]
+
 },
 
+
 indoor:{
+
     icon:"🏠",
     name:"室內",
     default:"symmetry",
+
     comps:[
-        ["symmetry","對稱","保持左右空間平衡"],
-        ["perspective","空間透視","利用牆面與走廊表現深度"],
-        ["center","中央構圖","突出室內主要視覺中心"],
-        ["thirds","三分法","安排家具與空間比例"],
-        ["frame","門框構圖","利用門窗形成天然畫框"]
+
+        [
+            "symmetry",
+            "對稱",
+            "保持左右空間平衡"
+        ],
+
+        [
+            "perspective",
+            "空間透視",
+            "利用牆面與走廊表現深度"
+        ],
+
+        [
+            "center",
+            "中央構圖",
+            "突出空間中心"
+        ],
+
+        [
+            "thirds",
+            "三分法",
+            "安排家具與空間比例"
+        ],
+
+        [
+            "frame",
+            "門框構圖",
+            "利用門窗形成畫框"
+        ]
+
     ]
+
 },
 
+
 food:{
+
     icon:"🍜",
     name:"美食",
     default:"foodCenter",
+
     comps:[
-        ["foodCenter","置中美食","適合單一主餐或餐盤"],
-        ["foodThirds","三分美食","讓主餐與配菜形成平衡"],
-        ["foodDiagonal","對角排列","適合多盤料理"],
-        ["foodTop","俯拍構圖","適合桌面與多道料理"],
-        ["fill","滿版特寫","強調食物細節與質感"]
+
+        [
+            "foodCenter",
+            "置中美食",
+            "適合單一餐盤"
+        ],
+
+        [
+            "foodThirds",
+            "三分美食",
+            "主餐與配菜形成平衡"
+        ],
+
+        [
+            "foodDiagonal",
+            "對角排列",
+            "適合多盤料理"
+        ],
+
+        [
+            "foodTop",
+            "俯拍構圖",
+            "適合桌面料理"
+        ],
+
+        [
+            "fill",
+            "滿版特寫",
+            "強調食物細節"
+        ]
+
     ]
+
 },
 
+
 macro:{
+
     icon:"🌸",
     name:"近拍",
     default:"macroThirds",
+
     comps:[
-        ["macroThirds","近拍三分","將花朵或小物放在三分交叉點"],
-        ["macroCenter","中央近拍","突出單一花朵或小型物件"],
-        ["diagonal","對角線","利用枝葉或物體方向形成動態"],
-        ["negative","留白","讓小型主體周圍保留乾淨空間"],
-        ["fill","滿版特寫","靠近主體突出細節"]
+
+        [
+            "macroThirds",
+            "近拍三分",
+            "主體放在三分位置"
+        ],
+
+        [
+            "macroCenter",
+            "中央近拍",
+            "突出單一小型主體"
+        ],
+
+        [
+            "diagonal",
+            "對角線",
+            "利用枝葉方向構圖"
+        ],
+
+        [
+            "negative",
+            "留白",
+            "保留乾淨背景"
+        ],
+
+        [
+            "fill",
+            "滿版特寫",
+            "突出細節"
+        ]
+
     ]
+
 },
 
+
 pet:{
+
     icon:"🐶",
     name:"寵物",
     default:"petThirds",
+
     comps:[
-        ["petThirds","眼睛三分","讓寵物眼睛靠近三分交叉點"],
-        ["petCenter","中央萌拍","適合正面看鏡頭"],
-        ["petLook","方向留白","在寵物面向方向保留空間"],
-        ["petFull","全身構圖","完整保留身體與腳部"],
-        ["petAction","動態留白","在移動方向預留畫面空間"]
+
+        [
+            "petThirds",
+            "眼睛三分",
+            "眼睛靠近三分位置"
+        ],
+
+        [
+            "petCenter",
+            "中央萌拍",
+            "適合正面看鏡頭"
+        ],
+
+        [
+            "petLook",
+            "方向留白",
+            "面向方向保留空間"
+        ],
+
+        [
+            "petFull",
+            "全身構圖",
+            "完整保留身體"
+        ],
+
+        [
+            "petAction",
+            "動態留白",
+            "移動方向保留空間"
+        ]
+
     ]
+
 },
 
+
 product:{
+
     icon:"📦",
     name:"商品",
     default:"productCenter",
+
     comps:[
-        ["productCenter","商品置中","適合單一商品展示"],
-        ["productThirds","商品三分","適合帶背景的商品照片"],
-        ["symmetry","對稱","適合幾何外型明確的商品"],
-        ["product45","45°構圖","呈現商品正面與側面立體感"],
-        ["foodTop","俯拍排列","適合多件商品平鋪"],
-        ["negative","留白","保留文字或版面設計空間"]
+
+        [
+            "productCenter",
+            "商品置中",
+            "適合單一商品"
+        ],
+
+        [
+            "productThirds",
+            "商品三分",
+            "適合帶背景商品照"
+        ],
+
+        [
+            "symmetry",
+            "對稱",
+            "適合幾何商品"
+        ],
+
+        [
+            "product45",
+            "45°構圖",
+            "表現商品立體感"
+        ],
+
+        [
+            "foodTop",
+            "俯拍排列",
+            "適合多件商品"
+        ],
+
+        [
+            "negative",
+            "留白",
+            "保留文字與版面空間"
+        ]
+
     ]
+
 }
 
 };
 
 
 /* =========================================================
-   相機
+   CAMERA
 ========================================================= */
 
 async function startCamera(){
 
     try{
 
-        messageEl.innerText="📷 正在開啟相機...";
+        messageEl.innerText=
+        "📷 正在開啟相機...";
+
 
         if(stream){
-            stream.getTracks().forEach(function(t){
-                t.stop();
-            });
+
+            stream
+            .getTracks()
+            .forEach(
+                track=>track.stop()
+            );
+
         }
 
-        stream=await navigator.mediaDevices.getUserMedia({
+
+        stream=
+        await navigator.mediaDevices
+        .getUserMedia({
+
             video:{
-                facingMode:{ideal:facing},
-                width:{ideal:1280},
-                height:{ideal:720}
+
+                facingMode:{
+                    ideal:facing
+                },
+
+                width:{
+                    ideal:1280
+                },
+
+                height:{
+                    ideal:720
+                }
+
             },
+
             audio:false
+
         });
 
-        video.srcObject=stream;
+
+        video.srcObject=
+        stream;
+
 
         await video.play();
 
+
         resizeOverlay();
 
-        messageEl.innerText="📷 對準想拍攝的畫面";
 
-    }catch(e){
+        messageEl.innerText=
+        "📷 對準想拍攝的畫面";
 
-        console.log(e);
 
-        if(e.name==="NotAllowedError"){
-            messageEl.innerText="❌ 請允許網站使用相機";
-        }
-        else if(e.name==="NotFoundError"){
-            messageEl.innerText="❌ 找不到可用相機";
-        }
-        else if(e.name==="NotReadableError"){
-            messageEl.innerText="❌ 相機可能被其他程式占用";
-        }
-        else{
-            messageEl.innerText="❌ 相機無法開啟";
-        }
     }
+    catch(error){
+
+        console.log(error);
+
+
+        if(
+            error.name===
+            "NotAllowedError"
+        ){
+
+            messageEl.innerText=
+            "❌ 請允許網站使用相機";
+
+        }
+
+        else if(
+            error.name===
+            "NotFoundError"
+        ){
+
+            messageEl.innerText=
+            "❌ 找不到可用相機";
+
+        }
+
+        else{
+
+            messageEl.innerText=
+            "❌ 相機無法開啟";
+
+        }
+
+    }
+
 }
 
+
 async function changeCamera(mode){
+
     facing=mode;
+
+    latestFace=null;
+
     await startCamera();
+
 }
 
 
 /* =========================================================
-   模式
+   MEDIAPIPE INIT
 ========================================================= */
 
-function selectMode(mode,button){
+async function initFaceDetector(){
+
+    if(detectorReady){
+        return true;
+    }
+
+
+    detectStatus.innerText=
+    "正在載入人像辨識...";
+
+
+    try{
+
+        const vision=
+        await FilesetResolver
+        .forVisionTasks(
+
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm"
+
+        );
+
+
+        faceDetector=
+        await FaceDetector
+        .createFromOptions(
+
+            vision,
+
+            {
+
+                baseOptions:{
+
+                    modelAssetPath:
+
+                    "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite"
+
+                },
+
+                runningMode:"VIDEO",
+
+                minDetectionConfidence:
+                0.55
+
+            }
+
+        );
+
+
+        detectorReady=true;
+
+
+        detectStatus.innerText=
+        "✓ 人像辨識已就緒";
+
+
+        return true;
+
+    }
+
+    catch(error){
+
+        console.error(
+            "Face detector error",
+            error
+        );
+
+
+        detectStatus.innerText=
+        "❌ 人像辨識載入失敗";
+
+
+        messageEl.innerText=
+        "❌ 辨識模組載入失敗";
+
+
+        return false;
+
+    }
+
+}
+
+
+/* =========================================================
+   SELECT MODE
+========================================================= */
+
+function selectMode(
+    mode,
+    button
+){
+
+    portraitNavigation=false;
+
+    latestFace=null;
 
     currentMode=mode;
 
-    document.querySelectorAll(".modeBtn")
-    .forEach(function(b){
-        b.classList.remove("active");
-    });
+
+    document
+    .querySelectorAll(
+        ".modeBtn"
+    )
+    .forEach(
+        b=>b.classList.remove(
+            "active"
+        )
+    );
+
 
     if(button){
-        button.classList.add("active");
+
+        button.classList.add(
+            "active"
+        );
+
     }
+
+
+    clearOverlay();
+
 
     if(mode==="auto"){
 
@@ -594,781 +1219,1774 @@ function selectMode(mode,button){
 
         compositionRow.innerHTML="";
 
-        modeTitle.innerText="✨ 自動構圖";
-        compositionEl.innerText="準備分析";
-        descEl.innerText="系統將依拍攝情境選擇合適的構圖方式";
+        modeTitle.innerText=
+        "✨ 自動構圖";
 
-        clearOverlay();
+        compositionEl.innerText=
+        "準備";
+
+        descEl.innerText=
+        "自動場景辨識將逐步加入";
+
+        detectStatus.innerText=
+        "V6.2";
+
+        mainButton.innerText=
+        "✨ 自動構圖";
 
         messageEl.innerText=
-        "📷 對準畫面後按「自動構圖」";
+        "👉 目前可先測試人像構圖導航";
 
         return;
+
     }
 
-    var d=database[mode];
 
-    modeTitle.innerText=d.icon+" "+d.name+"模式";
+    const data=
+    database[mode];
 
-    buildCompButtons();
 
-    selectComposition(d.default);
+    modeTitle.innerText=
+    data.icon+
+    " "+
+    data.name+
+    "模式";
 
-    messageEl.innerText=
-    "📷 "+d.name+"模式｜可手動選擇構圖";
+
+    buildCompositionButtons();
+
+
+    selectComposition(
+        data.default
+    );
+
+
+    if(mode==="portrait"){
+
+        mainButton.innerText=
+        "▶ 開始構圖導航";
+
+        detectStatus.innerText=
+        detectorReady
+        ?
+        "✓ 人像辨識已就緒"
+        :
+        "尚未啟動人像辨識";
+
+        messageEl.innerText=
+        "👤 對準一個人後按「開始構圖導航」";
+
+    }
+
+    else{
+
+        mainButton.innerText=
+        "✨ 推薦構圖";
+
+        detectStatus.innerText=
+        "手動構圖模式";
+
+        messageEl.innerText=
+        "📷 可手動選擇構圖方式";
+
+    }
+
 }
 
 
 /* =========================================================
-   建立構圖按鈕
+   BUILD BUTTONS
 ========================================================= */
 
-function buildCompButtons(){
+function buildCompositionButtons(){
 
     compositionRow.innerHTML="";
 
-    database[currentMode].comps
-    .forEach(function(c){
 
-        var b=document.createElement("button");
+    const data=
+    database[currentMode];
 
-        b.className="compBtn";
-        b.dataset.id=c[0];
-        b.innerText=c[1];
 
-        b.onclick=function(){
-            selectComposition(c[0]);
-        };
+    data.comps.forEach(
+        comp=>{
 
-        compositionRow.appendChild(b);
-    });
+            const button=
+            document.createElement(
+                "button"
+            );
+
+
+            button.className=
+            "compBtn";
+
+
+            button.dataset.id=
+            comp[0];
+
+
+            button.innerText=
+            comp[1];
+
+
+            button.onclick=
+            ()=>{
+
+                portraitNavigation=false;
+
+                selectComposition(
+                    comp[0]
+                );
+
+            };
+
+
+            compositionRow
+            .appendChild(
+                button
+            );
+
+        }
+    );
+
 }
 
 
 /* =========================================================
-   選擇構圖
+   SELECT COMPOSITION
 ========================================================= */
 
 function selectComposition(id){
 
     currentComposition=id;
 
-    var d=database[currentMode];
 
-    if(!d)return;
-
-    var comp=d.comps.find(function(c){
-        return c[0]===id;
-    });
-
-    if(!comp)return;
-
-    compositionEl.innerText=comp[1];
-    descEl.innerText=comp[2];
-
-    document.querySelectorAll(".compBtn")
-    .forEach(function(b){
-
-        b.classList.toggle(
-            "active",
-            b.dataset.id===id
-        );
-    });
-
-    drawComposition();
-}
+    const data=
+    database[currentMode];
 
 
-/* =========================================================
-   自動構圖
-========================================================= */
-
-function runComposition(){
-
-    /*
-       V6.1 的自動入口。
-
-       注意：
-       目前不是假裝已經辨識場景。
-
-       使用者選手動模式：
-       → 推薦該模式的預設構圖。
-
-       使用自動模式：
-       → V6.2 再接入真正影像辨識。
-
-       所以這一版不亂宣稱：
-       「已辨識出街景」
-    */
-
-    if(currentMode==="auto"){
-
-        modeTitle.innerText="✨ 自動構圖";
-
-        compositionEl.innerText="自動辨識待啟用";
-
-        descEl.innerText=
-        "自動模式的場景辨識將在下一階段加入";
-
-        messageEl.innerText=
-        "👉 目前請先選擇風景、街景、人像等拍攝模式";
-
-        clearOverlay();
-
+    if(!data){
         return;
     }
 
-    var d=database[currentMode];
 
-    selectComposition(d.default);
+    const comp=
+    data.comps.find(
+        c=>c[0]===id
+    );
 
-    var comp=d.comps.find(function(c){
-        return c[0]===d.default;
-    });
 
-    messageEl.innerText=
-    "✓ 推薦："+comp[1]+"｜依照輔助線調整畫面";
+    if(!comp){
+        return;
+    }
+
+
+    compositionEl.innerText=
+    comp[1];
+
+
+    descEl.innerText=
+    comp[2];
+
+
+    document
+    .querySelectorAll(
+        ".compBtn"
+    )
+    .forEach(
+        button=>{
+
+            button.classList.toggle(
+
+                "active",
+
+                button.dataset.id===id
+
+            );
+
+        }
+    );
+
+
+    drawComposition();
+
 }
 
 
 /* =========================================================
-   Canvas
+   MAIN BUTTON
+========================================================= */
+
+async function runComposition(){
+
+    if(currentMode==="portrait"){
+
+        const ok=
+        await initFaceDetector();
+
+
+        if(!ok){
+            return;
+        }
+
+
+        currentComposition=
+        "portraitThirds";
+
+
+        portraitNavigation=true;
+
+
+        compositionEl.innerText=
+        "三分人像導航";
+
+
+        descEl.innerText=
+        "移動手機，讓臉部進入綠色目標圈";
+
+
+        messageEl.innerText=
+        "🔍 正在尋找人物...";
+
+
+        requestAnimationFrame(
+            portraitLoop
+        );
+
+
+        return;
+
+    }
+
+
+    if(currentMode==="auto"){
+
+        messageEl.innerText=
+        "👉 V6.2 請先測試「人像」模式";
+
+        return;
+
+    }
+
+
+    const data=
+    database[currentMode];
+
+
+    selectComposition(
+        data.default
+    );
+
+
+    messageEl.innerText=
+    "✓ 推薦："+
+    compositionEl.innerText;
+
+}
+
+
+/* =========================================================
+   PORTRAIT LOOP
+========================================================= */
+
+async function portraitLoop(){
+
+    if(
+        !portraitNavigation ||
+        currentMode!=="portrait"
+    ){
+
+        return;
+
+    }
+
+
+    if(
+        video.readyState<2 ||
+        !faceDetector
+    ){
+
+        requestAnimationFrame(
+            portraitLoop
+        );
+
+        return;
+
+    }
+
+
+    if(
+        video.currentTime===
+        lastVideoTime
+    ){
+
+        requestAnimationFrame(
+            portraitLoop
+        );
+
+        return;
+
+    }
+
+
+    lastVideoTime=
+    video.currentTime;
+
+
+    if(detecting){
+
+        requestAnimationFrame(
+            portraitLoop
+        );
+
+        return;
+
+    }
+
+
+    detecting=true;
+
+
+    try{
+
+        const result=
+        faceDetector.detectForVideo(
+
+            video,
+
+            performance.now()
+
+        );
+
+
+        if(
+            result &&
+            result.detections &&
+            result.detections.length>0
+        ){
+
+            latestFace=
+            result.detections[0];
+
+
+            drawPortraitNavigation(
+                latestFace
+            );
+
+        }
+
+        else{
+
+            latestFace=null;
+
+
+            drawPortraitNoFace();
+
+
+            messageEl.innerText=
+            "👤 找不到臉｜請讓人物面向鏡頭";
+
+        }
+
+    }
+
+    catch(error){
+
+        console.log(
+            "Detection error",
+            error
+        );
+
+    }
+
+
+    detecting=false;
+
+
+    requestAnimationFrame(
+        portraitLoop
+    );
+
+}
+
+
+/* =========================================================
+   VIDEO → SCREEN COORDINATE
+
+   video 使用 object-fit:cover
+
+   所以不能直接把原始座標乘畫面大小。
+
+   必須計算 cover crop。
+
+========================================================= */
+
+function videoPointToScreen(
+    x,
+    y
+){
+
+    const vw=
+    video.videoWidth;
+
+    const vh=
+    video.videoHeight;
+
+
+    const sw=
+    overlay.clientWidth;
+
+    const sh=
+    overlay.clientHeight;
+
+
+    if(
+        !vw ||
+        !vh
+    ){
+
+        return {
+            x:0,
+            y:0
+        };
+
+    }
+
+
+    const scale=
+    Math.max(
+        sw/vw,
+        sh/vh
+    );
+
+
+    const renderedW=
+    vw*scale;
+
+    const renderedH=
+    vh*scale;
+
+
+    const cropX=
+    (renderedW-sw)/2;
+
+    const cropY=
+    (renderedH-sh)/2;
+
+
+    let screenX=
+    x*scale-cropX;
+
+    let screenY=
+    y*scale-cropY;
+
+
+    /*
+       前鏡 Safari 顯示可能有鏡像差異。
+
+       這裡先依目前 video 顯示座標處理。
+    */
+
+
+    return{
+
+        x:screenX,
+
+        y:screenY
+
+    };
+
+}
+
+
+/* =========================================================
+   PORTRAIT NAVIGATION
+========================================================= */
+
+function drawPortraitNavigation(
+    detection
+){
+
+    clearOverlay();
+
+
+    const box=
+    detection.boundingBox;
+
+
+    if(!box){
+        return;
+    }
+
+
+    const p1=
+    videoPointToScreen(
+        box.originX,
+        box.originY
+    );
+
+
+    const p2=
+    videoPointToScreen(
+        box.originX+
+        box.width,
+        box.originY+
+        box.height
+    );
+
+
+    const faceX=
+    (p1.x+p2.x)/2;
+
+
+    const faceY=
+    (p1.y+p2.y)/2;
+
+
+    const faceW=
+    Math.abs(
+        p2.x-p1.x
+    );
+
+
+    const faceH=
+    Math.abs(
+        p2.y-p1.y
+    );
+
+
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
+
+    /*
+       V6.2：
+
+       人像三分法先採左上三分點。
+
+       後續 V6.3 再根據
+       人物朝向決定左三分或右三分。
+    */
+
+
+    const targetX=
+    w/3;
+
+
+    const targetY=
+    h/3;
+
+
+    /* =========================
+       三分線
+    ========================= */
+
+
+    ctx.save();
+
+
+    ctx.strokeStyle=
+    "rgba(255,212,0,.50)";
+
+
+    ctx.lineWidth=1.5;
+
+
+    ctx.setLineDash(
+        [7,7]
+    );
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        w/3,
+        0
+    );
+
+    ctx.lineTo(
+        w/3,
+        h
+    );
+
+
+    ctx.moveTo(
+        w*2/3,
+        0
+    );
+
+    ctx.lineTo(
+        w*2/3,
+        h
+    );
+
+
+    ctx.moveTo(
+        0,
+        h/3
+    );
+
+    ctx.lineTo(
+        w,
+        h/3
+    );
+
+
+    ctx.moveTo(
+        0,
+        h*2/3
+    );
+
+    ctx.lineTo(
+        w,
+        h*2/3
+    );
+
+
+    ctx.stroke();
+
+
+    ctx.restore();
+
+
+    /* =========================
+       DISTANCE
+    ========================= */
+
+
+    const dx=
+    targetX-faceX;
+
+
+    const dy=
+    targetY-faceY;
+
+
+    const toleranceX=
+    w*.075;
+
+
+    const toleranceY=
+    h*.065;
+
+
+    const goodX=
+    Math.abs(dx)<
+    toleranceX;
+
+
+    const goodY=
+    Math.abs(dy)<
+    toleranceY;
+
+
+    const completed=
+    goodX &&
+    goodY;
+
+
+    /* =========================
+       TARGET
+    ========================= */
+
+
+    ctx.save();
+
+
+    ctx.strokeStyle=
+    completed
+    ?
+    "#2cff67"
+    :
+    "#2cff67";
+
+
+    ctx.lineWidth=4;
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+
+        targetX,
+
+        targetY,
+
+        25,
+
+        0,
+
+        Math.PI*2
+
+    );
+
+
+    ctx.stroke();
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+
+        targetX,
+
+        targetY,
+
+        5,
+
+        0,
+
+        Math.PI*2
+
+    );
+
+
+    ctx.fillStyle=
+    "#2cff67";
+
+
+    ctx.fill();
+
+
+    ctx.restore();
+
+
+    /* =========================
+       FACE BOX
+    ========================= */
+
+
+    ctx.save();
+
+
+    ctx.strokeStyle=
+    completed
+    ?
+    "#2cff67"
+    :
+    "#ffd400";
+
+
+    ctx.lineWidth=4;
+
+
+    ctx.strokeRect(
+
+        p1.x,
+
+        p1.y,
+
+        faceW,
+
+        faceH
+
+    );
+
+
+    ctx.restore();
+
+
+    /* =========================
+       CONNECTOR
+    ========================= */
+
+
+    if(!completed){
+
+        ctx.save();
+
+
+        ctx.strokeStyle=
+        "#ffd400";
+
+
+        ctx.lineWidth=3;
+
+
+        ctx.setLineDash(
+            [7,6]
+        );
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            faceX,
+            faceY
+        );
+
+
+        ctx.lineTo(
+            targetX,
+            targetY
+        );
+
+
+        ctx.stroke();
+
+
+        ctx.restore();
+
+    }
+
+
+    /* =========================
+       NAVIGATION TEXT
+    ========================= */
+
+
+    if(completed){
+
+        messageEl.innerText=
+        "✓ 構圖完成";
+
+
+        compositionEl.innerText=
+        "構圖完成";
+
+
+        descEl.innerText=
+        "人物已進入建議位置";
+
+
+        detectStatus.innerText=
+        "● 位置穩定";
+
+        return;
+
+    }
+
+
+    let horizontal="";
+
+    let vertical="";
+
+
+    /*
+       注意：
+
+       我們是在告訴使用者
+       「手機要怎麼移」
+
+       不是人物要怎麼移。
+
+       畫面中的臉若需要往左，
+       通常手機需要往右。
+
+       V6.2 先用畫面導航語意，
+       下一輪實機測試後再校正方向。
+    */
+
+
+    if(!goodX){
+
+        if(dx>0){
+
+            horizontal=
+            "← 手機向左";
+
+        }
+
+        else{
+
+            horizontal=
+            "→ 手機向右";
+
+        }
+
+    }
+
+
+    if(!goodY){
+
+        if(dy>0){
+
+            vertical=
+            "↑ 稍微抬高";
+
+        }
+
+        else{
+
+            vertical=
+            "↓ 稍微降低";
+
+        }
+
+    }
+
+
+    let text="";
+
+
+    if(
+        horizontal &&
+        vertical
+    ){
+
+        text=
+        horizontal+
+        "　"+
+        vertical;
+
+    }
+
+    else{
+
+        text=
+        horizontal ||
+        vertical;
+
+    }
+
+
+    messageEl.innerText=
+    text;
+
+
+    compositionEl.innerText=
+    "三分人像";
+
+
+    descEl.innerText=
+    "讓黃色人物框移向綠色目標";
+
+
+    detectStatus.innerText=
+    "● 正在追蹤人物";
+
+}
+
+
+/* =========================================================
+   NO FACE
+========================================================= */
+
+function drawPortraitNoFace(){
+
+    clearOverlay();
+
+
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
+
+    ctx.save();
+
+
+    ctx.strokeStyle=
+    "#2cff67";
+
+
+    ctx.lineWidth=3;
+
+
+    ctx.setLineDash(
+        [8,7]
+    );
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+
+        w/3,
+
+        h/3,
+
+        28,
+
+        0,
+
+        Math.PI*2
+
+    );
+
+
+    ctx.stroke();
+
+
+    ctx.restore();
+
+}
+
+
+/* =========================================================
+   NORMAL DRAW
 ========================================================= */
 
 function clearOverlay(){
+
     ctx.clearRect(
-        0,0,
+
+        0,
+
+        0,
+
         overlay.clientWidth,
+
         overlay.clientHeight
+
     );
+
 }
+
 
 function setup(){
 
-    ctx.strokeStyle="#ffd400";
-    ctx.fillStyle="#2cff67";
-    ctx.lineWidth=2.5;
+    ctx.strokeStyle=
+    "#ffd400";
+
+
+    ctx.fillStyle=
+    "#2cff67";
+
+
+    ctx.lineWidth=
+    2.5;
+
+
     ctx.setLineDash([]);
+
 }
+
 
 function target(x,y){
 
     ctx.save();
 
-    ctx.strokeStyle="#2cff67";
-    ctx.fillStyle="#2cff67";
+
+    ctx.strokeStyle=
+    "#2cff67";
+
+
+    ctx.fillStyle=
+    "#2cff67";
+
+
     ctx.lineWidth=3;
 
+
     ctx.beginPath();
-    ctx.arc(x,y,11,0,Math.PI*2);
+
+
+    ctx.arc(
+        x,
+        y,
+        11,
+        0,
+        Math.PI*2
+    );
+
+
     ctx.stroke();
 
+
     ctx.beginPath();
-    ctx.arc(x,y,4,0,Math.PI*2);
+
+
+    ctx.arc(
+        x,
+        y,
+        4,
+        0,
+        Math.PI*2
+    );
+
+
     ctx.fill();
 
+
     ctx.restore();
+
 }
 
 
 /* =========================================================
-   三分法
+   THIRDS
 ========================================================= */
 
 function drawThirds(){
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
 
     setup();
 
+
     ctx.beginPath();
+
 
     ctx.moveTo(w/3,0);
     ctx.lineTo(w/3,h);
 
+
     ctx.moveTo(w*2/3,0);
     ctx.lineTo(w*2/3,h);
+
 
     ctx.moveTo(0,h/3);
     ctx.lineTo(w,h/3);
 
+
     ctx.moveTo(0,h*2/3);
     ctx.lineTo(w,h*2/3);
 
+
     ctx.stroke();
 
-    target(w/3,h/3);
-    target(w*2/3,h/3);
-    target(w/3,h*2/3);
-    target(w*2/3,h*2/3);
+
+    target(
+        w/3,
+        h/3
+    );
+
+
+    target(
+        w*2/3,
+        h/3
+    );
+
+
+    target(
+        w/3,
+        h*2/3
+    );
+
+
+    target(
+        w*2/3,
+        h*2/3
+    );
+
 }
 
 
 /* =========================================================
-   黃金比例
-========================================================= */
-
-function drawGolden(){
-
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
-
-    setup();
-
-    var x1=w*.382;
-    var x2=w*.618;
-    var y1=h*.382;
-    var y2=h*.618;
-
-    ctx.beginPath();
-
-    ctx.moveTo(x1,0);
-    ctx.lineTo(x1,h);
-
-    ctx.moveTo(x2,0);
-    ctx.lineTo(x2,h);
-
-    ctx.moveTo(0,y1);
-    ctx.lineTo(w,y1);
-
-    ctx.moveTo(0,y2);
-    ctx.lineTo(w,y2);
-
-    ctx.stroke();
-
-    target(x1,y1);
-    target(x2,y1);
-}
-
-
-/* =========================================================
-   中央
+   CENTER
 ========================================================= */
 
 function drawCenter(){
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
 
     setup();
 
+
     ctx.beginPath();
 
-    ctx.moveTo(w/2,0);
-    ctx.lineTo(w/2,h);
 
-    ctx.moveTo(0,h/2);
-    ctx.lineTo(w,h/2);
+    ctx.moveTo(
+        w/2,
+        0
+    );
+
+
+    ctx.lineTo(
+        w/2,
+        h
+    );
+
+
+    ctx.moveTo(
+        0,
+        h/2
+    );
+
+
+    ctx.lineTo(
+        w,
+        h/2
+    );
+
 
     ctx.stroke();
 
-    target(w/2,h/2);
+
+    target(
+        w/2,
+        h/2
+    );
+
 }
 
 
 /* =========================================================
-   引導線
+   LEADING
 ========================================================= */
 
 function drawLeading(){
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
 
     setup();
 
-    var vx=w*.5;
-    var vy=h*.4;
+
+    const vx=
+    w*.5;
+
+
+    const vy=
+    h*.4;
+
 
     ctx.lineWidth=4;
 
+
     ctx.beginPath();
 
-    ctx.moveTo(w*.08,h);
-    ctx.lineTo(vx,vy);
 
-    ctx.moveTo(w*.92,h);
-    ctx.lineTo(vx,vy);
+    ctx.moveTo(
+        w*.08,
+        h
+    );
+
+
+    ctx.lineTo(
+        vx,
+        vy
+    );
+
+
+    ctx.moveTo(
+        w*.92,
+        h
+    );
+
+
+    ctx.lineTo(
+        vx,
+        vy
+    );
+
 
     ctx.stroke();
 
-    target(vx,vy);
+
+    target(
+        vx,
+        vy
+    );
+
 }
 
 
 /* =========================================================
-   單點透視
+   PERSPECTIVE
 ========================================================= */
 
 function drawPerspective(){
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
 
     setup();
 
-    var vx=w*.5;
-    var vy=h*.42;
 
-    var starts=[
+    const vx=
+    w*.5;
+
+
+    const vy=
+    h*.42;
+
+
+    const starts=[
+
         [0,h],
+
         [w*.25,h],
+
         [w*.75,h],
+
         [w,h],
+
         [0,h*.65],
+
         [w,h*.65]
+
     ];
+
 
     ctx.beginPath();
 
-    starts.forEach(function(p){
-        ctx.moveTo(p[0],p[1]);
-        ctx.lineTo(vx,vy);
-    });
+
+    starts.forEach(
+        p=>{
+
+            ctx.moveTo(
+                p[0],
+                p[1]
+            );
+
+
+            ctx.lineTo(
+                vx,
+                vy
+            );
+
+        }
+    );
+
 
     ctx.stroke();
 
-    target(vx,vy);
+
+    target(
+        vx,
+        vy
+    );
+
 }
 
 
 /* =========================================================
-   對稱
+   SYMMETRY
 ========================================================= */
 
 function drawSymmetry(){
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
 
     setup();
 
+
     ctx.lineWidth=3;
 
-    ctx.beginPath();
-    ctx.moveTo(w/2,0);
-    ctx.lineTo(w/2,h);
-    ctx.stroke();
-
-    ctx.setLineDash([8,8]);
 
     ctx.beginPath();
 
-    ctx.moveTo(w*.2,h*.2);
-    ctx.lineTo(w*.2,h*.8);
 
-    ctx.moveTo(w*.8,h*.2);
-    ctx.lineTo(w*.8,h*.8);
+    ctx.moveTo(
+        w/2,
+        0
+    );
+
+
+    ctx.lineTo(
+        w/2,
+        h
+    );
+
 
     ctx.stroke();
+
+
+    ctx.setLineDash(
+        [8,8]
+    );
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        w*.2,
+        h*.2
+    );
+
+
+    ctx.lineTo(
+        w*.2,
+        h*.8
+    );
+
+
+    ctx.moveTo(
+        w*.8,
+        h*.2
+    );
+
+
+    ctx.lineTo(
+        w*.8,
+        h*.8
+    );
+
+
+    ctx.stroke();
+
 
     ctx.setLineDash([]);
+
 }
 
 
 /* =========================================================
-   對角線
+   DIAGONAL
 ========================================================= */
 
 function drawDiagonal(){
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
 
     setup();
 
-    ctx.lineWidth=3;
 
     ctx.beginPath();
-    ctx.moveTo(0,h);
-    ctx.lineTo(w,0);
+
+
+    ctx.moveTo(
+        0,
+        h
+    );
+
+
+    ctx.lineTo(
+        w,
+        0
+    );
+
+
     ctx.stroke();
 
-    target(w*.62,h*.38);
+
+    target(
+        w*.62,
+        h*.38
+    );
+
 }
 
 
 /* =========================================================
-   框景
+   FRAME
 ========================================================= */
 
 function drawFrame(){
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
 
     setup();
 
+
     ctx.strokeRect(
+
         w*.12,
+
         h*.13,
+
         w*.76,
+
         h*.74
+
     );
 
-    target(w/2,h/2);
+
+    target(
+        w/2,
+        h/2
+    );
+
 }
 
 
 /* =========================================================
-   人像
+   PORTRAIT TEMPLATE
 ========================================================= */
 
 function drawPortraitThirds(){
 
     drawThirds();
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
 
     ctx.save();
 
-    ctx.strokeStyle="#2cff67";
+
+    ctx.strokeStyle=
+    "#2cff67";
+
+
     ctx.lineWidth=3;
 
+
     ctx.beginPath();
+
+
     ctx.ellipse(
-        w*.36,h*.33,
-        w*.10,h*.085,
-        0,0,Math.PI*2
+
+        w*.34,
+
+        h*.32,
+
+        w*.10,
+
+        h*.08,
+
+        0,
+
+        0,
+
+        Math.PI*2
+
     );
+
+
     ctx.stroke();
 
+
     ctx.restore();
+
 }
+
 
 function drawPortraitCenter(){
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+    drawCenter();
 
-    setup();
-
-    ctx.strokeStyle="#2cff67";
-    ctx.lineWidth=3;
-
-    ctx.beginPath();
-    ctx.ellipse(
-        w*.5,h*.3,
-        w*.11,h*.085,
-        0,0,Math.PI*2
-    );
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(w*.5,h*.39);
-    ctx.lineTo(w*.5,h*.78);
-    ctx.stroke();
 }
 
-function drawLookSpace(){
-
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
-
-    drawThirds();
-
-    ctx.save();
-
-    ctx.strokeStyle="#2cff67";
-    ctx.lineWidth=3;
-
-    ctx.strokeRect(
-        w*.18,h*.28,
-        w*.24,h*.46
-    );
-
-    ctx.beginPath();
-    ctx.moveTo(w*.43,h*.37);
-    ctx.lineTo(w*.76,h*.37);
-    ctx.stroke();
-
-    ctx.restore();
-}
 
 function drawFullBody(){
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
 
     setup();
 
-    ctx.strokeStyle="#2cff67";
-    ctx.lineWidth=3;
+
+    ctx.strokeStyle=
+    "#2cff67";
+
 
     ctx.strokeRect(
-        w*.36,h*.10,
-        w*.28,h*.80
+
+        w*.36,
+
+        h*.10,
+
+        w*.28,
+
+        h*.80
+
     );
 
-    ctx.setLineDash([6,6]);
-
-    ctx.beginPath();
-    ctx.moveTo(0,h*.1);
-    ctx.lineTo(w,h*.1);
-
-    ctx.moveTo(0,h*.9);
-    ctx.lineTo(w,h*.9);
-    ctx.stroke();
-
-    ctx.setLineDash([]);
-}
-
-function drawEnvironment(){
-    drawPortraitThirds();
 }
 
 
 /* =========================================================
-   倒影
+   FOOD / PRODUCT / MACRO
 ========================================================= */
 
-function drawReflection(){
+function drawCircle(){
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
 
     setup();
 
+
+    ctx.strokeStyle=
+    "#2cff67";
+
+
     ctx.lineWidth=3;
 
-    ctx.beginPath();
-    ctx.moveTo(0,h*.5);
-    ctx.lineTo(w,h*.5);
-    ctx.stroke();
-
-    target(w*.5,h*.5);
-}
-
-
-/* =========================================================
-   美食
-========================================================= */
-
-function drawFoodCenter(){
-
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
-
-    setup();
-
-    ctx.strokeStyle="#2cff67";
-    ctx.lineWidth=3;
 
     ctx.beginPath();
+
+
     ctx.arc(
-        w*.5,h*.5,
+
+        w*.5,
+
+        h*.5,
+
         Math.min(w,h)*.23,
-        0,Math.PI*2
-    );
-    ctx.stroke();
 
-    target(w*.5,h*.5);
-}
+        0,
 
-function drawFoodThirds(){
+        Math.PI*2
 
-    drawThirds();
-
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
-
-    ctx.save();
-
-    ctx.strokeStyle="#2cff67";
-    ctx.lineWidth=3;
-
-    ctx.beginPath();
-    ctx.arc(
-        w*.36,h*.62,
-        Math.min(w,h)*.15,
-        0,Math.PI*2
-    );
-    ctx.stroke();
-
-    ctx.restore();
-}
-
-function drawFoodDiagonal(){
-
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
-
-    setup();
-
-    ctx.beginPath();
-    ctx.moveTo(w*.1,h*.82);
-    ctx.lineTo(w*.9,h*.18);
-    ctx.stroke();
-
-    var p=[
-        [.25,.70],
-        [.50,.50],
-        [.75,.30]
-    ];
-
-    p.forEach(function(a){
-
-        ctx.beginPath();
-        ctx.arc(
-            w*a[0],
-            h*a[1],
-            Math.min(w,h)*.085,
-            0,Math.PI*2
-        );
-        ctx.stroke();
-    });
-}
-
-function drawFoodTop(){
-    drawFoodCenter();
-}
-
-
-/* =========================================================
-   留白
-========================================================= */
-
-function drawNegative(){
-
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
-
-    setup();
-
-    ctx.setLineDash([7,7]);
-
-    ctx.strokeRect(
-        w*.08,
-        h*.18,
-        w*.35,
-        h*.55
     );
 
-    ctx.setLineDash([]);
 
-    target(w*.30,h*.48);
+    ctx.stroke();
+
+
+    target(
+        w*.5,
+        h*.5
+    );
+
 }
 
-
-/* =========================================================
-   滿版
-========================================================= */
 
 function drawFill(){
 
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
+    const w=
+    overlay.clientWidth;
+
+
+    const h=
+    overlay.clientHeight;
+
 
     setup();
 
-    ctx.strokeStyle="#2cff67";
+
+    ctx.strokeStyle=
+    "#2cff67";
+
+
     ctx.lineWidth=4;
 
+
     ctx.strokeRect(
+
         w*.06,
+
         h*.06,
+
         w*.88,
+
         h*.88
+
     );
+
 }
 
 
 /* =========================================================
-   寵物
+   GOLDEN
 ========================================================= */
 
-function drawPetThirds(){
-    drawPortraitThirds();
-}
+function drawGolden(){
 
-function drawPetCenter(){
-    drawPortraitCenter();
-}
-
-function drawPetLook(){
-    drawLookSpace();
-}
-
-function drawPetFull(){
-    drawFullBody();
-}
-
-function drawPetAction(){
-    drawLookSpace();
-}
+    const w=
+    overlay.clientWidth;
 
 
-/* =========================================================
-   商品
-========================================================= */
+    const h=
+    overlay.clientHeight;
 
-function drawProductCenter(){
-
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
 
     setup();
 
-    ctx.strokeStyle="#2cff67";
-    ctx.lineWidth=3;
-
-    ctx.strokeRect(
-        w*.28,
-        h*.24,
-        w*.44,
-        h*.52
-    );
-
-    target(w*.5,h*.5);
-}
-
-function drawProductThirds(){
-
-    drawThirds();
-
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
-
-    ctx.save();
-
-    ctx.strokeStyle="#2cff67";
-    ctx.lineWidth=3;
-
-    ctx.strokeRect(
-        w*.18,
-        h*.34,
-        w*.34,
-        h*.40
-    );
-
-    ctx.restore();
-}
-
-function drawProduct45(){
-
-    var w=overlay.clientWidth;
-    var h=overlay.clientHeight;
-
-    setup();
-
-    ctx.strokeStyle="#2cff67";
-    ctx.lineWidth=3;
 
     ctx.beginPath();
 
-    ctx.moveTo(w*.30,h*.35);
-    ctx.lineTo(w*.60,h*.28);
-    ctx.lineTo(w*.72,h*.42);
-    ctx.lineTo(w*.70,h*.70);
-    ctx.lineTo(w*.40,h*.75);
-    ctx.lineTo(w*.28,h*.60);
-    ctx.closePath();
+
+    ctx.moveTo(
+        w*.382,
+        0
+    );
+
+
+    ctx.lineTo(
+        w*.382,
+        h
+    );
+
+
+    ctx.moveTo(
+        w*.618,
+        0
+    );
+
+
+    ctx.lineTo(
+        w*.618,
+        h
+    );
+
+
+    ctx.moveTo(
+        0,
+        h*.382
+    );
+
+
+    ctx.lineTo(
+        w,
+        h*.382
+    );
+
+
+    ctx.moveTo(
+        0,
+        h*.618
+    );
+
+
+    ctx.lineTo(
+        w,
+        h*.618
+    );
+
 
     ctx.stroke();
 
-    target(w*.5,h*.5);
 }
 
 
@@ -1378,121 +2996,176 @@ function drawProduct45(){
 
 function drawComposition(){
 
+    if(portraitNavigation){
+        return;
+    }
+
+
     clearOverlay();
 
-    switch(currentComposition){
+
+    switch(
+        currentComposition
+    ){
+
 
         case "thirds":
-            drawThirds(); break;
+        case "macroThirds":
+        case "petThirds":
+        case "productThirds":
+        case "foodThirds":
+
+            drawThirds();
+            break;
+
 
         case "golden":
-            drawGolden(); break;
+
+            drawGolden();
+            break;
+
 
         case "leading":
-            drawLeading(); break;
+
+            drawLeading();
+            break;
+
 
         case "center":
-            drawCenter(); break;
+        case "macroCenter":
+        case "petCenter":
+        case "productCenter":
+
+            drawCenter();
+            break;
+
 
         case "frame":
-            drawFrame(); break;
+
+            drawFrame();
+            break;
+
 
         case "perspective":
-            drawPerspective(); break;
+
+            drawPerspective();
+            break;
+
 
         case "symmetry":
-            drawSymmetry(); break;
+
+            drawSymmetry();
+            break;
+
 
         case "diagonal":
-            drawDiagonal(); break;
+        case "foodDiagonal":
+        case "product45":
+
+            drawDiagonal();
+            break;
+
 
         case "portraitThirds":
-            drawPortraitThirds(); break;
+        case "environment":
+        case "lookSpace":
+
+            drawPortraitThirds();
+            break;
+
 
         case "portraitCenter":
-            drawPortraitCenter(); break;
 
-        case "lookSpace":
-            drawLookSpace(); break;
+            drawPortraitCenter();
+            break;
+
 
         case "fullbody":
-            drawFullBody(); break;
+        case "petFull":
+        case "petAction":
+        case "petLook":
 
-        case "environment":
-            drawEnvironment(); break;
+            drawFullBody();
+            break;
+
 
         case "reflection":
-            drawReflection(); break;
+
+            drawCenter();
+            break;
+
 
         case "foodCenter":
-            drawFoodCenter(); break;
-
-        case "foodThirds":
-            drawFoodThirds(); break;
-
-        case "foodDiagonal":
-            drawFoodDiagonal(); break;
-
         case "foodTop":
-            drawFoodTop(); break;
+
+            drawCircle();
+            break;
+
 
         case "fill":
-            drawFill(); break;
 
-        case "macroThirds":
-            drawFoodThirds(); break;
+            drawFill();
+            break;
 
-        case "macroCenter":
-            drawFoodCenter(); break;
 
         case "negative":
-            drawNegative(); break;
 
-        case "petThirds":
-            drawPetThirds(); break;
+            drawThirds();
+            break;
 
-        case "petCenter":
-            drawPetCenter(); break;
-
-        case "petLook":
-            drawPetLook(); break;
-
-        case "petFull":
-            drawPetFull(); break;
-
-        case "petAction":
-            drawPetAction(); break;
-
-        case "productCenter":
-            drawProductCenter(); break;
-
-        case "productThirds":
-            drawProductThirds(); break;
-
-        case "product45":
-            drawProduct45(); break;
     }
+
 }
 
 
 /* =========================================================
-   Resize
+   RESIZE
 ========================================================= */
 
 function resizeOverlay(){
 
-    var rect=overlay.getBoundingClientRect();
-    var dpr=window.devicePixelRatio||1;
+    const rect=
+    overlay.getBoundingClientRect();
 
-    overlay.width=Math.round(rect.width*dpr);
-    overlay.height=Math.round(rect.height*dpr);
 
-    ctx.setTransform(
-        dpr,0,0,dpr,0,0
+    const dpr=
+    window.devicePixelRatio ||
+    1;
+
+
+    overlay.width=
+    Math.round(
+        rect.width*dpr
     );
 
+
+    overlay.height=
+    Math.round(
+        rect.height*dpr
+    );
+
+
+    ctx.setTransform(
+
+        dpr,
+
+        0,
+
+        0,
+
+        dpr,
+
+        0,
+
+        0
+
+    );
+
+
     drawComposition();
+
 }
+
 
 window.addEventListener(
     "resize",
@@ -1501,66 +3174,128 @@ window.addEventListener(
 
 
 /* =========================================================
-   Zoom
+   ZOOM
 ========================================================= */
 
 zoom.addEventListener(
-"input",
-async function(){
 
-    var value=Number(this.value);
+    "input",
 
-    zoomText.innerText=
-    value.toFixed(1)+"×";
+    async function(){
 
-    if(!stream)return;
-
-    var tracks=
-    stream.getVideoTracks();
-
-    if(!tracks.length)return;
-
-    var track=tracks[0];
-
-    if(!track.getCapabilities)return;
-
-    var caps=
-    track.getCapabilities();
-
-    if(!caps.zoom)return;
-
-    try{
-
-        var z=Math.max(
-            caps.zoom.min,
-            Math.min(
-                caps.zoom.max,
-                value
-            )
+        const value=
+        Number(
+            this.value
         );
 
-        await track.applyConstraints({
-            advanced:[{zoom:z}]
-        });
 
-    }catch(e){
-        console.log("Zoom:",e);
+        zoomText.innerText=
+        value.toFixed(1)+
+        "×";
+
+
+        if(!stream){
+            return;
+        }
+
+
+        const tracks=
+        stream.getVideoTracks();
+
+
+        if(!tracks.length){
+            return;
+        }
+
+
+        const track=
+        tracks[0];
+
+
+        if(
+            !track.getCapabilities
+        ){
+            return;
+        }
+
+
+        const caps=
+        track.getCapabilities();
+
+
+        if(!caps.zoom){
+            return;
+        }
+
+
+        try{
+
+            const z=
+            Math.max(
+
+                caps.zoom.min,
+
+                Math.min(
+
+                    caps.zoom.max,
+
+                    value
+
+                )
+
+            );
+
+
+            await track
+            .applyConstraints({
+
+                advanced:[
+                    {
+                        zoom:z
+                    }
+                ]
+
+            });
+
+        }
+
+        catch(error){
+
+            console.log(
+                "Zoom",
+                error
+            );
+
+        }
+
     }
-});
+
+);
+
+
+/* =========================================================
+   EXPOSE FUNCTIONS
+========================================================= */
+
+window.selectMode=
+selectMode;
+
+
+window.changeCamera=
+changeCamera;
+
+
+window.runComposition=
+runComposition;
 
 
 /* =========================================================
    INIT
 ========================================================= */
 
-function init(){
+resizeOverlay();
 
-    resizeOverlay();
-
-    startCamera();
-}
-
-init();
+startCamera();
 
 </script>
 
