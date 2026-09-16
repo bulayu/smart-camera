@@ -9,7 +9,7 @@ initial-scale=1,
 maximum-scale=1,
 user-scalable=no">
 
-<title>AI 構圖助手 V5.8.4</title>
+<title>AI 構圖助手 V5.8.4.1</title>
 
 <style>
 
@@ -215,7 +215,7 @@ button{
     </div>
 
     <div id="version">
-        V5.8.4
+        V5.8.4.1
     </div>
 
 </div>
@@ -264,7 +264,7 @@ button{
     </div>
 
     <div id="status">
-        V5.8.4｜地平線約束版
+        V5.8.4.1｜地平線約束・相機診斷版
     </div>
 
 </div>
@@ -274,22 +274,16 @@ button{
 
 /* =========================================================
 
-   AI 構圖助手 V5.8.4
-   地平線約束版
+   AI 構圖助手 V5.8.4.1
 
-   V5.8.4 核心：
+   基底：V5.8.3
 
-   1. Sobel 找邊緣
-   2. 每個區塊最多留下 2 個不同方向
-   3. 建立候選消失點網格
-   4. 左右來源必須同時支持
-   5. 下方 / 中段必須同時有支持
-   6. 強化「近處分散 → 遠處收窄」
-   7. 樹枝、窗框等單區域線條降權
-   8. 強化道路 / 步道下半部證據
-   9. 上方樹冠區 VP 大幅降權
-   10. 中間地平線區域適度加權
-   11. 最後再用支持線交點精修
+   修改：
+   1. 保留 V5.8.3 相機流程
+   2. 增加相機錯誤名稱顯示
+   3. 上方假消失點降權
+   4. 加強中下部道路 / 步道證據
+   5. VP 搜尋仍保留高低彈性
 
 ========================================================= */
 
@@ -462,11 +456,15 @@ function lineDistance(
 
 /* =========================================================
    CAMERA
+   保留 V5.8.3 邏輯
 ========================================================= */
 
 async function startCamera(){
 
     try{
+
+        messageEl.innerText =
+        "📷 正在開啟相機...";
 
         if(stream){
 
@@ -479,6 +477,25 @@ async function startCamera(){
             );
 
         }
+
+        stream = null;
+
+
+        /*
+        檢查瀏覽器是否支援相機 API
+        */
+
+        if(
+            !navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia
+        ){
+
+            throw new Error(
+                "getUserMedia 不支援"
+            );
+
+        }
+
 
         stream =
         await navigator.mediaDevices
@@ -504,10 +521,13 @@ async function startCamera(){
 
         });
 
+
         video.srcObject =
         stream;
 
+
         await video.play();
+
 
         resizeOverlay();
 
@@ -516,16 +536,114 @@ async function startCamera(){
     }
     catch(error){
 
-        console.log(error);
+        console.log(
+            "Camera error:",
+            error
+        );
+
+
+        var errorName =
+        error && error.name
+        ?
+        error.name
+        :
+        "UnknownError";
+
+
+        var errorMessage =
+        error && error.message
+        ?
+        error.message
+        :
+        "";
+
 
         compositionEl.innerText =
         "相機無法開啟";
 
-        descEl.innerText =
-        "請確認 Safari 相機權限";
 
-        messageEl.innerText =
-        "❌ 無法開啟相機";
+        if(
+            errorName ===
+            "NotAllowedError"
+        ){
+
+            descEl.innerText =
+            "相機權限被拒絕";
+
+            messageEl.innerText =
+            "❌ NotAllowedError｜請允許網站使用相機";
+
+        }
+        else
+        if(
+            errorName ===
+            "NotFoundError"
+        ){
+
+            descEl.innerText =
+            "找不到可用相機";
+
+            messageEl.innerText =
+            "❌ NotFoundError｜找不到鏡頭";
+
+        }
+        else
+        if(
+            errorName ===
+            "NotReadableError"
+        ){
+
+            descEl.innerText =
+            "相機可能被其他程式占用";
+
+            messageEl.innerText =
+            "❌ NotReadableError｜請關閉其他相機程式";
+
+        }
+        else
+        if(
+            errorName ===
+            "OverconstrainedError"
+        ){
+
+            descEl.innerText =
+            "相機規格限制無法套用";
+
+            messageEl.innerText =
+            "❌ OverconstrainedError｜鏡頭限制不相容";
+
+        }
+        else
+        if(
+            errorName ===
+            "SecurityError"
+        ){
+
+            descEl.innerText =
+            "瀏覽器安全限制";
+
+            messageEl.innerText =
+            "❌ SecurityError｜請確認使用 HTTPS";
+
+        }
+        else{
+
+            descEl.innerText =
+            errorName +
+            (
+                errorMessage
+                ?
+                "｜"+errorMessage
+                :
+                ""
+            );
+
+
+            messageEl.innerText =
+            "❌ 相機錯誤：" +
+            errorName;
+
+        }
 
     }
 
@@ -578,6 +696,7 @@ function runAI(){
         return;
     }
 
+
     if(
         video.readyState < 2
     ){
@@ -588,6 +707,7 @@ function runAI(){
         return;
 
     }
+
 
     analyzing = true;
 
@@ -600,10 +720,10 @@ function runAI(){
     "AI 分析中";
 
     descEl.innerText =
-    "正在分析道路與景深收斂方向";
+    "正在分析近處到遠處的收斂方向";
 
     messageEl.innerText =
-    "🔍 尋找真正消失點...";
+    "🔍 尋找景深收斂點...";
 
 
     var results = [];
@@ -1210,29 +1330,25 @@ function extractLines(
 
 
                 /*
-                V5.8.4
-
-                下半部來源略微加強。
-                道路、步道、鐵軌等近景線
-                通常比上方樹枝更可靠。
+                V5.8.4.1
+                保留 V5.8.3 基本權重，
+                只稍微提高下半部。
                 */
 
-                var yn =
-                L.y/AH;
-
-
                 var depthSource =
-                .66
+                .72
                 +
-                yn*.48;
+                (
+                    L.y/AH
+                )*.38;
 
 
                 if(
-                    yn > .52
+                    L.y/AH > .55
                 ){
 
                     depthSource *=
-                    1.08;
+                    1.06;
 
                 }
 
@@ -1287,7 +1403,6 @@ function scoreCandidateVP(
     var nearBand = [];
     var middleBand = [];
     var farBand = [];
-
 
     var regionBest = {};
 
@@ -1466,6 +1581,7 @@ function scoreCandidateVP(
 
 
     var total = 0;
+
     var leftWeight = 0;
     var rightWeight = 0;
 
@@ -1595,10 +1711,6 @@ function scoreCandidateVP(
     }
 
 
-    /*
-    左右都必須有景深線。
-    */
-
     if(
         leftWeight <= 0
         ||
@@ -1611,17 +1723,15 @@ function scoreCandidateVP(
 
 
     /*
-    V5.8.4：
-    中段 + 近段必須占更高比例。
-
-    降低只有上方樹枝支持的假VP。
+    V5.8.4.1
+    稍微提高中近段最低要求。
     */
 
     if(
         nearWeight +
         middleWeight
         <
-        total*.34
+        total*.32
     ){
 
         return null;
@@ -1681,9 +1791,7 @@ function scoreCandidateVP(
 
 
     /*
-    =====================================================
     近寬 → 遠窄
-    =====================================================
     */
 
     var narrowingScore =
@@ -1742,22 +1850,18 @@ function scoreCandidateVP(
 
 
     /*
-    =====================================================
-    V5.8.4 景深證據
-
-    近景道路：1.35
-    中景道路：1.05
-    遠處碎線：0.30
-    =====================================================
+    V5.8.4.1
+    下半部證據提高，
+    遠處碎線降低。
     */
 
     var depthEvidence =
     (
-        nearWeight*1.35
+        nearWeight*1.30
         +
-        middleWeight*1.05
+        middleWeight*1.02
         +
-        farWeight*.30
+        farWeight*.34
     )
     /
     Math.max(
@@ -1769,14 +1873,10 @@ function scoreCandidateVP(
     depthEvidence =
     clamp(
         depthEvidence,
-        .30,
-        1.20
+        .32,
+        1.18
     );
 
-
-    /*
-    X方向極端位置降權。
-    */
 
     var nx =
     vx/AW;
@@ -1811,16 +1911,14 @@ function scoreCandidateVP(
 
     /*
     =====================================================
-    V5.8.4 地平線約束
+    V5.8.4.1 地平線約束
 
-    上方樹冠 / 天空：
-    強烈降權。
+    注意：
+    這裡不是硬性規定消失點位置。
 
-    中間景深區：
-    適度加分。
-
-    不完全禁止高VP，
-    保留上坡、樓梯等情況。
+    只是：
+    上方假交點 → 降分
+    中間景深區 → 微幅加分
     =====================================================
     */
 
@@ -1833,29 +1931,29 @@ function scoreCandidateVP(
 
 
     if(
-        ny < .22
+        ny < .20
     ){
 
         horizonPenalty =
-        .28;
+        .34;
 
     }
     else
     if(
-        ny < .30
+        ny < .28
     ){
 
         horizonPenalty =
-        .48;
+        .55;
 
     }
     else
     if(
-        ny < .36
+        ny < .35
     ){
 
         horizonPenalty =
-        .72;
+        .78;
 
     }
 
@@ -1871,35 +1969,30 @@ function scoreCandidateVP(
     ){
 
         horizonBonus =
-        1.13;
+        1.10;
 
     }
 
-
-    /*
-    太低也要壓制，
-    避免路面裂縫交點。
-    */
 
     var lowPenalty =
     1;
 
 
     if(
-        ny > .74
+        ny > .72
     ){
 
         lowPenalty =
-        .55;
+        .60;
 
     }
     else
     if(
-        ny > .67
+        ny > .65
     ){
 
         lowPenalty =
-        .76;
+        .82;
 
     }
 
@@ -2296,10 +2389,6 @@ function analyzeDepthVanishingPoint(){
     );
 
 
-    /*
-    GRAYSCALE
-    */
-
     for(
         var i=0;
         i<AW*AH;
@@ -2470,10 +2559,6 @@ function analyzeDepthVanishingPoint(){
     }
 
 
-    /*
-    LINE EXTRACTION
-    */
-
     var lines =
     extractLines(
         magnitude,
@@ -2493,20 +2578,21 @@ function analyzeDepthVanishingPoint(){
 
     /*
     =====================================================
-    V5.8.4 VP 粗搜尋
+    VP 粗搜尋
 
-    Y由20%開始。
+    保留比 V5.8.4 更大的範圍，
+    避免把真正高VP直接切掉。
 
-    上方仍保留一些搜尋空間，
-    但不再從12%開始大量尋找樹冠交點。
+    真正的抑制交給 scoreCandidateVP。
     =====================================================
     */
 
-    var best = null;
+    var best =
+    null;
 
 
     for(
-        var gy=AH*.20;
+        var gy=AH*.14;
         gy<=AH*.74;
         gy+=8
     ){
@@ -2563,9 +2649,7 @@ function analyzeDepthVanishingPoint(){
 
 
     /*
-    =====================================================
     細搜尋
-    =====================================================
     */
 
     var fineBest =
@@ -2580,7 +2664,7 @@ function analyzeDepthVanishingPoint(){
     ){
 
         if(
-            fy < AH*.16
+            fy < AH*.10
             ||
             fy > AH*.77
         ){
@@ -2662,22 +2746,13 @@ function analyzeDepthVanishingPoint(){
     );
 
 
-    /*
-    V5.8.4：
-    精修後仍限制在合理垂直範圍。
-    */
-
     var vy =
     clamp(
         refined.y,
-        AH*.15,
+        AH*.09,
         AH*.78
     );
 
-
-    /*
-    精修後再驗證。
-    */
 
     var finalCheck =
     scoreCandidateVP(
@@ -2703,7 +2778,6 @@ function analyzeDepthVanishingPoint(){
 
     /*
     CONFIDENCE
-    這是辨識信心，不是構圖分數。
     */
 
     var balance =
@@ -3096,7 +3170,10 @@ function(
 
     messageEl.innerText =
     "⚠️ 程式錯誤：" +
-    message;
+    message +
+    "｜第" +
+    line +
+    "行";
 
 
     return false;
