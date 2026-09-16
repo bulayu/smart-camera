@@ -9,7 +9,7 @@ initial-scale=1,
 maximum-scale=1,
 user-scalable=no">
 
-<title>AI 構圖助手 V5.8.6</title>
+<title>AI 構圖助手 V5.8.7</title>
 
 <style>
 
@@ -66,7 +66,7 @@ html,body{
     position:absolute;
     top:18px;
     left:16px;
-    width:245px;
+    width:250px;
     padding:16px 17px;
     border-radius:20px;
     background:rgba(0,0,0,.74);
@@ -125,9 +125,9 @@ html,body{
     position:absolute;
     right:8px;
     bottom:5px;
-    font-size:11px;
     color:#ffd400;
-    opacity:.90;
+    font-size:11px;
+    opacity:.9;
     z-index:20;
 }
 
@@ -225,7 +225,7 @@ button{
     </div>
 
     <div id="version">
-        V5.8.6
+        V5.8.7
     </div>
 
     <div id="debug">
@@ -272,13 +272,13 @@ button{
         value="1">
 
         <span id="zoomText">
-        1.0×
+            1.0×
         </span>
 
     </div>
 
     <div id="status">
-        V5.8.6｜道路邊界鎖定／除錯版
+        V5.8.7｜近景道路種子＋邊緣追蹤版
     </div>
 
 </div>
@@ -288,40 +288,48 @@ button{
 
 /* =========================================================
 
- AI 構圖助手 V5.8.6
+ AI 構圖助手 V5.8.7
 
- 道路邊界鎖定 / 除錯版
-
-
- 這一版核心改變：
-
- V5.8.5：
-
- 候選 VP
- ↓
- 看下面像不像道路
+ 近景道路種子 + 邊緣追蹤版
 
 
- V5.8.6：
+ V5.8.6 問題：
 
- 先找畫面下方斜向長邊
- ↓
- 分成 LEFT / RIGHT
- ↓
- 建立左右道路線群
- ↓
- 左右線群交點
- ↓
- VP
+ 中段樹枝
+ 灌木
+ 樹幹斜線
+
+ 都可能直接成為道路候選。
+
+
+ V5.8.7：
+
+ ① Sobel 邊緣
+
+ ② 只在畫面底部尋找道路種子
+
+ ③ 左種子必須向右上延伸
+    右種子必須向左上延伸
+
+ ④ 從種子開始往上追蹤
+
+ ⑤ 每一層只接受：
+    - 距離預測位置近
+    - 方向相近
+    - 有足夠邊緣強度
+
+ ⑥ 形成道路點群
+
+ ⑦ Robust regression 擬合左右邊界
+
+ ⑧ 左右擬合線交會 = VP
 
 
  DEBUG：
 
- 黃色實線 = 選中的道路邊界
-
- 黃色虛線 = 邊界延長
-
- 綠色 = VP
+ 白點 = 實際道路追蹤證據
+ 黃線 = 擬合道路邊界
+ 綠點 = VP
 
 ========================================================= */
 
@@ -395,8 +403,6 @@ null;
 
 var AW = 240;
 var AH = 180;
-
-var CELL = 8;
 
 
 /* =========================================================
@@ -646,7 +652,7 @@ function resetAnalysis(){
 
 
     descEl.innerText =
-    "先尋找左右道路邊界";
+    "從近景尋找道路左右邊界";
 
 
     messageEl.innerText =
@@ -660,7 +666,7 @@ function resetAnalysis(){
 
 
 /* =========================================================
- RUN
+ RUN AI
 ========================================================= */
 
 function runAI(){
@@ -695,15 +701,15 @@ function runAI(){
 
 
     compositionEl.innerText =
-    "分析道路邊界";
+    "追蹤道路邊界";
 
 
     descEl.innerText =
-    "正在尋找左右收斂線";
+    "從畫面底部向遠方追蹤";
 
 
     messageEl.innerText =
-    "🔍 鎖定道路左右邊界...";
+    "🔍 尋找近景道路種子...";
 
 
     var results = [];
@@ -746,7 +752,7 @@ function runAI(){
 
 
 /* =========================================================
- FINISH MULTI FRAME
+ FINISH
 ========================================================= */
 
 function finishAnalysis(results){
@@ -754,7 +760,7 @@ function finishAnalysis(results){
     if(results.length<3){
 
         failAnalysis(
-            "左右道路邊界不足"
+            "找不到穩定的左右道路"
         );
 
         return;
@@ -782,10 +788,6 @@ function finishAnalysis(results){
     );
 
 
-    /*
-    去除明顯離群幀
-    */
-
     var distances =
     results.map(
         function(r){
@@ -805,8 +807,8 @@ function finishAnalysis(results){
 
     var limit =
     Math.max(
-        .04,
-        md*2.2
+        .035,
+        md*2.0
     );
 
 
@@ -858,14 +860,14 @@ function finishAnalysis(results){
 
 
     /*
-    找離最終 VP 最近的一幀，
-    用它畫 debug 邊界。
+    找最接近多幀中位數的一幀
+    當 DEBUG 顯示。
     */
 
-    var bestFrame =
+    var best =
     filtered[0];
 
-    var bestDistance =
+    var bestD =
     999;
 
 
@@ -882,12 +884,12 @@ function finishAnalysis(results){
         );
 
 
-        if(d<bestDistance){
+        if(d<bestD){
 
-            bestDistance =
+            bestD =
             d;
 
-            bestFrame =
+            best =
             filtered[i];
 
         }
@@ -905,24 +907,20 @@ function finishAnalysis(results){
 
     debugResult = {
 
-        left:
-        bestFrame.left,
+        leftPoints:
+        best.leftPoints,
 
-        right:
-        bestFrame.right,
+        rightPoints:
+        best.rightPoints,
 
-        leftCount:
-        bestFrame.leftCount,
+        leftLine:
+        best.leftLine,
 
-        rightCount:
-        bestFrame.rightCount
+        rightLine:
+        best.rightLine
 
     };
 
-
-    /*
-    幀穩定度
-    */
 
     var spread =
     median(
@@ -941,13 +939,13 @@ function finishAnalysis(results){
 
     var stability =
     clamp(
-        1-spread/.12,
+        1-spread/.09,
         0,
         1
     );
 
 
-    var baseConfidence =
+    var base =
     median(
         filtered.map(
             function(r){
@@ -957,22 +955,15 @@ function finishAnalysis(results){
     );
 
 
-    /*
-    這一版故意不讓信心太高。
-
-    因為現在主要目的是
-    驗證道路邊界抓得對不對。
-    */
-
     var confidence =
     Math.round(
         clamp(
             (
-                baseConfidence*.72+
+                base*.72+
                 stability*.28
             )*100,
             0,
-            92
+            90
         )
     );
 
@@ -987,18 +978,18 @@ function finishAnalysis(results){
 
 
     descEl.innerText =
-    "黃色線＝AI 判定的道路邊界";
+    "白點＝追蹤證據｜黃線＝道路邊界";
 
 
     messageEl.innerText =
-    "🔎 請檢查黃色左右邊界是否抓對";
+    "🔎 檢查白點是否沿著真正步道";
 
 
     debugEl.innerText =
     "L:"+
-    bestFrame.leftCount+
+    best.leftPoints.length+
     "｜R:"+
-    bestFrame.rightCount;
+    best.rightPoints.length;
 
 }
 
@@ -1021,12 +1012,11 @@ function failAnalysis(reason){
 
 
     compositionEl.innerText =
-    "道路邊界不足";
+    "道路追蹤不足";
 
 
     descEl.innerText =
-    reason ||
-    "無法形成左右道路線群";
+    reason;
 
 
     messageEl.innerText =
@@ -1040,7 +1030,7 @@ function failAnalysis(reason){
 
 
 /* =========================================================
- SOBEL
+ EDGE MAP
 ========================================================= */
 
 function buildEdges(){
@@ -1092,14 +1082,12 @@ function buildEdges(){
 
 
     /*
-    先做非常小的 3 點平滑。
+    輕度平滑。
 
-    目的是降低：
+    主要壓制：
     葉子
     草
-    磁磚小紋理
-
-    但不能模糊道路邊界。
+    磁磚細紋
     */
 
     var smooth =
@@ -1109,14 +1097,14 @@ function buildEdges(){
 
 
     for(
-        var y=1;
-        y<AH-1;
+        var y=2;
+        y<AH-2;
         y++
     ){
 
         for(
-            var x=1;
-            x<AW-1;
+            var x=2;
+            x<AW-2;
             x++
         ){
 
@@ -1216,12 +1204,6 @@ function buildEdges(){
             mag;
 
 
-            /*
-            Sobel 是法線方向。
-
-            +90° 轉成實際邊緣方向。
-            */
-
             var a =
             Math.atan2(
                 gy,
@@ -1256,6 +1238,11 @@ function buildEdges(){
     }
 
 
+    if(values.length===0){
+        return null;
+    }
+
+
     values.sort(
         function(a,b){
             return a-b;
@@ -1263,29 +1250,17 @@ function buildEdges(){
     );
 
 
-    if(values.length===0){
-        return null;
-    }
-
-
-    /*
-    稍微提高門檻。
-
-    5.8.6 不希望把大量葉片
-    都當道路線。
-    */
-
     var threshold =
     values[
         Math.floor(
-            values.length*.91
+            values.length*.895
         )
     ];
 
 
     if(
         !threshold ||
-        threshold<13
+        threshold<12
     ){
         return null;
     }
@@ -1308,413 +1283,21 @@ function buildEdges(){
 
 
 /* =========================================================
- LINE CONTINUITY
-
- 沿著候選方向前後走，
- 看這條線是不是真的延續。
-
- 道路邊界：
- 通常延續較長。
-
- 葉子：
- 通常很快中斷。
-========================================================= */
-
-function lineContinuity(
-    x,
-    y,
-    a,
-    magnitude,
-    edgeAngle,
-    threshold
-){
-
-    var dx =
-    Math.cos(a);
-
-    var dy =
-    Math.sin(a);
-
-
-    var hit = 0;
-    var total = 0;
-
-
-    /*
-    比 5.8.5 看得更遠
-    */
-
-    for(
-        var s=-42;
-        s<=42;
-        s+=6
-    ){
-
-        if(
-            Math.abs(s)<4
-        ){
-            continue;
-        }
-
-
-        var px =
-        Math.round(
-            x+dx*s
-        );
-
-
-        var py =
-        Math.round(
-            y+dy*s
-        );
-
-
-        if(
-            px<2 ||
-            px>=AW-2 ||
-            py<2 ||
-            py>=AH-2
-        ){
-            continue;
-        }
-
-
-        total++;
-
-
-        var found =
-        false;
-
-
-        /*
-        5x5 小範圍找同方向邊
-        */
-
-        for(
-            var oy=-2;
-            oy<=2 && !found;
-            oy++
-        ){
-
-            for(
-                var ox=-2;
-                ox<=2;
-                ox++
-            ){
-
-                var id =
-                (py+oy)*AW+
-                (px+ox);
-
-
-                if(
-                    magnitude[id]
-                    <
-                    threshold*.55
-                ){
-                    continue;
-                }
-
-
-                if(
-                    angleDifference(
-                        edgeAngle[id],
-                        a
-                    )
-                    <
-                    .22
-                ){
-
-                    found =
-                    true;
-
-                    break;
-
-                }
-
-            }
-
-        }
-
-
-        if(found){
-            hit++;
-        }
-
-    }
-
-
-    if(total===0){
-        return 0;
-    }
-
-
-    return hit/total;
-
-}
-
-
-/* =========================================================
- EXTRACT ROAD CANDIDATES
-
- 這次只把「有可能成為道路邊界」
- 的線抽出來。
-
- 重點：
- 來源要偏中下半部。
-========================================================= */
-
-function extractRoadCandidates(
-    magnitude,
-    edgeAngle,
-    threshold
-){
-
-    var candidates = [];
-
-
-    /*
-    不從畫面最上面開始。
-
-    道路線的來源應該主要存在
-    中下區域。
-    */
-
-    var startY =
-    Math.floor(
-        AH*.38
-    );
-
-
-    for(
-        var cy=startY;
-        cy<AH;
-        cy+=CELL
-    ){
-
-        for(
-            var cx=0;
-            cx<AW;
-            cx+=CELL
-        ){
-
-            var best = null;
-
-
-            for(
-                var y=cy;
-                y<
-                Math.min(
-                    cy+CELL,
-                    AH
-                );
-                y++
-            ){
-
-                for(
-                    var x=cx;
-                    x<
-                    Math.min(
-                        cx+CELL,
-                        AW
-                    );
-                    x++
-                ){
-
-                    var id =
-                    y*AW+x;
-
-
-                    var mag =
-                    magnitude[id];
-
-
-                    if(
-                        mag<threshold
-                    ){
-                        continue;
-                    }
-
-
-                    var a =
-                    edgeAngle[id];
-
-
-                    var absA =
-                    Math.abs(a);
-
-
-                    /*
-                    太水平：
-                    地磚橫線、陰影。
-
-                    太垂直：
-                    樹幹、柱子。
-                    */
-
-                    if(
-                        absA<.16 ||
-                        absA>1.38
-                    ){
-                        continue;
-                    }
-
-
-                    if(
-                        !best ||
-                        mag>best.mag
-                    ){
-
-                        best = {
-
-                            x:x,
-                            y:y,
-                            angle:a,
-                            mag:mag
-
-                        };
-
-                    }
-
-                }
-
-            }
-
-
-            if(!best){
-                continue;
-            }
-
-
-            var continuity =
-            lineContinuity(
-                best.x,
-                best.y,
-                best.angle,
-                magnitude,
-                edgeAngle,
-                threshold
-            );
-
-
-            /*
-            太碎不要
-            */
-
-            if(
-                continuity<.20
-            ){
-                continue;
-            }
-
-
-            best.continuity =
-            continuity;
-
-
-            /*
-            來源越低，
-            越像近景道路證據。
-            */
-
-            var depth =
-            clamp(
-                (
-                    best.y-
-                    AH*.32
-                )
-                /
-                (
-                    AH*.68
-                ),
-                0,
-                1
-            );
-
-
-            /*
-            強度不允許無限放大。
-            */
-
-            var strength =
-            clamp(
-                best.mag/
-                (threshold*2.3),
-                .45,
-                1.10
-            );
-
-
-            best.weight =
-            (
-                .45+
-                continuity*.75
-            )
-            *
-            (
-                .72+
-                depth*.42
-            )
-            *
-            strength;
-
-
-            candidates.push(
-                best
-            );
-
-        }
-
-    }
-
-
-    return candidates;
-
-}
-
-
-/* =========================================================
- CLASSIFY LEFT / RIGHT
-
- Canvas 座標：
-
- x →
- y ↓
-
-
- 左道路邊界：
-
- 從近處往遠處看，
- 通常往「右上」走。
-
-
- 右道路邊界：
-
- 從近處往遠處看，
- 通常往「左上」走。
-
-
- 由於 angle 正負會受方向表示方式影響，
- 不直接只看 angle 正負。
-
- 改用候選線延伸到上方某高度後，
- 看它往中心哪一側移動。
+ LINE PROJECTION
 ========================================================= */
 
 function projectXAtY(
-    line,
+    x,
+    y,
+    angle,
     targetY
 ){
 
     var dx =
-    Math.cos(
-        line.angle
-    );
+    Math.cos(angle);
 
     var dy =
-    Math.sin(
-        line.angle
-    );
+    Math.sin(angle);
 
 
     if(
@@ -1725,141 +1308,202 @@ function projectXAtY(
 
 
     var t =
-    (
-        targetY-line.y
-    )
-    /
-    dy;
+    (targetY-y)/dy;
 
 
     return(
-        line.x+
-        dx*t
+        x+dx*t
     );
 
 }
 
 
 /* =========================================================
- BUILD SIDE GROUPS
+ FIND BOTTOM SEEDS
+
+ 最重要的 V5.8.7 改動。
+
+ 道路線不能從樹冠開始。
+
+ 種子只能出現在：
+ AH * 0.65 ~ AH * 0.96
+
+ 左種子：
+ 來源位於左側，
+ 往上必須向右收。
+
+ 右種子：
+ 來源位於右側，
+ 往上必須向左收。
 ========================================================= */
 
-function buildRoadGroups(
-    candidates
+function findSeeds(
+    magnitude,
+    angle,
+    threshold
 ){
 
     var left = [];
+
     var right = [];
+
+
+    var startY =
+    Math.floor(
+        AH*.65
+    );
+
+
+    var endY =
+    Math.floor(
+        AH*.96
+    );
 
 
     var center =
     AW*.50;
 
 
-    /*
-    投影到約畫面 35% 高度。
-
-    真道路邊界應該往遠方中心收。
-    */
-
-    var targetY =
-    AH*.35;
-
-
     for(
-        var i=0;
-        i<candidates.length;
-        i++
+        var y=startY;
+        y<=endY;
+        y+=3
     ){
 
-        var L =
-        candidates[i];
-
-
-        var projectedX =
-        projectXAtY(
-            L,
-            targetY
-        );
-
-
-        if(
-            projectedX===null ||
-            !isFinite(projectedX)
+        for(
+            var x=4;
+            x<AW-4;
+            x+=3
         ){
-            continue;
-        }
+
+            var id =
+            y*AW+x;
 
 
-        /*
-        左側來源
-        */
+            if(
+                magnitude[id]
+                <
+                threshold*.90
+            ){
+                continue;
+            }
 
-        if(
-            L.x<
-            center-AW*.035
-        ){
+
+            var a =
+            angle[id];
+
+
+            var absA =
+            Math.abs(a);
+
 
             /*
-            往上延伸後，
-            必須比原位置更靠右。
+            排除：
 
-            也就是向畫面中心收斂。
+            太水平的磁磚橫線
+            太垂直的柱子/樹幹
             */
 
             if(
-                projectedX>
-                L.x+AW*.018
+                absA<.18 ||
+                absA>1.36
+            ){
+                continue;
+            }
+
+
+            /*
+            投影到畫面較上方，
+            看是不是往中心收。
+            */
+
+            var targetY =
+            AH*.40;
+
+
+            var px =
+            projectXAtY(
+                x,
+                y,
+                a,
+                targetY
+            );
+
+
+            if(
+                px===null ||
+                !isFinite(px)
+            ){
+                continue;
+            }
+
+
+            /*
+            左道路種子
+            */
+
+            if(
+                x<
+                center-AW*.055
             ){
 
-                /*
-                不接受非常誇張的橫跨。
-                */
-
                 if(
-                    projectedX<
-                    AW*1.05
+                    px>
+                    x+AW*.025
+                    &&
+                    px<
+                    AW*.75
                 ){
 
-                    L.projectedX =
-                    projectedX;
+                    left.push({
 
-                    left.push(L);
+                        x:x,
+                        y:y,
+                        angle:a,
+
+                        mag:
+                        magnitude[id],
+
+                        projectedX:
+                        px
+
+                    });
 
                 }
 
             }
 
-        }
-
-
-        /*
-        右側來源
-        */
-
-        else if(
-            L.x>
-            center+AW*.035
-        ){
 
             /*
-            往上後應往左收斂
+            右道路種子
             */
 
-            if(
-                projectedX<
-                L.x-AW*.018
+            else if(
+                x>
+                center+AW*.055
             ){
 
                 if(
-                    projectedX>
-                    -AW*.05
+                    px<
+                    x-AW*.025
+                    &&
+                    px>
+                    AW*.25
                 ){
 
-                    L.projectedX =
-                    projectedX;
+                    right.push({
 
-                    right.push(L);
+                        x:x,
+                        y:y,
+                        angle:a,
+
+                        mag:
+                        magnitude[id],
+
+                        projectedX:
+                        px
+
+                    });
 
                 }
 
@@ -1872,8 +1516,17 @@ function buildRoadGroups(
 
     return{
 
-        left:left,
-        right:right
+        left:
+        selectSeeds(
+            left,
+            "left"
+        ),
+
+        right:
+        selectSeeds(
+            right,
+            "right"
+        )
 
     };
 
@@ -1881,28 +1534,717 @@ function buildRoadGroups(
 
 
 /* =========================================================
- LINE INTERSECTION
+ SEED SELECTION
+
+ 不只是找最亮。
+
+ 優先：
+ 1. 來源低
+ 2. 來源離中央適中
+ 3. 投影後往中心
+ 4. 不在極端畫面邊緣
 ========================================================= */
 
-function lineIntersection(A,B){
+function selectSeeds(
+    seeds,
+    side
+){
 
-    var dx1 =
-    Math.cos(A.angle);
-
-    var dy1 =
-    Math.sin(A.angle);
+    if(seeds.length===0){
+        return [];
+    }
 
 
-    var dx2 =
-    Math.cos(B.angle);
+    var center =
+    AW*.50;
 
-    var dy2 =
-    Math.sin(B.angle);
+
+    for(
+        var i=0;
+        i<seeds.length;
+        i++
+    ){
+
+        var S =
+        seeds[i];
+
+
+        var depth =
+        clamp(
+            (
+                S.y-
+                AH*.62
+            )
+            /
+            (
+                AH*.34
+            ),
+            0,
+            1
+        );
+
+
+        var sourceDistance =
+        Math.abs(
+            S.x-center
+        );
+
+
+        /*
+        道路邊界通常不是：
+        正中央，也不是畫面最外側。
+        */
+
+        var positionScore =
+        1-
+        clamp(
+            Math.abs(
+                sourceDistance-
+                AW*.27
+            )
+            /
+            (AW*.30),
+            0,
+            1
+        );
+
+
+        var convergence =
+        Math.abs(
+            S.projectedX-
+            S.x
+        );
+
+
+        var convergenceScore =
+        clamp(
+            convergence/
+            (AW*.22),
+            .15,
+            1
+        );
+
+
+        S.score =
+        (
+            .45+
+            depth*.55
+        )
+        *
+        (
+            .45+
+            positionScore*.55
+        )
+        *
+        (
+            .55+
+            convergenceScore*.45
+        );
+
+    }
+
+
+    seeds.sort(
+        function(a,b){
+            return b.score-a.score;
+        }
+    );
+
+
+    /*
+    避免同一條粗邊緣
+    產生一大堆重複種子。
+    */
+
+    var selected = [];
+
+
+    for(
+        var j=0;
+        j<seeds.length;
+        j++
+    ){
+
+        var S2 =
+        seeds[j];
+
+
+        var tooClose =
+        false;
+
+
+        for(
+            var k=0;
+            k<selected.length;
+            k++
+        ){
+
+            var D =
+            selected[k];
+
+
+            if(
+                Math.hypot(
+                    S2.x-D.x,
+                    S2.y-D.y
+                )
+                <
+                12
+                &&
+                angleDifference(
+                    S2.angle,
+                    D.angle
+                )
+                <
+                .16
+            ){
+
+                tooClose =
+                true;
+
+                break;
+
+            }
+
+        }
+
+
+        if(tooClose){
+            continue;
+        }
+
+
+        selected.push(S2);
+
+
+        /*
+        每側最多測 8 個種子
+        */
+
+        if(
+            selected.length>=8
+        ){
+            break;
+        }
+
+    }
+
+
+    return selected;
+
+}
+
+
+/* =========================================================
+ FIND EDGE NEAR PREDICTION
+
+ 在某一個 y 層附近，
+ 尋找最符合預測道路位置的邊緣。
+========================================================= */
+
+function findEdgeNear(
+    targetX,
+    targetY,
+    expectedAngle,
+    side,
+    magnitude,
+    edgeAngle,
+    threshold,
+    radius
+){
+
+    var best =
+    null;
+
+
+    var minX =
+    Math.max(
+        2,
+        Math.floor(
+            targetX-radius
+        )
+    );
+
+
+    var maxX =
+    Math.min(
+        AW-3,
+        Math.ceil(
+            targetX+radius
+        )
+    );
+
+
+    var minY =
+    Math.max(
+        2,
+        Math.floor(
+            targetY-2
+        )
+    );
+
+
+    var maxY =
+    Math.min(
+        AH-3,
+        Math.ceil(
+            targetY+2
+        )
+    );
+
+
+    for(
+        var y=minY;
+        y<=maxY;
+        y++
+    ){
+
+        for(
+            var x=minX;
+            x<=maxX;
+            x++
+        ){
+
+            var id =
+            y*AW+x;
+
+
+            var mag =
+            magnitude[id];
+
+
+            if(
+                mag<
+                threshold*.58
+            ){
+                continue;
+            }
+
+
+            var a =
+            edgeAngle[id];
+
+
+            var absA =
+            Math.abs(a);
+
+
+            if(
+                absA<.13 ||
+                absA>1.42
+            ){
+                continue;
+            }
+
+
+            /*
+            與目前道路方向不能差太多。
+            */
+
+            var ad =
+            angleDifference(
+                a,
+                expectedAngle
+            );
+
+
+            if(
+                ad>.30
+            ){
+                continue;
+            }
+
+
+            /*
+            再確認方向確實往中心。
+            */
+
+            var upperX =
+            projectXAtY(
+                x,
+                y,
+                a,
+                Math.max(
+                    AH*.32,
+                    y-25
+                )
+            );
+
+
+            if(
+                upperX===null ||
+                !isFinite(upperX)
+            ){
+                continue;
+            }
+
+
+            if(
+                side==="left"
+            ){
+
+                if(
+                    upperX<=x
+                ){
+                    continue;
+                }
+
+            }
+            else{
+
+                if(
+                    upperX>=x
+                ){
+                    continue;
+                }
+
+            }
+
+
+            var distance =
+            Math.abs(
+                x-targetX
+            );
+
+
+            var distanceScore =
+            1-
+            clamp(
+                distance/
+                radius,
+                0,
+                1
+            );
+
+
+            var angleScore =
+            1-
+            clamp(
+                ad/.30,
+                0,
+                1
+            );
+
+
+            var magScore =
+            clamp(
+                mag/
+                (threshold*2.2),
+                .2,
+                1
+            );
+
+
+            var score =
+
+            distanceScore*.48
+
+            +
+
+            angleScore*.32
+
+            +
+
+            magScore*.20;
+
+
+            if(
+                !best ||
+                score>best.score
+            ){
+
+                best = {
+
+                    x:x,
+                    y:y,
+                    angle:a,
+                    score:score,
+                    mag:mag
+
+                };
+
+            }
+
+        }
+
+    }
+
+
+    return best;
+
+}
+
+
+/* =========================================================
+ TRACE FROM SEED
+
+ 從近景往上追。
+
+ 每次只上移 5 pixel。
+
+ 找不到時可以短暫跳過，
+ 但不能連續失聯太久。
+========================================================= */
+
+function traceSeed(
+    seed,
+    side,
+    magnitude,
+    edgeAngle,
+    threshold
+){
+
+    var points = [];
+
+
+    points.push({
+
+        x:seed.x,
+        y:seed.y,
+        angle:seed.angle
+
+    });
+
+
+    var currentX =
+    seed.x;
+
+    var currentY =
+    seed.y;
+
+    var currentAngle =
+    seed.angle;
+
+
+    var misses = 0;
+
+
+    /*
+    追到畫面約 35% 高度。
+
+    不追進樹冠最上方。
+    */
+
+    var minY =
+    AH*.34;
+
+
+    while(
+        currentY>minY
+    ){
+
+        var nextY =
+        currentY-5;
+
+
+        /*
+        依照目前方向預測下一層 X。
+        */
+
+        var predictedX =
+        projectXAtY(
+            currentX,
+            currentY,
+            currentAngle,
+            nextY
+        );
+
+
+        if(
+            predictedX===null ||
+            !isFinite(predictedX)
+        ){
+            break;
+        }
+
+
+        /*
+        越往遠方，
+        道路變細，
+        搜尋半徑稍微縮小。
+        */
+
+        var relative =
+        nextY/AH;
+
+
+        var radius =
+        relative>.65
+        ?
+        10
+        :
+        relative>.48
+        ?
+        8
+        :
+        6;
+
+
+        var found =
+        findEdgeNear(
+            predictedX,
+            nextY,
+            currentAngle,
+            side,
+            magnitude,
+            edgeAngle,
+            threshold,
+            radius
+        );
+
+
+        if(found){
+
+            points.push({
+
+                x:found.x,
+                y:found.y,
+                angle:found.angle
+
+            });
+
+
+            /*
+            位置稍微平滑。
+            */
+
+            currentX =
+            found.x;
+
+
+            currentY =
+            found.y;
+
+
+            /*
+            方向不能突然被樹枝帶走。
+
+            新方向只佔 25%。
+            */
+
+            var newAngle =
+            currentAngle*.75+
+            found.angle*.25;
+
+
+            /*
+            如果正負跨過 ±90 的表示問題，
+            直接使用 found。
+            */
+
+            if(
+                angleDifference(
+                    currentAngle,
+                    found.angle
+                )
+                >.45
+            ){
+
+                newAngle =
+                found.angle;
+
+            }
+
+
+            currentAngle =
+            newAngle;
+
+
+            misses = 0;
+
+        }
+
+        else{
+
+            misses++;
+
+
+            /*
+            可以允許 2 層找不到。
+            */
+
+            if(
+                misses>2
+            ){
+                break;
+            }
+
+
+            currentX =
+            predictedX;
+
+            currentY =
+            nextY;
+
+        }
+
+    }
+
+
+    return points;
+
+}
+
+
+/* =========================================================
+ LINE FIT
+
+ 我們用：
+
+ x = a*y + b
+
+ 因為道路接近垂直時，
+ 這比 y = mx+b 更穩定。
+========================================================= */
+
+function fitLine(points){
+
+    if(
+        !points ||
+        points.length<4
+    ){
+        return null;
+    }
+
+
+    var sumY = 0;
+    var sumX = 0;
+    var sumYY = 0;
+    var sumYX = 0;
+
+
+    var n =
+    points.length;
+
+
+    for(
+        var i=0;
+        i<n;
+        i++
+    ){
+
+        var p =
+        points[i];
+
+
+        sumY +=
+        p.y;
+
+        sumX +=
+        p.x;
+
+        sumYY +=
+        p.y*p.y;
+
+        sumYX +=
+        p.y*p.x;
+
+    }
 
 
     var denominator =
-    dx1*dy2-
-    dy1*dx2;
+    n*sumYY-
+    sumY*sumY;
 
 
     if(
@@ -1916,29 +2258,61 @@ function lineIntersection(A,B){
     }
 
 
-    var rx =
-    B.x-A.x;
-
-    var ry =
-    B.y-A.y;
-
-
-    var t =
+    var a =
     (
-        rx*dy2-
-        ry*dx2
+        n*sumYX-
+        sumY*sumX
     )
     /
     denominator;
 
 
+    var b =
+    (
+        sumX-
+        a*sumY
+    )
+    /
+    n;
+
+
+    /*
+    residual
+    */
+
+    var errors = [];
+
+
+    for(
+        var j=0;
+        j<n;
+        j++
+    ){
+
+        var expected =
+        a*points[j].y+
+        b;
+
+
+        errors.push(
+            Math.abs(
+                points[j].x-
+                expected
+            )
+        );
+
+    }
+
+
+    var error =
+    median(errors);
+
+
     return{
 
-        x:
-        A.x+t*dx1,
-
-        y:
-        A.y+t*dy1
+        a:a,
+        b:b,
+        error:error
 
     };
 
@@ -1946,244 +2320,42 @@ function lineIntersection(A,B){
 
 
 /* =========================================================
- FIND VP FROM LEFT / RIGHT GROUPS
+ ROBUST FIT
 
- 不選「最強的一對」。
-
- 對多組左右線交點投票，
- 再找交點群的中位數。
-
- 這樣單根樹枝比較難霸榜。
+ 第一輪 fit 後，
+ 把偏離太大的點拿掉再 fit。
 ========================================================= */
 
-function findRoadVP(
-    left,
-    right
-){
+function robustFit(points){
 
-    var intersections = [];
+    var first =
+    fitLine(points);
 
 
-    for(
-        var i=0;
-        i<left.length;
-        i++
-    ){
-
-        for(
-            var j=0;
-            j<right.length;
-            j++
-        ){
-
-            var A =
-            left[i];
-
-            var B =
-            right[j];
-
-
-            /*
-            兩線方向太接近平行
-            不算。
-            */
-
-            var ad =
-            angleDifference(
-                A.angle,
-                B.angle
-            );
-
-
-            if(ad<.16){
-                continue;
-            }
-
-
-            var p =
-            lineIntersection(
-                A,
-                B
-            );
-
-
-            if(!p){
-                continue;
-            }
-
-
-            /*
-            VP 必須大致位於畫面遠方。
-
-            這只是寬鬆範圍，
-            不是硬鎖道路盡頭。
-            */
-
-            if(
-                p.x<
-                -AW*.05 ||
-                p.x>
-                AW*1.05
-            ){
-                continue;
-            }
-
-
-            if(
-                p.y<
-                AH*.10 ||
-                p.y>
-                AH*.70
-            ){
-                continue;
-            }
-
-
-            /*
-            交點應位於兩條來源線上方。
-            */
-
-            if(
-                p.y>
-                Math.min(
-                    A.y,
-                    B.y
-                )
-                -
-                AH*.03
-            ){
-                continue;
-            }
-
-
-            /*
-            左右來源跨度。
-
-            兩條線如果本來就靠很近，
-            很可能只是中央磁磚紋理。
-            */
-
-            var sourceSpan =
-            B.x-A.x;
-
-
-            if(
-                sourceSpan<
-                AW*.12
-            ){
-                continue;
-            }
-
-
-            /*
-            近景來源稍微加權。
-            */
-
-            var sourceDepth =
-            (
-                A.y+
-                B.y
-            )
-            /
-            (AH*2);
-
-
-            var weight =
-            Math.sqrt(
-                A.weight*
-                B.weight
-            )
-            *
-            (
-                .70+
-                sourceDepth*.45
-            );
-
-
-            intersections.push({
-
-                x:p.x,
-                y:p.y,
-
-                weight:weight,
-
-                left:A,
-                right:B
-
-            });
-
-        }
-
-    }
-
-
-    if(
-        intersections.length<3
-    ){
+    if(!first){
         return null;
     }
 
 
-    /*
-    第一輪中位數
-    */
-
-    var mx =
-    median(
-        intersections.map(
-            function(p){
-                return p.x;
-            }
-        )
-    );
-
-
-    var my =
-    median(
-        intersections.map(
-            function(p){
-                return p.y;
-            }
-        )
-    );
-
-
-    /*
-    去掉離群交點
-    */
-
-    var distances =
-    intersections.map(
-        function(p){
-
-            return Math.hypot(
-                p.x-mx,
-                p.y-my
-            );
-
-        }
-    );
-
-
-    var md =
-    median(distances);
-
-
     var limit =
     Math.max(
-        AW*.065,
-        md*1.8
+        3.5,
+        first.error*2.2
     );
 
 
-    var good =
-    intersections.filter(
+    var filtered =
+    points.filter(
         function(p){
 
+            var expected =
+            first.a*p.y+
+            first.b;
+
+
             return(
-                Math.hypot(
-                    p.x-mx,
-                    p.y-my
+                Math.abs(
+                    p.x-expected
                 )
                 <=limit
             );
@@ -2193,240 +2365,317 @@ function findRoadVP(
 
 
     if(
-        good.length<2
+        filtered.length<4
     ){
         return null;
     }
 
 
-    /*
-    第二輪中位數
-    */
+    var second =
+    fitLine(filtered);
 
-    mx =
-    median(
-        good.map(
-            function(p){
-                return p.x;
-            }
-        )
+
+    if(!second){
+        return null;
+    }
+
+
+    second.points =
+    filtered;
+
+
+    return second;
+
+}
+
+
+/* =========================================================
+ TRACE QUALITY
+========================================================= */
+
+function traceQuality(
+    fit,
+    originalPoints
+){
+
+    if(!fit){
+        return 0;
+    }
+
+
+    var countScore =
+    clamp(
+        fit.points.length/12,
+        0,
+        1
     );
 
 
-    my =
-    median(
-        good.map(
-            function(p){
-                return p.y;
-            }
-        )
-    );
-
-
-    /*
-    找出最支持最終交點的
-    左右線。
-
-    這兩條會顯示成黃色 debug 線。
-    */
-
-    var bestPair =
-    null;
-
-    var bestScore =
-    -1;
+    var minY = 999;
+    var maxY = -999;
 
 
     for(
-        var k=0;
-        k<good.length;
-        k++
+        var i=0;
+        i<fit.points.length;
+        i++
     ){
 
-        var P =
-        good[k];
-
-
-        var distance =
-        Math.hypot(
-            P.x-mx,
-            P.y-my
+        minY =
+        Math.min(
+            minY,
+            fit.points[i].y
         );
 
+        maxY =
+        Math.max(
+            maxY,
+            fit.points[i].y
+        );
 
-        var closeness =
-        1-
-        clamp(
-            distance/
-            (AW*.12),
-            0,
+    }
+
+
+    var verticalSpan =
+    maxY-minY;
+
+
+    var spanScore =
+    clamp(
+        verticalSpan/
+        (AH*.42),
+        0,
+        1
+    );
+
+
+    var errorScore =
+    1-
+    clamp(
+        fit.error/7,
+        0,
+        1
+    );
+
+
+    /*
+    保留下來的點比例。
+    */
+
+    var keepScore =
+    clamp(
+        fit.points.length/
+        Math.max(
+            originalPoints.length,
             1
-        );
+        ),
+        0,
+        1
+    );
 
 
-        var score =
-        P.weight*
-        (
-            .35+
-            closeness*.65
+    return(
+
+        countScore*.30
+
+        +
+
+        spanScore*.30
+
+        +
+
+        errorScore*.25
+
+        +
+
+        keepScore*.15
+
+    );
+
+}
+
+
+/* =========================================================
+ FIND BEST TRACE
+========================================================= */
+
+function findBestTrace(
+    seeds,
+    side,
+    magnitude,
+    edgeAngle,
+    threshold
+){
+
+    var best =
+    null;
+
+
+    for(
+        var i=0;
+        i<seeds.length;
+        i++
+    ){
+
+        var points =
+        traceSeed(
+            seeds[i],
+            side,
+            magnitude,
+            edgeAngle,
+            threshold
         );
 
 
         /*
-        更偏好來源在中下部的線
+        太短直接淘汰
         */
 
-        var sourceY =
-        (
-            P.left.y+
-            P.right.y
-        )/2;
+        if(
+            points.length<5
+        ){
+            continue;
+        }
 
 
-        score *=
-        (
-            .75+
-            (sourceY/AH)*.35
-        );
+        var fit =
+        robustFit(points);
+
+
+        if(!fit){
+            continue;
+        }
+
+
+        /*
+        左線 x=a*y+b：
+
+        y 越大 = 越近。
+
+        左道路：
+        近處 x 應更小，
+        所以 a 應為負。
+
+        右道路：
+        近處 x 應更大，
+        所以 a 應為正。
+        */
+
+        if(
+            side==="left"
+            &&
+            fit.a>=-.025
+        ){
+            continue;
+        }
 
 
         if(
-            score>
-            bestScore
+            side==="right"
+            &&
+            fit.a<=.025
+        ){
+            continue;
+        }
+
+
+        var quality =
+        traceQuality(
+            fit,
+            points
+        );
+
+
+        /*
+        種子本身的分數也保留少量。
+        */
+
+        quality =
+        quality*.85+
+        seeds[i].score*.15;
+
+
+        if(
+            !best ||
+            quality>best.quality
         ){
 
-            bestScore =
-            score;
+            best = {
 
-            bestPair =
-            P;
+                seed:
+                seeds[i],
+
+                points:
+                fit.points,
+
+                fit:
+                fit,
+
+                quality:
+                quality
+
+            };
 
         }
 
     }
 
 
-    if(!bestPair){
+    return best;
+
+}
+
+
+/* =========================================================
+ INTERSECTION OF FITTED LINES
+
+ left:
+ x = a1*y+b1
+
+ right:
+ x = a2*y+b2
+
+ a1*y+b1 =
+ a2*y+b2
+========================================================= */
+
+function fittedIntersection(
+    left,
+    right
+){
+
+    var denominator =
+    left.a-right.a;
+
+
+    if(
+        Math.abs(
+            denominator
+        )
+        <
+        .00001
+    ){
         return null;
     }
 
 
-    /*
-    交點集中度
-    */
-
-    var spread =
-    median(
-        good.map(
-            function(p){
-
-                return Math.hypot(
-                    p.x-mx,
-                    p.y-my
-                );
-
-            }
-        )
-    );
+    var y =
+    (
+        right.b-left.b
+    )
+    /
+    denominator;
 
 
-    var cluster =
-    clamp(
-        1-spread/(AW*.16),
-        0,
-        1
-    );
-
-
-    /*
-    支持比例
-    */
-
-    var support =
-    clamp(
-        good.length/12,
-        0,
-        1
-    );
-
-
-    /*
-    左右線延續程度
-    */
-
-    var continuity =
-    clamp(
-        (
-            bestPair.left.continuity+
-            bestPair.right.continuity
-        )/2,
-        0,
-        1
-    );
-
-
-    /*
-    近景跨度
-    */
-
-    var span =
-    bestPair.right.x-
-    bestPair.left.x;
-
-
-    var spanScore =
-    clamp(
-        span/(AW*.55),
-        .15,
-        1
-    );
-
-
-    var confidence =
-
-    .18
-
-    +
-
-    cluster*.28
-
-    +
-
-    support*.18
-
-    +
-
-    continuity*.20
-
-    +
-
-    spanScore*.16;
-
-
-    confidence =
-    clamp(
-        confidence,
-        .25,
-        .90
-    );
+    var x =
+    left.a*y+
+    left.b;
 
 
     return{
 
-        x:mx,
-        y:my,
-
-        left:
-        bestPair.left,
-
-        right:
-        bestPair.right,
-
-        confidence:
-        confidence,
-
-        intersectionCount:
-        good.length
+        x:x,
+        y:y
 
     };
 
@@ -2434,7 +2683,159 @@ function findRoadVP(
 
 
 /* =========================================================
- MAIN ROAD ANALYSIS
+ ROAD GEOMETRY VALIDATION
+========================================================= */
+
+function validateRoadGeometry(
+    left,
+    right,
+    vp
+){
+
+    if(!vp){
+        return null;
+    }
+
+
+    /*
+    VP 寬鬆範圍。
+    */
+
+    if(
+        vp.x<
+        AW*.08 ||
+        vp.x>
+        AW*.92
+    ){
+        return null;
+    }
+
+
+    if(
+        vp.y<
+        AH*.15 ||
+        vp.y>
+        AH*.68
+    ){
+        return null;
+    }
+
+
+    /*
+    在近景比較左右道路寬度。
+    */
+
+    var yNear =
+    AH*.88;
+
+
+    var yMiddle =
+    AH*.60;
+
+
+    var leftNear =
+    left.a*yNear+
+    left.b;
+
+
+    var rightNear =
+    right.a*yNear+
+    right.b;
+
+
+    var leftMiddle =
+    left.a*yMiddle+
+    left.b;
+
+
+    var rightMiddle =
+    right.a*yMiddle+
+    right.b;
+
+
+    var nearWidth =
+    rightNear-leftNear;
+
+
+    var middleWidth =
+    rightMiddle-leftMiddle;
+
+
+    /*
+    必須真的有道路寬度。
+    */
+
+    if(
+        nearWidth<
+        AW*.15
+    ){
+        return null;
+    }
+
+
+    /*
+    遠處應比近處窄。
+    */
+
+    if(
+        middleWidth>=
+        nearWidth*.94
+    ){
+        return null;
+    }
+
+
+    /*
+    中段也不能交叉。
+    */
+
+    if(
+        middleWidth<=0
+    ){
+        return null;
+    }
+
+
+    var narrowing =
+    1-
+    clamp(
+        middleWidth/
+        nearWidth,
+        0,
+        1
+    );
+
+
+    var widthScore =
+    clamp(
+        nearWidth/
+        (AW*.55),
+        .2,
+        1
+    );
+
+
+    return{
+
+        nearWidth:
+        nearWidth,
+
+        middleWidth:
+        middleWidth,
+
+        narrowing:
+        narrowing,
+
+        widthScore:
+        widthScore
+
+    };
+
+}
+
+
+/* =========================================================
+ MAIN ANALYSIS
 ========================================================= */
 
 function analyzeRoad(){
@@ -2453,8 +2854,13 @@ function analyzeRoad(){
     }
 
 
-    var candidates =
-    extractRoadCandidates(
+    /*
+    STEP 1
+    只在底部找種子。
+    */
+
+    var seeds =
+    findSeeds(
         edges.magnitude,
         edges.angle,
         edges.threshold
@@ -2462,40 +2868,139 @@ function analyzeRoad(){
 
 
     if(
-        candidates.length<6
+        seeds.left.length===0 ||
+        seeds.right.length===0
     ){
         return null;
     }
-
-
-    var groups =
-    buildRoadGroups(
-        candidates
-    );
 
 
     /*
-    至少左右各兩條候選。
+    STEP 2
+    從底部向上追蹤。
     */
 
+    var leftTrace =
+    findBestTrace(
+        seeds.left,
+        "left",
+        edges.magnitude,
+        edges.angle,
+        edges.threshold
+    );
+
+
+    var rightTrace =
+    findBestTrace(
+        seeds.right,
+        "right",
+        edges.magnitude,
+        edges.angle,
+        edges.threshold
+    );
+
+
     if(
-        groups.left.length<2 ||
-        groups.right.length<2
+        !leftTrace ||
+        !rightTrace
     ){
         return null;
     }
 
 
+    /*
+    STEP 3
+    擬合線交點。
+    */
+
     var vp =
-    findRoadVP(
-        groups.left,
-        groups.right
+    fittedIntersection(
+        leftTrace.fit,
+        rightTrace.fit
     );
 
 
     if(!vp){
         return null;
     }
+
+
+    /*
+    STEP 4
+    道路幾何驗證。
+    */
+
+    var geometry =
+    validateRoadGeometry(
+        leftTrace.fit,
+        rightTrace.fit,
+        vp
+    );
+
+
+    if(!geometry){
+        return null;
+    }
+
+
+    /*
+    CONFIDENCE
+
+    注意：
+    還是辨識信心，
+    不是構圖分數。
+    */
+
+    var traceScore =
+    (
+        leftTrace.quality+
+        rightTrace.quality
+    )/2;
+
+
+    var fitError =
+    (
+        leftTrace.fit.error+
+        rightTrace.fit.error
+    )/2;
+
+
+    var fitScore =
+    1-
+    clamp(
+        fitError/7,
+        0,
+        1
+    );
+
+
+    var confidence =
+
+    .15
+
+    +
+
+    traceScore*.38
+
+    +
+
+    fitScore*.20
+
+    +
+
+    geometry.narrowing*.15
+
+    +
+
+    geometry.widthScore*.12;
+
+
+    confidence =
+    clamp(
+        confidence,
+        .25,
+        .88
+    );
 
 
     return{
@@ -2507,22 +3012,19 @@ function analyzeRoad(){
         vp.y/AH,
 
         confidence:
-        vp.confidence,
+        confidence,
 
-        left:
-        vp.left,
+        leftPoints:
+        leftTrace.points,
 
-        right:
-        vp.right,
+        rightPoints:
+        rightTrace.points,
 
-        leftCount:
-        groups.left.length,
+        leftLine:
+        leftTrace.fit,
 
-        rightCount:
-        groups.right.length,
-
-        intersections:
-        vp.intersectionCount
+        rightLine:
+        rightTrace.fit
 
     };
 
@@ -2530,13 +3032,100 @@ function analyzeRoad(){
 
 
 /* =========================================================
- DRAW DEBUG ROAD LINE
+ DRAW POINTS
 ========================================================= */
 
-function drawRoadLine(
+function drawTrackedPoints(
+    points,
+    label
+){
+
+    if(!points){
+        return;
+    }
+
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    ctx.save();
+
+
+    ctx.fillStyle =
+    "#ffffff";
+
+
+    for(
+        var i=0;
+        i<points.length;
+        i++
+    ){
+
+        var x =
+        points[i].x/AW*w;
+
+
+        var y =
+        points[i].y/AH*h;
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            x,
+            y,
+            3.2,
+            0,
+            Math.PI*2
+        );
+
+        ctx.fill();
+
+    }
+
+
+    /*
+    第一個點標 L/R
+    */
+
+    if(points.length){
+
+        var first =
+        points[0];
+
+
+        ctx.fillStyle =
+        "#ffffff";
+
+        ctx.font =
+        "bold 14px -apple-system,Arial";
+
+
+        ctx.fillText(
+            label,
+            first.x/AW*w+8,
+            first.y/AH*h-8
+        );
+
+    }
+
+
+    ctx.restore();
+
+}
+
+
+/* =========================================================
+ DRAW FITTED LINE
+========================================================= */
+
+function drawFittedLine(
     line,
-    vp,
-    side
+    label
 ){
 
     if(!line){
@@ -2552,85 +3141,34 @@ function drawRoadLine(
 
 
     /*
-    Analysis coordinate → screen coordinate
+    畫線範圍：
+
+    從畫面底部
+    到 VP 附近。
+
+    DEBUG 時直接畫完整擬合。
     */
 
-    var sx =
-    line.x/AW*w;
-
-    var sy =
-    line.y/AH*h;
-
-
-    var vx =
-    vp.vx*w;
-
-    var vy =
-    vp.vy*h;
-
-
-    /*
-    先算線往畫面底部的交點
-    */
-
-    var dx =
-    Math.cos(
-        line.angle
-    );
-
-    var dy =
-    Math.sin(
-        line.angle
-    );
-
-
-    var bottomY =
+    var yBottom =
     AH*.98;
 
 
-    var bottomX =
-    line.x;
+    var yTop =
+    AH*.30;
 
 
-    if(
-        Math.abs(dy)>.03
-    ){
-
-        var t =
-        (
-            bottomY-line.y
-        )/dy;
+    var xBottom =
+    line.a*yBottom+
+    line.b;
 
 
-        bottomX =
-        line.x+
-        dx*t;
-
-    }
-
-
-    bottomX =
-    clamp(
-        bottomX,
-        -AW*.20,
-        AW*1.20
-    );
-
-
-    var bx =
-    bottomX/AW*w;
-
-    var by =
-    bottomY/AH*h;
+    var xTop =
+    line.a*yTop+
+    line.b;
 
 
     ctx.save();
 
-
-    /*
-    黃色實線：
-    從候選道路來源往近處延伸。
-    */
 
     ctx.strokeStyle =
     "#ffd400";
@@ -2643,64 +3181,33 @@ function drawRoadLine(
 
     ctx.beginPath();
 
+
     ctx.moveTo(
-        sx,
-        sy
+        xBottom/AW*w,
+        yBottom/AH*h
     );
 
+
     ctx.lineTo(
-        bx,
-        by
+        xTop/AW*w,
+        yTop/AH*h
     );
+
 
     ctx.stroke();
 
-
-    /*
-    黃色虛線：
-    往 VP 延伸。
-    */
-
-    ctx.lineWidth =
-    2.5;
-
-    ctx.setLineDash(
-        [8,7]
-    );
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        sx,
-        sy
-    );
-
-    ctx.lineTo(
-        vx,
-        vy
-    );
-
-    ctx.stroke();
-
-
-    /*
-    L / R 標籤
-    */
-
-    ctx.setLineDash([]);
 
     ctx.fillStyle =
     "#ffd400";
 
     ctx.font =
-    "bold 14px -apple-system,Arial";
+    "bold 15px -apple-system,Arial";
 
 
     ctx.fillText(
-        side,
-        sx+8,
-        sy-8
+        label,
+        xBottom/AW*w+8,
+        yBottom/AH*h-10
     );
 
 
@@ -2749,10 +3256,6 @@ function drawVP(){
     ctx.setLineDash([]);
 
 
-    /*
-    圓
-    */
-
     ctx.beginPath();
 
     ctx.arc(
@@ -2765,10 +3268,6 @@ function drawVP(){
 
     ctx.stroke();
 
-
-    /*
-    中心
-    */
 
     ctx.beginPath();
 
@@ -2783,12 +3282,9 @@ function drawVP(){
     ctx.fill();
 
 
-    /*
-    十字
-    */
-
     ctx.lineWidth =
     3;
+
 
     ctx.beginPath();
 
@@ -2840,10 +3336,6 @@ function drawVP(){
     ctx.stroke();
 
 
-    /*
-    LABEL
-    */
-
     ctx.font =
     "bold 16px -apple-system,Arial";
 
@@ -2869,29 +3361,42 @@ function drawVP(){
 
 function drawDebug(){
 
-    if(
-        !debugResult ||
-        !detectedPoint
-    ){
+    if(!debugResult){
         return;
     }
 
 
     /*
-    先畫黃色道路線，
-    再畫綠色 VP。
+    黃線先畫。
     */
 
-    drawRoadLine(
-        debugResult.left,
-        detectedPoint,
+    drawFittedLine(
+        debugResult.leftLine,
         "L"
     );
 
 
-    drawRoadLine(
-        debugResult.right,
-        detectedPoint,
+    drawFittedLine(
+        debugResult.rightLine,
+        "R"
+    );
+
+
+    /*
+    再畫真正追蹤點。
+
+    白點在黃線上方，
+    比較容易看清楚。
+    */
+
+    drawTrackedPoints(
+        debugResult.leftPoints,
+        "L"
+    );
+
+
+    drawTrackedPoints(
+        debugResult.rightPoints,
         "R"
     );
 
@@ -2938,7 +3443,7 @@ function resizeOverlay(){
 
 
 /* =========================================================
- LOOP
+ DRAW LOOP
 ========================================================= */
 
 function loop(){
@@ -2983,8 +3488,7 @@ zoom.addEventListener(
 
 
         /*
-        Zoom 改變後，
-        舊分析結果失效。
+        改倍率後舊結果無效。
         */
 
         detectedPoint =
@@ -2992,6 +3496,18 @@ zoom.addEventListener(
 
         debugResult =
         null;
+
+
+        scoreEl.innerHTML =
+        '-- <small>%</small>';
+
+
+        compositionEl.innerText =
+        "倍率已變更";
+
+
+        descEl.innerText =
+        "請重新執行 AI 分析";
 
 
         if(!stream){
