@@ -9,7 +9,7 @@ initial-scale=1,
 maximum-scale=1,
 user-scalable=no">
 
-<title>AI 構圖助手 V5.8.8</title>
+<title>AI 構圖助手 V6.0</title>
 
 <style>
 
@@ -33,10 +33,20 @@ html,body{
     sans-serif;
 }
 
+body{
+    display:flex;
+    flex-direction:column;
+}
+
+/* =========================
+   CAMERA
+========================= */
+
 #cameraArea{
     position:relative;
     width:100%;
-    height:72%;
+    flex:1;
+    min-height:0;
     background:#111;
     overflow:hidden;
 }
@@ -58,56 +68,51 @@ html,body{
     z-index:5;
 }
 
-#analysisCanvas{
-    display:none;
-}
+/* =========================
+   INFO
+========================= */
 
 #info{
     position:absolute;
-    top:18px;
-    left:16px;
-    width:250px;
-    padding:16px 17px;
+    top:16px;
+    left:15px;
+    width:260px;
+    padding:15px 17px;
     border-radius:20px;
-    background:rgba(0,0,0,.74);
+    background:rgba(0,0,0,.72);
+    backdrop-filter:blur(6px);
     z-index:10;
 }
 
-#score{
-    font-size:43px;
-    font-weight:750;
-    line-height:1;
-}
-
-#score small{
-    font-size:17px;
-    opacity:.65;
+#modeTitle{
+    font-size:14px;
+    opacity:.70;
+    margin-bottom:5px;
 }
 
 #composition{
-    margin-top:12px;
-    font-size:21px;
-    font-weight:750;
+    font-size:25px;
+    font-weight:800;
 }
 
 #desc{
-    margin-top:6px;
+    margin-top:7px;
     font-size:14px;
-    line-height:1.4;
+    line-height:1.45;
     opacity:.85;
 }
 
 #message{
     position:absolute;
     left:50%;
-    bottom:18px;
+    bottom:15px;
     transform:translateX(-50%);
     width:92%;
-    padding:14px;
+    padding:13px;
     border-radius:18px;
-    background:rgba(0,0,0,.80);
+    background:rgba(0,0,0,.78);
     text-align:center;
-    font-size:16px;
+    font-size:15px;
     font-weight:700;
     z-index:10;
 }
@@ -115,73 +120,153 @@ html,body{
 #version{
     position:absolute;
     left:8px;
-    bottom:5px;
+    bottom:4px;
     font-size:11px;
-    opacity:.72;
+    opacity:.65;
     z-index:20;
 }
 
-#debug{
-    position:absolute;
-    right:8px;
-    bottom:5px;
-    color:#ffd400;
-    font-size:11px;
-    opacity:.9;
-    z-index:20;
-}
+/* =========================
+   CONTROLS
+========================= */
 
 #controls{
-    height:28%;
-    padding:13px;
+    flex:0 0 auto;
+    padding:
+    10px
+    12px
+    calc(12px + env(safe-area-inset-bottom));
     background:#000;
 }
 
-#cameraButtons{
+/* =========================
+   MODES
+========================= */
+
+#modeRow{
     display:flex;
-    justify-content:center;
-    gap:10px;
-    margin-bottom:11px;
+    gap:7px;
+    overflow-x:auto;
+    padding-bottom:9px;
+    scrollbar-width:none;
 }
 
-button{
-    color:#fff;
+#modeRow::-webkit-scrollbar{
+    display:none;
+}
+
+.modeBtn{
+    flex:0 0 auto;
+    min-width:73px;
+    padding:9px 9px;
     border:none;
+    border-radius:18px;
+    background:#242424;
+    color:#fff;
+    font-size:13px;
+    font-weight:700;
 }
 
-.cameraBtn{
-    padding:10px 18px;
-    background:#292929;
-    border-radius:23px;
-    font-size:15px;
+.modeBtn.active{
+    background:#fff;
+    color:#000;
 }
+
+.modeIcon{
+    display:block;
+    font-size:20px;
+    margin-bottom:3px;
+}
+
+/* =========================
+   COMPOSITION CHIPS
+========================= */
+
+#compositionRow{
+    display:flex;
+    gap:7px;
+    overflow-x:auto;
+    padding-bottom:9px;
+    scrollbar-width:none;
+}
+
+#compositionRow::-webkit-scrollbar{
+    display:none;
+}
+
+.compBtn{
+    flex:0 0 auto;
+    padding:8px 13px;
+    border-radius:18px;
+    border:1px solid #444;
+    background:#151515;
+    color:#ddd;
+    font-size:13px;
+}
+
+.compBtn.active{
+    border-color:#ffd400;
+    color:#ffd400;
+}
+
+/* =========================
+   AI BUTTON
+========================= */
 
 #aiButton{
     width:100%;
     padding:13px;
-    margin-bottom:13px;
+    border:none;
+    border-radius:25px;
     background:#fff;
     color:#000;
-    border-radius:25px;
     font-size:17px;
-    font-weight:bold;
+    font-weight:800;
+    margin-bottom:9px;
 }
 
-#zoomRow{
+/* =========================
+   CAMERA BUTTONS
+========================= */
+
+#bottomRow{
     display:flex;
-    gap:10px;
     align-items:center;
+    gap:8px;
+}
+
+.cameraBtn{
+    flex:0 0 auto;
+    padding:9px 13px;
+    background:#292929;
+    color:#fff;
+    border:none;
+    border-radius:20px;
+    font-size:13px;
+}
+
+#zoomArea{
+    flex:1;
+    display:flex;
+    align-items:center;
+    gap:6px;
 }
 
 #zoom{
     flex:1;
+    min-width:60px;
+}
+
+#zoomText{
+    font-size:12px;
+    min-width:34px;
 }
 
 #status{
-    margin-top:15px;
+    margin-top:7px;
     text-align:center;
-    font-size:12px;
-    opacity:.45;
+    font-size:11px;
+    opacity:.40;
 }
 
 </style>
@@ -189,96 +274,182 @@ button{
 
 <body>
 
+<!-- =========================
+     CAMERA AREA
+========================= -->
+
 <div id="cameraArea">
 
     <video
     id="video"
     autoplay
     playsinline
-    muted></video>
+    muted>
+    </video>
 
     <canvas id="overlay"></canvas>
 
-    <canvas
-    id="analysisCanvas"
-    width="240"
-    height="180"></canvas>
-
     <div id="info">
 
-        <div id="score">
-            -- <small>%</small>
+        <div id="modeTitle">
+            🏞️ 風景模式
         </div>
 
         <div id="composition">
-            等待分析
+            三分法
         </div>
 
         <div id="desc">
-            對準道路、步道、走廊或鐵軌
+            將主體安排在三分交叉點附近
         </div>
 
     </div>
 
     <div id="message">
-        ✨ 固定鏡頭後，按 AI 自動分析
+        ✨ 選擇拍攝模式，再按 AI 構圖建議
     </div>
 
     <div id="version">
-        V5.8.8
-    </div>
-
-    <div id="debug">
-        L:--｜R:--
+        V6.0
     </div>
 
 </div>
 
 
+<!-- =========================
+     CONTROLS
+========================= -->
+
 <div id="controls">
 
-    <div id="cameraButtons">
+    <!-- 六大模式 -->
+
+    <div id="modeRow">
+
+        <button
+        class="modeBtn active"
+        data-mode="landscape"
+        onclick="selectMode('landscape',this)">
+
+            <span class="modeIcon">🏞️</span>
+            風景
+
+        </button>
+
+
+        <button
+        class="modeBtn"
+        data-mode="street"
+        onclick="selectMode('street',this)">
+
+            <span class="modeIcon">🏙️</span>
+            街景
+
+        </button>
+
+
+        <button
+        class="modeBtn"
+        data-mode="portrait"
+        onclick="selectMode('portrait',this)">
+
+            <span class="modeIcon">👤</span>
+            人像
+
+        </button>
+
+
+        <button
+        class="modeBtn"
+        data-mode="night"
+        onclick="selectMode('night',this)">
+
+            <span class="modeIcon">🌙</span>
+            夜景
+
+        </button>
+
+
+        <button
+        class="modeBtn"
+        data-mode="indoor"
+        onclick="selectMode('indoor',this)">
+
+            <span class="modeIcon">🏠</span>
+            室內
+
+        </button>
+
+
+        <button
+        class="modeBtn"
+        data-mode="food"
+        onclick="selectMode('food',this)">
+
+            <span class="modeIcon">🍜</span>
+            美食
+
+        </button>
+
+    </div>
+
+
+    <!-- 構圖選擇 -->
+
+    <div id="compositionRow">
+    </div>
+
+
+    <!-- AI -->
+
+    <button
+    id="aiButton"
+    onclick="runAI()">
+        ✨ AI 構圖建議
+    </button>
+
+
+    <!-- CAMERA -->
+
+    <div id="bottomRow">
 
         <button
         class="cameraBtn"
         onclick="changeCamera('user')">
-        🤳 前鏡頭
+            🤳 前鏡
         </button>
 
         <button
         class="cameraBtn"
         onclick="changeCamera('environment')">
-        📷 後鏡頭
+            📷 後鏡
         </button>
 
-    </div>
+        <div id="zoomArea">
 
-    <button
-    id="aiButton"
-    onclick="runAI()">
-    ✨ AI 自動分析
-    </button>
+            <span style="font-size:12px">
+                倍率
+            </span>
 
-    <div id="zoomRow">
+            <input
+            id="zoom"
+            type="range"
+            min="1"
+            max="3"
+            step=".1"
+            value="1">
 
-        <span>倍率</span>
+            <span id="zoomText">
+                1.0×
+            </span>
 
-        <input
-        id="zoom"
-        type="range"
-        min="1"
-        max="3"
-        step=".1"
-        value="1">
-
-        <span id="zoomText">
-            1.0×
-        </span>
+        </div>
 
     </div>
+
 
     <div id="status">
-        V5.8.8｜道路底部入口鎖定版
+        V6.0｜六大拍攝模式架構版
     </div>
 
 </div>
@@ -288,48 +459,55 @@ button{
 
 /* =========================================================
 
- AI 構圖助手 V5.8.8
+ AI 構圖助手 V6.0
 
- 道路底部入口鎖定版
+ 六大拍攝模式架構版
 
+ 模式：
 
- V5.8.6 問題：
-
- 中段樹枝
- 灌木
- 樹幹斜線
-
- 都可能直接成為道路候選。
-
-
- V5.8.8：
-
- ① Sobel 邊緣
-
- ② 只在畫面底部尋找道路種子
-
- ③ 左種子必須向右上延伸
-    右種子必須向左上延伸
-
- ④ 從種子開始往上追蹤
-
- ⑤ 每一層只接受：
-    - 距離預測位置近
-    - 方向相近
-    - 有足夠邊緣強度
-
- ⑥ 形成道路點群
-
- ⑦ Robust regression 擬合左右邊界
-
- ⑧ 左右擬合線交會 = VP
+ 1. 風景
+ 2. 街景
+ 3. 人像
+ 4. 夜景
+ 5. 室內
+ 6. 美食
 
 
- DEBUG：
+ V6.0 目標：
 
- 白點 = 實際道路追蹤證據
- 黃線 = 擬合道路邊界
- 綠點 = VP
+ 不再把道路消失點當成整個 App 核心。
+
+ 改為：
+
+ 拍攝模式
+ ↓
+ 構圖知識庫
+ ↓
+ 場景分析
+ ↓
+ 選擇構圖
+ ↓
+ 畫輔助線
+ ↓
+ 未來加入手機移動導航
+
+
+ V6.0：
+
+ 目前先完成：
+
+ ✓ 六大模式
+ ✓ 每個模式獨立構圖法
+ ✓ 構圖模板
+ ✓ 輔助線
+ ✓ 相機
+ ✓ 前後鏡頭
+ ✓ Zoom
+
+ 下一階段：
+
+ V6.1
+ 加入場景辨識與自動構圖選擇
 
 ========================================================= */
 
@@ -347,17 +525,11 @@ document.getElementById("overlay");
 var ctx =
 overlay.getContext("2d");
 
-var analysisCanvas =
-document.getElementById("analysisCanvas");
+var cameraArea =
+document.getElementById("cameraArea");
 
-var ax =
-analysisCanvas.getContext(
-    "2d",
-    {willReadFrequently:true}
-);
-
-var scoreEl =
-document.getElementById("score");
+var modeTitle =
+document.getElementById("modeTitle");
 
 var compositionEl =
 document.getElementById("composition");
@@ -368,14 +540,14 @@ document.getElementById("desc");
 var messageEl =
 document.getElementById("message");
 
+var compositionRow =
+document.getElementById("compositionRow");
+
 var zoom =
 document.getElementById("zoom");
 
 var zoomText =
 document.getElementById("zoomText");
-
-var debugEl =
-document.getElementById("debug");
 
 
 /* =========================================================
@@ -387,86 +559,314 @@ var stream = null;
 var facing =
 "environment";
 
-var analyzing =
-false;
+var currentMode =
+"landscape";
 
-var detectedPoint =
-null;
-
-var debugResult =
-null;
+var currentComposition =
+"thirds";
 
 
 /* =========================================================
- ANALYSIS SIZE
+ COMPOSITION DATABASE
 ========================================================= */
 
-var AW = 240;
-var AH = 180;
+var modeDatabase = {
 
 
-/* =========================================================
- UTIL
-========================================================= */
+/* =========================
+   LANDSCAPE
+========================= */
 
-function clamp(v,min,max){
+landscape:{
 
-    return Math.max(
-        min,
-        Math.min(max,v)
-    );
+    icon:"🏞️",
 
-}
+    name:"風景",
 
+    default:"thirds",
 
-function median(arr){
+    compositions:[
 
-    if(
-        !arr ||
-        arr.length===0
-    ){
-        return 0;
-    }
+        {
+            id:"thirds",
+            name:"三分法",
+            desc:"將地平線與主要景物安排在三分位置"
+        },
 
-    var a =
-    arr.slice().sort(
-        function(x,y){
-            return x-y;
+        {
+            id:"golden",
+            name:"黃金比例",
+            desc:"利用黃金比例安排視覺重心"
+        },
+
+        {
+            id:"leading",
+            name:"引導線",
+            desc:"利用道路、河流或山脈線條引導視線"
+        },
+
+        {
+            id:"center",
+            name:"中央構圖",
+            desc:"將主要風景主體放在畫面中央"
+        },
+
+        {
+            id:"frame",
+            name:"框景",
+            desc:"利用樹木、門窗或前景包圍主體"
         }
-    );
 
-    var m =
-    Math.floor(
-        a.length/2
-    );
+    ]
 
-    if(a.length%2){
-        return a[m];
-    }
+},
 
-    return(
-        a[m-1]+a[m]
-    )/2;
+
+/* =========================
+   STREET
+========================= */
+
+street:{
+
+    icon:"🏙️",
+
+    name:"街景",
+
+    default:"leading",
+
+    compositions:[
+
+        {
+            id:"leading",
+            name:"引導線",
+            desc:"利用道路與建築線條把視線帶向主體"
+        },
+
+        {
+            id:"perspective",
+            name:"單點透視",
+            desc:"利用道路或建築的收斂方向強化縱深"
+        },
+
+        {
+            id:"symmetry",
+            name:"對稱",
+            desc:"利用左右對稱創造穩定且強烈的視覺效果"
+        },
+
+        {
+            id:"thirds",
+            name:"三分法",
+            desc:"將街景主體安排在三分位置"
+        },
+
+        {
+            id:"diagonal",
+            name:"對角線",
+            desc:"利用斜向線條增加畫面的動態感"
+        }
+
+    ]
+
+},
+
+
+/* =========================
+   PORTRAIT
+========================= */
+
+portrait:{
+
+    icon:"👤",
+
+    name:"人像",
+
+    default:"thirdsPortrait",
+
+    compositions:[
+
+        {
+            id:"thirdsPortrait",
+            name:"三分人像",
+            desc:"將人物眼睛與身體安排在三分位置"
+        },
+
+        {
+            id:"centerPortrait",
+            name:"中央人像",
+            desc:"人物置中，強調臉部與視線"
+        },
+
+        {
+            id:"headroom",
+            name:"視線留白",
+            desc:"在人物視線方向保留適當空間"
+        },
+
+        {
+            id:"fullbody",
+            name:"全身構圖",
+            desc:"保留頭頂與腳部空間，避免關節位置被裁切"
+        },
+
+        {
+            id:"environmentPortrait",
+            name:"環境人像",
+            desc:"人物與周圍環境一起成為構圖的一部分"
+        }
+
+    ]
+
+},
+
+
+/* =========================
+   NIGHT
+========================= */
+
+night:{
+
+    icon:"🌙",
+
+    name:"夜景",
+
+    default:"thirds",
+
+    compositions:[
+
+        {
+            id:"thirds",
+            name:"三分夜景",
+            desc:"利用三分位置安排夜景主體與天空"
+        },
+
+        {
+            id:"reflection",
+            name:"倒影構圖",
+            desc:"利用水面或玻璃倒影形成上下呼應"
+        },
+
+        {
+            id:"leading",
+            name:"燈光引導",
+            desc:"利用街燈與光軌形成視覺引導"
+        },
+
+        {
+            id:"center",
+            name:"中央構圖",
+            desc:"將夜景主要光源或建築置中"
+        },
+
+        {
+            id:"symmetry",
+            name:"夜景對稱",
+            desc:"利用建築與燈光形成左右對稱"
+        }
+
+    ]
+
+},
+
+
+/* =========================
+   INDOOR
+========================= */
+
+indoor:{
+
+    icon:"🏠",
+
+    name:"室內",
+
+    default:"symmetry",
+
+    compositions:[
+
+        {
+            id:"symmetry",
+            name:"對稱",
+            desc:"保持左右平衡，適合室內空間與建築"
+        },
+
+        {
+            id:"perspective",
+            name:"空間透視",
+            desc:"利用牆面與走廊線條表現空間深度"
+        },
+
+        {
+            id:"thirds",
+            name:"三分法",
+            desc:"將家具或主要物件安排在三分位置"
+        },
+
+        {
+            id:"frame",
+            name:"門框構圖",
+            desc:"利用門框或窗框形成天然畫框"
+        },
+
+        {
+            id:"center",
+            name:"中央構圖",
+            desc:"將室內主要視覺中心放在畫面中央"
+        }
+
+    ]
+
+},
+
+
+/* =========================
+   FOOD
+========================= */
+
+food:{
+
+    icon:"🍜",
+
+    name:"美食",
+
+    default:"foodCenter",
+
+    compositions:[
+
+        {
+            id:"foodCenter",
+            name:"置中美食",
+            desc:"將主要餐點放在畫面視覺中心"
+        },
+
+        {
+            id:"foodThirds",
+            name:"三分美食",
+            desc:"將主餐安排在三分交叉點"
+        },
+
+        {
+            id:"foodDiagonal",
+            name:"對角排列",
+            desc:"多個餐盤沿對角線排列增加層次"
+        },
+
+        {
+            id:"foodTop",
+            name:"俯拍構圖",
+            desc:"從上方整理餐盤與桌面的幾何關係"
+        },
+
+        {
+            id:"fill",
+            name:"滿版特寫",
+            desc:"靠近餐點，減少背景干擾"
+        }
+
+    ]
 
 }
 
-
-function angleDifference(a,b){
-
-    var d =
-    Math.abs(a-b);
-
-    while(d>Math.PI){
-        d-=Math.PI;
-    }
-
-    if(d>Math.PI/2){
-        d=Math.PI-d;
-    }
-
-    return Math.abs(d);
-
-}
+};
 
 
 /* =========================================================
@@ -492,9 +892,6 @@ async function startCamera(){
             );
 
         }
-
-
-        stream = null;
 
 
         if(
@@ -543,9 +940,12 @@ async function startCamera(){
 
         resizeOverlay();
 
-        resetAnalysis();
+
+        messageEl.innerText =
+        "✨ 選擇拍攝模式，再按 AI 構圖建議";
 
     }
+
     catch(error){
 
         console.log(
@@ -562,50 +962,28 @@ async function startCamera(){
         "UnknownError";
 
 
-        compositionEl.innerText =
-        "相機無法開啟";
-
-
-        if(
-            name==="NotAllowedError"
-        ){
-
-            descEl.innerText =
-            "相機權限被拒絕";
+        if(name==="NotAllowedError"){
 
             messageEl.innerText =
-            "❌ NotAllowedError｜請允許網站使用相機";
+            "❌ 請允許網站使用相機";
 
         }
 
-        else if(
-            name==="NotFoundError"
-        ){
-
-            descEl.innerText =
-            "找不到可用相機";
+        else if(name==="NotFoundError"){
 
             messageEl.innerText =
-            "❌ NotFoundError｜找不到鏡頭";
+            "❌ 找不到可用相機";
 
         }
 
-        else if(
-            name==="NotReadableError"
-        ){
-
-            descEl.innerText =
-            "相機可能被其他程式占用";
+        else if(name==="NotReadableError"){
 
             messageEl.innerText =
-            "❌ NotReadableError｜相機無法讀取";
+            "❌ 相機可能被其他程式占用";
 
         }
 
         else{
-
-            descEl.innerText =
-            name;
 
             messageEl.innerText =
             "❌ 相機錯誤："+name;
@@ -628,2818 +1006,391 @@ async function changeCamera(mode){
 
 
 /* =========================================================
- RESET
+ MODE
 ========================================================= */
 
-function resetAnalysis(){
+function selectMode(
+    mode,
+    button
+){
 
-    analyzing =
-    false;
-
-    detectedPoint =
-    null;
-
-    debugResult =
-    null;
+    currentMode =
+    mode;
 
 
-    scoreEl.innerHTML =
-    '-- <small>%</small>';
+    var buttons =
+    document.querySelectorAll(
+        ".modeBtn"
+    );
 
 
-    compositionEl.innerText =
-    "等待分析";
+    buttons.forEach(
+        function(btn){
+
+            btn.classList
+            .remove("active");
+
+        }
+    );
 
 
-    descEl.innerText =
-    "先鎖定道路底部入口，再向上追蹤";
+    if(button){
+
+        button.classList
+        .add("active");
+
+    }
+
+
+    var data =
+    modeDatabase[mode];
+
+
+    currentComposition =
+    data.default;
+
+
+    modeTitle.innerText =
+    data.icon+
+    " "+
+    data.name+
+    "模式";
+
+
+    buildCompositionButtons();
+
+
+    selectComposition(
+        currentComposition
+    );
 
 
     messageEl.innerText =
-    "✨ 固定鏡頭後，按 AI 自動分析";
-
-
-    debugEl.innerText =
-    "L:--｜R:--";
+    "✨ "+
+    data.name+
+    "模式｜按 AI 取得構圖建議";
 
 }
 
 
 /* =========================================================
- RUN AI
+ BUILD COMPOSITION BUTTONS
+========================================================= */
+
+function buildCompositionButtons(){
+
+    compositionRow.innerHTML =
+    "";
+
+
+    var data =
+    modeDatabase[currentMode];
+
+
+    data.compositions
+    .forEach(
+        function(comp){
+
+            var button =
+            document.createElement(
+                "button"
+            );
+
+
+            button.className =
+            "compBtn";
+
+
+            button.innerText =
+            comp.name;
+
+
+            button.dataset.id =
+            comp.id;
+
+
+            button.onclick =
+            function(){
+
+                selectComposition(
+                    comp.id
+                );
+
+            };
+
+
+            compositionRow
+            .appendChild(
+                button
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+ SELECT COMPOSITION
+========================================================= */
+
+function selectComposition(id){
+
+    currentComposition =
+    id;
+
+
+    var data =
+    modeDatabase[currentMode];
+
+
+    var comp =
+    data.compositions.find(
+        function(c){
+            return c.id===id;
+        }
+    );
+
+
+    if(!comp){
+        return;
+    }
+
+
+    compositionEl.innerText =
+    comp.name;
+
+
+    descEl.innerText =
+    comp.desc;
+
+
+    var buttons =
+    document.querySelectorAll(
+        ".compBtn"
+    );
+
+
+    buttons.forEach(
+        function(btn){
+
+            if(
+                btn.dataset.id===id
+            ){
+
+                btn.classList
+                .add("active");
+
+            }
+
+            else{
+
+                btn.classList
+                .remove("active");
+
+            }
+
+        }
+    );
+
+
+    drawComposition();
+
+}
+
+
+/* =========================================================
+ AI
+
+ V6.0：
+
+ 這裡先建立「決策入口」。
+
+ 現在會依照模式選擇預設推薦。
+
+ V6.1 開始，
+ 這裡會接真正的畫面分析。
 ========================================================= */
 
 function runAI(){
 
-    if(analyzing){
-        return;
-    }
-
-
-    if(video.readyState<2){
-
-        messageEl.innerText =
-        "⏳ 鏡頭還沒準備完成";
-
-        return;
-
-    }
-
-
-    analyzing =
-    true;
-
-    detectedPoint =
-    null;
-
-    debugResult =
-    null;
-
-
-    scoreEl.innerHTML =
-    '-- <small>%</small>';
-
-
-    compositionEl.innerText =
-    "追蹤道路邊界";
-
-
-    descEl.innerText =
-    "從畫面底部向遠方追蹤";
-
-
-    messageEl.innerText =
-    "🔍 鎖定道路底部左右入口...";
-
-
-    var results = [];
-
-    var frame = 0;
-
-
-    var timer =
-    setInterval(
-        function(){
-
-            var r =
-            analyzeRoad();
-
-            if(r){
-                results.push(r);
-            }
-
-            frame++;
-
-
-            if(frame>=7){
-
-                clearInterval(timer);
-
-                analyzing =
-                false;
-
-                finishAnalysis(
-                    results
-                );
-
-            }
-
-        },
-        170
-    );
-
-}
-
-
-/* =========================================================
- FINISH
-========================================================= */
-
-function finishAnalysis(results){
-
-    if(results.length<3){
-
-        failAnalysis(
-            "找不到穩定的左右道路"
-        );
-
-        return;
-
-    }
-
-
-    var mx =
-    median(
-        results.map(
-            function(r){
-                return r.vx;
-            }
-        )
-    );
-
-
-    var my =
-    median(
-        results.map(
-            function(r){
-                return r.vy;
-            }
-        )
-    );
-
-
-    var distances =
-    results.map(
-        function(r){
-
-            return Math.hypot(
-                r.vx-mx,
-                r.vy-my
-            );
-
-        }
-    );
-
-
-    var md =
-    median(distances);
-
-
-    var limit =
-    Math.max(
-        .035,
-        md*2.0
-    );
-
-
-    var filtered =
-    results.filter(
-        function(r){
-
-            return(
-                Math.hypot(
-                    r.vx-mx,
-                    r.vy-my
-                )
-                <=limit
-            );
-
-        }
-    );
-
-
-    if(filtered.length<3){
-
-        failAnalysis(
-            "道路交點不穩定"
-        );
-
-        return;
-
-    }
-
-
-    mx =
-    median(
-        filtered.map(
-            function(r){
-                return r.vx;
-            }
-        )
-    );
-
-
-    my =
-    median(
-        filtered.map(
-            function(r){
-                return r.vy;
-            }
-        )
-    );
-
-
-    /*
-    找最接近多幀中位數的一幀
-    當 DEBUG 顯示。
-    */
-
-    var best =
-    filtered[0];
-
-    var bestD =
-    999;
-
-
-    for(
-        var i=0;
-        i<filtered.length;
-        i++
-    ){
-
-        var d =
-        Math.hypot(
-            filtered[i].vx-mx,
-            filtered[i].vy-my
-        );
-
-
-        if(d<bestD){
-
-            bestD =
-            d;
-
-            best =
-            filtered[i];
-
-        }
-
-    }
-
-
-    detectedPoint = {
-
-        vx:mx,
-        vy:my
-
-    };
-
-
-    debugResult = {
-
-        leftPoints:
-        best.leftPoints,
-
-        rightPoints:
-        best.rightPoints,
-
-        leftLine:
-        best.leftLine,
-
-        rightLine:
-        best.rightLine,
-
-        leftSeed:
-        best.leftSeed,
-
-        rightSeed:
-        best.rightSeed
-
-    };
-
-
-    var spread =
-    median(
-        filtered.map(
-            function(r){
-
-                return Math.hypot(
-                    r.vx-mx,
-                    r.vy-my
-                );
-
-            }
-        )
-    );
-
-
-    var stability =
-    clamp(
-        1-spread/.09,
-        0,
-        1
-    );
-
-
-    var base =
-    median(
-        filtered.map(
-            function(r){
-                return r.confidence;
-            }
-        )
-    );
-
-
-    var confidence =
-    Math.round(
-        clamp(
-            (
-                base*.72+
-                stability*.28
-            )*100,
-            0,
-            90
-        )
-    );
-
-
-    scoreEl.innerHTML =
-    confidence+
-    ' <small>%</small>';
-
-
-    compositionEl.innerText =
-    "◎ 道路單點透視";
-
-
-    descEl.innerText =
-    "藍點＝底部入口｜白點＝追蹤證據｜黃線＝驗證邊界";
-
-
-    messageEl.innerText =
-    "🔎 檢查藍點是否落在道路底部左右入口";
-
-
-    debugEl.innerText =
-    "L:"+
-    best.leftPoints.length+
-    "｜R:"+
-    best.rightPoints.length;
-
-}
-
-
-/* =========================================================
- FAIL
-========================================================= */
-
-function failAnalysis(reason){
-
-    detectedPoint =
-    null;
-
-    debugResult =
-    null;
-
-
-    scoreEl.innerHTML =
-    '-- <small>%</small>';
-
-
-    compositionEl.innerText =
-    "道路追蹤不足";
-
-
-    descEl.innerText =
-    reason;
-
-
-    messageEl.innerText =
-    "📱 調整畫面後重新分析";
-
-
-    debugEl.innerText =
-    "L:0｜R:0";
-
-}
-
-
-/* =========================================================
- EDGE MAP
-========================================================= */
-
-function buildEdges(){
-
-    ax.drawImage(
-        video,
-        0,
-        0,
-        AW,
-        AH
-    );
-
-
-    var image =
-    ax.getImageData(
-        0,
-        0,
-        AW,
-        AH
-    );
-
-
     var data =
-    image.data;
+    modeDatabase[currentMode];
 
 
-    var gray =
-    new Float32Array(
-        AW*AH
-    );
-
-
-    for(
-        var i=0;
-        i<AW*AH;
-        i++
-    ){
-
-        var p =
-        i*4;
-
-
-        gray[i] =
-        data[p]*.299+
-        data[p+1]*.587+
-        data[p+2]*.114;
-
-    }
+    var recommendation =
+    data.default;
 
 
     /*
-    輕度平滑。
+    V6.0 先採模式預設構圖。
 
-    主要壓制：
-    葉子
-    草
-    磁磚細紋
+    未來 V6.1：
+
+    analyzeScene()
+        ↓
+    detectSubject()
+        ↓
+    detectLines()
+        ↓
+    detectHorizon()
+        ↓
+    compositionDecision()
     */
 
-    var smooth =
-    new Float32Array(
-        AW*AH
+
+    selectComposition(
+        recommendation
     );
 
 
-    for(
-        var y=2;
-        y<AH-2;
-        y++
-    ){
-
-        for(
-            var x=2;
-            x<AW-2;
-            x++
-        ){
-
-            var id =
-            y*AW+x;
-
-
-            smooth[id] =
-            (
-                gray[id]*4+
-                gray[id-1]+
-                gray[id+1]+
-                gray[id-AW]+
-                gray[id+AW]
-            )/8;
-
-        }
-
-    }
-
-
-    var magnitude =
-    new Float32Array(
-        AW*AH
-    );
-
-
-    var angle =
-    new Float32Array(
-        AW*AH
-    );
-
-
-    var values = [];
-
-
-    for(
-        var yy=2;
-        yy<AH-2;
-        yy++
-    ){
-
-        for(
-            var xx=2;
-            xx<AW-2;
-            xx++
-        ){
-
-            var id2 =
-            yy*AW+xx;
-
-
-            var gx =
-
-            -smooth[id2-AW-1]
-            +
-            smooth[id2-AW+1]
-
-            -
-
-            2*smooth[id2-1]
-            +
-            2*smooth[id2+1]
-
-            -
-
-            smooth[id2+AW-1]
-            +
-            smooth[id2+AW+1];
-
-
-            var gy =
-
-            -smooth[id2-AW-1]
-            -
-            2*smooth[id2-AW]
-            -
-            smooth[id2-AW+1]
-
-            +
-
-            smooth[id2+AW-1]
-            +
-            2*smooth[id2+AW]
-            +
-            smooth[id2+AW+1];
-
-
-            var mag =
-            Math.hypot(
-                gx,
-                gy
-            );
-
-
-            magnitude[id2] =
-            mag;
-
-
-            var a =
-            Math.atan2(
-                gy,
-                gx
-            )
-            +
-            Math.PI/2;
-
-
-            while(
-                a>Math.PI/2
-            ){
-                a-=Math.PI;
-            }
-
-
-            while(
-                a<-Math.PI/2
-            ){
-                a+=Math.PI;
-            }
-
-
-            angle[id2] =
-            a;
-
-
-            values.push(mag);
-
-        }
-
-    }
-
-
-    if(values.length===0){
-        return null;
-    }
-
-
-    values.sort(
-        function(a,b){
-            return a-b;
+    var comp =
+    data.compositions.find(
+        function(c){
+            return c.id===
+            recommendation;
         }
     );
 
 
-    var threshold =
-    values[
-        Math.floor(
-            values.length*.895
-        )
-    ];
-
-
-    if(
-        !threshold ||
-        threshold<12
-    ){
-        return null;
-    }
-
-
-    return{
-
-        magnitude:
-        magnitude,
-
-        angle:
-        angle,
-
-        threshold:
-        threshold
-
-    };
+    messageEl.innerText =
+    "✨ AI 建議："+
+    comp.name+
+    "｜依照黃色輔助線調整畫面";
 
 }
 
 
 /* =========================================================
- LINE PROJECTION
+ DRAW
 ========================================================= */
 
-function projectXAtY(
-    x,
-    y,
-    angle,
-    targetY
-){
+function clearOverlay(){
 
-    var dx =
-    Math.cos(angle);
-
-    var dy =
-    Math.sin(angle);
-
-
-    if(
-        Math.abs(dy)<.05
-    ){
-        return null;
-    }
-
-
-    var t =
-    (targetY-y)/dy;
-
-
-    return(
-        x+dx*t
-    );
-
-}
-
-
-/* =========================================================
- FIND BOTTOM SEEDS
-
- 最重要的 V5.8.8 改動。
-
- 道路線不能從樹冠開始。
-
- 種子只能出現在：
- AH * 0.65 ~ AH * 0.96
-
- 左種子：
- 來源位於左側，
- 往上必須向右收。
-
- 右種子：
- 來源位於右側，
- 往上必須向左收。
-========================================================= */
-
-function findSeeds(
-    magnitude,
-    angle,
-    threshold
-){
-
-    var left = [];
-
-    var right = [];
-
-
-    var startY =
-    Math.floor(
-        AH*.70
-    );
-
-
-    var endY =
-    Math.floor(
-        AH*.96
-    );
-
-
-    var center =
-    AW*.50;
-
-
-    for(
-        var y=startY;
-        y<=endY;
-        y+=3
-    ){
-
-        for(
-            var x=4;
-            x<AW-4;
-            x+=3
-        ){
-
-            var id =
-            y*AW+x;
-
-
-            if(
-                magnitude[id]
-                <
-                threshold*.90
-            ){
-                continue;
-            }
-
-
-            var a =
-            angle[id];
-
-
-            var absA =
-            Math.abs(a);
-
-
-            /*
-            排除：
-
-            太水平的磁磚橫線
-            太垂直的柱子/樹幹
-            */
-
-            if(
-                absA<.18 ||
-                absA>1.36
-            ){
-                continue;
-            }
-
-
-            /*
-            投影到畫面較上方，
-            看是不是往中心收。
-            */
-
-            var targetY =
-            AH*.40;
-
-
-            var px =
-            projectXAtY(
-                x,
-                y,
-                a,
-                targetY
-            );
-
-
-            if(
-                px===null ||
-                !isFinite(px)
-            ){
-                continue;
-            }
-
-
-            /*
-            左道路種子
-            */
-
-            if(
-                x<
-                center-AW*.055
-            ){
-
-                if(
-                    px>
-                    x+AW*.025
-                    &&
-                    px<
-                    AW*.75
-                ){
-
-                    left.push({
-
-                        x:x,
-                        y:y,
-                        angle:a,
-
-                        mag:
-                        magnitude[id],
-
-                        projectedX:
-                        px
-
-                    });
-
-                }
-
-            }
-
-
-            /*
-            右道路種子
-            */
-
-            else if(
-                x>
-                center+AW*.055
-            ){
-
-                if(
-                    px<
-                    x-AW*.025
-                    &&
-                    px>
-                    AW*.25
-                ){
-
-                    right.push({
-
-                        x:x,
-                        y:y,
-                        angle:a,
-
-                        mag:
-                        magnitude[id],
-
-                        projectedX:
-                        px
-
-                    });
-
-                }
-
-            }
-
-        }
-
-    }
-
-
-    return{
-
-        left:
-        selectSeeds(
-            left,
-            "left"
-        ),
-
-        right:
-        selectSeeds(
-            right,
-            "right"
-        )
-
-    };
-
-}
-
-
-/* =========================================================
- SEED SELECTION
-
- 不只是找最亮。
-
- 優先：
- 1. 來源低
- 2. 來源離中央適中
- 3. 投影後往中心
- 4. 不在極端畫面邊緣
-========================================================= */
-
-function selectSeeds(
-    seeds,
-    side
-){
-
-    if(seeds.length===0){
-        return [];
-    }
-
-
-    var center =
-    AW*.50;
-
-
-    for(
-        var i=0;
-        i<seeds.length;
-        i++
-    ){
-
-        var S =
-        seeds[i];
-
-
-        var depth =
-        clamp(
-            (
-                S.y-
-                AH*.62
-            )
-            /
-            (
-                AH*.34
-            ),
-            0,
-            1
-        );
-
-
-        var sourceDistance =
-        Math.abs(
-            S.x-center
-        );
-
-
-        /*
-        道路邊界通常不是：
-        正中央，也不是畫面最外側。
-        */
-
-        var positionScore =
-        1-
-        clamp(
-            Math.abs(
-                sourceDistance-
-                AW*.27
-            )
-            /
-            (AW*.30),
-            0,
-            1
-        );
-
-
-        var convergence =
-        Math.abs(
-            S.projectedX-
-            S.x
-        );
-
-
-        var convergenceScore =
-        clamp(
-            convergence/
-            (AW*.22),
-            .15,
-            1
-        );
-
-
-        S.score =
-        (
-            .45+
-            depth*.55
-        )
-        *
-        (
-            .45+
-            positionScore*.55
-        )
-        *
-        (
-            .55+
-            convergenceScore*.45
-        );
-
-    }
-
-
-    seeds.sort(
-        function(a,b){
-            return b.score-a.score;
-        }
-    );
-
-
-    /*
-    避免同一條粗邊緣
-    產生一大堆重複種子。
-    */
-
-    var selected = [];
-
-
-    for(
-        var j=0;
-        j<seeds.length;
-        j++
-    ){
-
-        var S2 =
-        seeds[j];
-
-
-        var tooClose =
-        false;
-
-
-        for(
-            var k=0;
-            k<selected.length;
-            k++
-        ){
-
-            var D =
-            selected[k];
-
-
-            if(
-                Math.hypot(
-                    S2.x-D.x,
-                    S2.y-D.y
-                )
-                <
-                12
-                &&
-                angleDifference(
-                    S2.angle,
-                    D.angle
-                )
-                <
-                .16
-            ){
-
-                tooClose =
-                true;
-
-                break;
-
-            }
-
-        }
-
-
-        if(tooClose){
-            continue;
-        }
-
-
-        selected.push(S2);
-
-
-        /*
-        每側最多測 8 個種子
-        */
-
-        if(
-            selected.length>=8
-        ){
-            break;
-        }
-
-    }
-
-
-    return selected;
-
-}
-
-
-/* =========================================================
- FIND EDGE NEAR PREDICTION
-
- 在某一個 y 層附近，
- 尋找最符合預測道路位置的邊緣。
-========================================================= */
-
-function findEdgeNear(
-    targetX,
-    targetY,
-    expectedAngle,
-    side,
-    magnitude,
-    edgeAngle,
-    threshold,
-    radius
-){
-
-    var best =
-    null;
-
-
-    var minX =
-    Math.max(
-        2,
-        Math.floor(
-            targetX-radius
-        )
-    );
-
-
-    var maxX =
-    Math.min(
-        AW-3,
-        Math.ceil(
-            targetX+radius
-        )
-    );
-
-
-    var minY =
-    Math.max(
-        2,
-        Math.floor(
-            targetY-2
-        )
-    );
-
-
-    var maxY =
-    Math.min(
-        AH-3,
-        Math.ceil(
-            targetY+2
-        )
-    );
-
-
-    for(
-        var y=minY;
-        y<=maxY;
-        y++
-    ){
-
-        for(
-            var x=minX;
-            x<=maxX;
-            x++
-        ){
-
-            var id =
-            y*AW+x;
-
-
-            var mag =
-            magnitude[id];
-
-
-            if(
-                mag<
-                threshold*.58
-            ){
-                continue;
-            }
-
-
-            var a =
-            edgeAngle[id];
-
-
-            var absA =
-            Math.abs(a);
-
-
-            if(
-                absA<.13 ||
-                absA>1.42
-            ){
-                continue;
-            }
-
-
-            /*
-            與目前道路方向不能差太多。
-            */
-
-            var ad =
-            angleDifference(
-                a,
-                expectedAngle
-            );
-
-
-            if(
-                ad>.30
-            ){
-                continue;
-            }
-
-
-            /*
-            再確認方向確實往中心。
-            */
-
-            var upperX =
-            projectXAtY(
-                x,
-                y,
-                a,
-                Math.max(
-                    AH*.32,
-                    y-25
-                )
-            );
-
-
-            if(
-                upperX===null ||
-                !isFinite(upperX)
-            ){
-                continue;
-            }
-
-
-            if(
-                side==="left"
-            ){
-
-                if(
-                    upperX<=x
-                ){
-                    continue;
-                }
-
-            }
-            else{
-
-                if(
-                    upperX>=x
-                ){
-                    continue;
-                }
-
-            }
-
-
-            var distance =
-            Math.abs(
-                x-targetX
-            );
-
-
-            var distanceScore =
-            1-
-            clamp(
-                distance/
-                radius,
-                0,
-                1
-            );
-
-
-            var angleScore =
-            1-
-            clamp(
-                ad/.30,
-                0,
-                1
-            );
-
-
-            var magScore =
-            clamp(
-                mag/
-                (threshold*2.2),
-                .2,
-                1
-            );
-
-
-            var score =
-
-            distanceScore*.48
-
-            +
-
-            angleScore*.32
-
-            +
-
-            magScore*.20;
-
-
-            if(
-                !best ||
-                score>best.score
-            ){
-
-                best = {
-
-                    x:x,
-                    y:y,
-                    angle:a,
-                    score:score,
-                    mag:mag
-
-                };
-
-            }
-
-        }
-
-    }
-
-
-    return best;
-
-}
-
-
-/* =========================================================
- TRACE FROM SEED
-
- 從近景往上追。
-
- 每次只上移 5 pixel。
-
- 找不到時可以短暫跳過，
- 但不能連續失聯太久。
-========================================================= */
-
-function traceSeed(
-    seed,
-    side,
-    magnitude,
-    edgeAngle,
-    threshold
-){
-
-    var points = [];
-
-
-    points.push({
-
-        x:seed.x,
-        y:seed.y,
-        angle:seed.angle
-
-    });
-
-
-    var currentX =
-    seed.x;
-
-    var currentY =
-    seed.y;
-
-    var currentAngle =
-    seed.angle;
-
-
-    var misses = 0;
-
-
-    /*
-    追到畫面約 35% 高度。
-
-    不追進樹冠最上方。
-    */
-
-    var minY =
-    AH*.34;
-
-
-    while(
-        currentY>minY
-    ){
-
-        var nextY =
-        currentY-5;
-
-
-        /*
-        依照目前方向預測下一層 X。
-        */
-
-        var predictedX =
-        projectXAtY(
-            currentX,
-            currentY,
-            currentAngle,
-            nextY
-        );
-
-
-        if(
-            predictedX===null ||
-            !isFinite(predictedX)
-        ){
-            break;
-        }
-
-
-        /*
-        越往遠方，
-        道路變細，
-        搜尋半徑稍微縮小。
-        */
-
-        var relative =
-        nextY/AH;
-
-
-        var radius =
-        relative>.65
-        ?
-        10
-        :
-        relative>.48
-        ?
-        8
-        :
-        6;
-
-
-        var found =
-        findEdgeNear(
-            predictedX,
-            nextY,
-            currentAngle,
-            side,
-            magnitude,
-            edgeAngle,
-            threshold,
-            radius
-        );
-
-
-        if(found){
-
-            points.push({
-
-                x:found.x,
-                y:found.y,
-                angle:found.angle
-
-            });
-
-
-            /*
-            位置稍微平滑。
-            */
-
-            currentX =
-            found.x;
-
-
-            currentY =
-            found.y;
-
-
-            /*
-            方向不能突然被樹枝帶走。
-
-            新方向只佔 25%。
-            */
-
-            var newAngle =
-            currentAngle*.75+
-            found.angle*.25;
-
-
-            /*
-            如果正負跨過 ±90 的表示問題，
-            直接使用 found。
-            */
-
-            if(
-                angleDifference(
-                    currentAngle,
-                    found.angle
-                )
-                >.45
-            ){
-
-                newAngle =
-                found.angle;
-
-            }
-
-
-            currentAngle =
-            newAngle;
-
-
-            misses = 0;
-
-        }
-
-        else{
-
-            misses++;
-
-
-            /*
-            可以允許 2 層找不到。
-            */
-
-            if(
-                misses>2
-            ){
-                break;
-            }
-
-
-            currentX =
-            predictedX;
-
-            currentY =
-            nextY;
-
-        }
-
-    }
-
-
-    return points;
-
-}
-
-
-/* =========================================================
- LINE FIT
-
- 我們用：
-
- x = a*y + b
-
- 因為道路接近垂直時，
- 這比 y = mx+b 更穩定。
-========================================================= */
-
-function fitLine(points){
-
-    if(
-        !points ||
-        points.length<4
-    ){
-        return null;
-    }
-
-
-    var sumY = 0;
-    var sumX = 0;
-    var sumYY = 0;
-    var sumYX = 0;
-
-
-    var n =
-    points.length;
-
-
-    for(
-        var i=0;
-        i<n;
-        i++
-    ){
-
-        var p =
-        points[i];
-
-
-        sumY +=
-        p.y;
-
-        sumX +=
-        p.x;
-
-        sumYY +=
-        p.y*p.y;
-
-        sumYX +=
-        p.y*p.x;
-
-    }
-
-
-    var denominator =
-    n*sumYY-
-    sumY*sumY;
-
-
-    if(
-        Math.abs(
-            denominator
-        )
-        <
-        .00001
-    ){
-        return null;
-    }
-
-
-    var a =
-    (
-        n*sumYX-
-        sumY*sumX
-    )
-    /
-    denominator;
-
-
-    var b =
-    (
-        sumX-
-        a*sumY
-    )
-    /
-    n;
-
-
-    /*
-    residual
-    */
-
-    var errors = [];
-
-
-    for(
-        var j=0;
-        j<n;
-        j++
-    ){
-
-        var expected =
-        a*points[j].y+
-        b;
-
-
-        errors.push(
-            Math.abs(
-                points[j].x-
-                expected
-            )
-        );
-
-    }
-
-
-    var error =
-    median(errors);
-
-
-    return{
-
-        a:a,
-        b:b,
-        error:error
-
-    };
-
-}
-
-
-/* =========================================================
- ROBUST FIT
-
- 第一輪 fit 後，
- 把偏離太大的點拿掉再 fit。
-========================================================= */
-
-function robustFit(points){
-
-    var first =
-    fitLine(points);
-
-
-    if(!first){
-        return null;
-    }
-
-
-    var limit =
-    Math.max(
-        3.5,
-        first.error*2.2
-    );
-
-
-    var filtered =
-    points.filter(
-        function(p){
-
-            var expected =
-            first.a*p.y+
-            first.b;
-
-
-            return(
-                Math.abs(
-                    p.x-expected
-                )
-                <=limit
-            );
-
-        }
-    );
-
-
-    if(
-        filtered.length<4
-    ){
-        return null;
-    }
-
-
-    var second =
-    fitLine(filtered);
-
-
-    if(!second){
-        return null;
-    }
-
-
-    second.points =
-    filtered;
-
-
-    return second;
-
-}
-
-
-/* =========================================================
- TRACE QUALITY
-========================================================= */
-
-function traceQuality(
-    fit,
-    originalPoints
-){
-
-    if(!fit){
-        return 0;
-    }
-
-
-    var countScore =
-    clamp(
-        fit.points.length/12,
+    ctx.clearRect(
         0,
-        1
-    );
-
-
-    var minY = 999;
-    var maxY = -999;
-
-
-    for(
-        var i=0;
-        i<fit.points.length;
-        i++
-    ){
-
-        minY =
-        Math.min(
-            minY,
-            fit.points[i].y
-        );
-
-        maxY =
-        Math.max(
-            maxY,
-            fit.points[i].y
-        );
-
-    }
-
-
-    var verticalSpan =
-    maxY-minY;
-
-
-    var spanScore =
-    clamp(
-        verticalSpan/
-        (AH*.42),
         0,
-        1
-    );
-
-
-    var errorScore =
-    1-
-    clamp(
-        fit.error/7,
-        0,
-        1
-    );
-
-
-    /*
-    保留下來的點比例。
-    */
-
-    var keepScore =
-    clamp(
-        fit.points.length/
-        Math.max(
-            originalPoints.length,
-            1
-        ),
-        0,
-        1
-    );
-
-
-    return(
-
-        countScore*.30
-
-        +
-
-        spanScore*.30
-
-        +
-
-        errorScore*.25
-
-        +
-
-        keepScore*.15
-
+        overlay.clientWidth,
+        overlay.clientHeight
     );
 
 }
 
 
 /* =========================================================
- FIND BEST TRACE
+ COMMON DRAW SETTINGS
 ========================================================= */
 
-function findBestTrace(
-    seeds,
-    side,
-    magnitude,
-    edgeAngle,
-    threshold
-){
-
-    var best =
-    null;
-
-
-    for(
-        var i=0;
-        i<seeds.length;
-        i++
-    ){
-
-        var points =
-        traceSeed(
-            seeds[i],
-            side,
-            magnitude,
-            edgeAngle,
-            threshold
-        );
-
-
-        /*
-        太短直接淘汰
-        */
-
-        if(
-            points.length<5
-        ){
-            continue;
-        }
-
-
-        var fit =
-        robustFit(points);
-
-
-        if(!fit){
-            continue;
-        }
-
-
-        /*
-        左線 x=a*y+b：
-
-        y 越大 = 越近。
-
-        左道路：
-        近處 x 應更小，
-        所以 a 應為負。
-
-        右道路：
-        近處 x 應更大，
-        所以 a 應為正。
-        */
-
-        if(
-            side==="left"
-            &&
-            fit.a>=-.025
-        ){
-            continue;
-        }
-
-
-        if(
-            side==="right"
-            &&
-            fit.a<=.025
-        ){
-            continue;
-        }
-
-
-        var quality =
-        traceQuality(
-            fit,
-            points
-        );
-
-
-        /*
-        種子本身的分數也保留少量。
-        */
-
-        quality =
-        quality*.85+
-        seeds[i].score*.15;
-
-
-        if(
-            !best ||
-            quality>best.quality
-        ){
-
-            best = {
-
-                seed:
-                seeds[i],
-
-                points:
-                fit.points,
-
-                fit:
-                fit,
-
-                quality:
-                quality
-
-            };
-
-        }
-
-    }
-
-
-    return best;
-
-}
-
-
-/* =========================================================
- INTERSECTION OF FITTED LINES
-
- left:
- x = a1*y+b1
-
- right:
- x = a2*y+b2
-
- a1*y+b1 =
- a2*y+b2
-========================================================= */
-
-function fittedIntersection(
-    left,
-    right
-){
-
-    var denominator =
-    left.a-right.a;
-
-
-    if(
-        Math.abs(
-            denominator
-        )
-        <
-        .00001
-    ){
-        return null;
-    }
-
-
-    var y =
-    (
-        right.b-left.b
-    )
-    /
-    denominator;
-
-
-    var x =
-    left.a*y+
-    left.b;
-
-
-    return{
-
-        x:x,
-        y:y
-
-    };
-
-}
-
-
-/* =========================================================
- ROAD GEOMETRY VALIDATION
-========================================================= */
-
-function validateRoadGeometry(
-    left,
-    right,
-    vp
-){
-
-    if(!vp){
-        return null;
-    }
-
-
-    /*
-    VP 寬鬆範圍。
-    */
-
-    if(
-        vp.x<
-        AW*.08 ||
-        vp.x>
-        AW*.92
-    ){
-        return null;
-    }
-
-
-    if(
-        vp.y<
-        AH*.15 ||
-        vp.y>
-        AH*.68
-    ){
-        return null;
-    }
-
-
-    /*
-    在近景比較左右道路寬度。
-    */
-
-    var yNear =
-    AH*.88;
-
-
-    var yMiddle =
-    AH*.60;
-
-
-    var leftNear =
-    left.a*yNear+
-    left.b;
-
-
-    var rightNear =
-    right.a*yNear+
-    right.b;
-
-
-    var leftMiddle =
-    left.a*yMiddle+
-    left.b;
-
-
-    var rightMiddle =
-    right.a*yMiddle+
-    right.b;
-
-
-    var nearWidth =
-    rightNear-leftNear;
-
-
-    var middleWidth =
-    rightMiddle-leftMiddle;
-
-
-    /*
-    必須真的有道路寬度。
-    */
-
-    if(
-        nearWidth<
-        AW*.15
-    ){
-        return null;
-    }
-
-
-    /*
-    遠處應比近處窄。
-    */
-
-    if(
-        middleWidth>=
-        nearWidth*.94
-    ){
-        return null;
-    }
-
-
-    /*
-    中段也不能交叉。
-    */
-
-    if(
-        middleWidth<=0
-    ){
-        return null;
-    }
-
-
-    var narrowing =
-    1-
-    clamp(
-        middleWidth/
-        nearWidth,
-        0,
-        1
-    );
-
-
-    var widthScore =
-    clamp(
-        nearWidth/
-        (AW*.55),
-        .2,
-        1
-    );
-
-
-    return{
-
-        nearWidth:
-        nearWidth,
-
-        middleWidth:
-        middleWidth,
-
-        narrowing:
-        narrowing,
-
-        widthScore:
-        widthScore
-
-    };
-
-}
-
-
-
-/* =========================================================
- V5.8.8 ROAD PAIR LOCK
-
- 1. 左右邊界不再各自選最高分後直接配對
- 2. 建立多組 L/R trace 後一起驗證
- 3. 檢查底部入口、道路寬度、逐層收斂
- 4. 禁止 X 型交叉後再張開
- 5. 通過驗證後才允許產生黃線與 VP
-========================================================= */
-
-function xOnLine(line,y){
-    return line.a*y + line.b;
-}
-
-function validateRoadPair(leftTrace,rightTrace){
-
-    if(!leftTrace || !rightTrace){
-        return null;
-    }
-
-    var L = leftTrace.fit;
-    var R = rightTrace.fit;
-
-    var ys = [
-        AH*.90,
-        AH*.78,
-        AH*.66,
-        AH*.54
-    ];
-
-    var widths = [];
-
-    for(var i=0;i<ys.length;i++){
-
-        var lx = xOnLine(L,ys[i]);
-        var rx = xOnLine(R,ys[i]);
-        var width = rx-lx;
-
-        if(!isFinite(lx) || !isFinite(rx) || width<=0){
-            return null;
-        }
-
-        widths.push(width);
-    }
-
-    var nearLeft  = xOnLine(L,AH*.92);
-    var nearRight = xOnLine(R,AH*.92);
-    var nearWidth = nearRight-nearLeft;
-
-    if(
-        nearLeft < -AW*.08 ||
-        nearRight > AW*1.08
-    ){
-        return null;
-    }
-
-    if(
-        nearWidth < AW*.20 ||
-        nearWidth > AW*1.05
-    ){
-        return null;
-    }
-
-    if(
-        nearLeft > AW*.47 ||
-        nearRight < AW*.53
-    ){
-        return null;
-    }
-
-    /*
-    由近到遠必須大致變窄。
-    允許 6% 誤差，但禁止重新張開。
-    */
-    for(var j=1;j<widths.length;j++){
-
-        if(widths[j] > widths[j-1]*1.06){
-            return null;
-        }
-
-        if(widths[j] < AW*.035){
-            return null;
-        }
-    }
-
-    var vp = fittedIntersection(L,R);
-
-    if(!vp){
-        return null;
-    }
-
-    if(
-        vp.x < AW*.10 ||
-        vp.x > AW*.90 ||
-        vp.y < AH*.18 ||
-        vp.y > AH*.67
-    ){
-        return null;
-    }
-
-    /*
-    VP 要接近道路中軸，避免樹枝斜線把交點拉走。
-    */
-    var yCheck = AH*.58;
-
-    var centerX =
-        (
-            xOnLine(L,yCheck)+
-            xOnLine(R,yCheck)
-        )/2;
-
-    var centerError =
-        Math.abs(vp.x-centerX);
-
-    if(centerError > AW*.20){
-        return null;
-    }
-
-    var shrink =
-        1-clamp(
-            widths[3]/Math.max(widths[0],1),
-            0,
-            1
-        );
-
-    var symmetry =
-        1-clamp(
-            centerError/(AW*.20),
-            0,
-            1
-        );
-
-    return{
-        vp:vp,
-        nearWidth:nearWidth,
-        widths:widths,
-        shrink:shrink,
-        symmetry:symmetry
-    };
-}
-
-
-function collectTraceCandidates(
-    seeds,
-    side,
-    magnitude,
-    edgeAngle,
-    threshold
-){
-
-    var list = [];
-
-    for(var i=0;i<seeds.length;i++){
-
-        var points =
-        traceSeed(
-            seeds[i],
-            side,
-            magnitude,
-            edgeAngle,
-            threshold
-        );
-
-        if(points.length<5){
-            continue;
-        }
-
-        var fit = robustFit(points);
-
-        if(!fit){
-            continue;
-        }
-
-        if(
-            side==="left" &&
-            fit.a>=-.025
-        ){
-            continue;
-        }
-
-        if(
-            side==="right" &&
-            fit.a<=.025
-        ){
-            continue;
-        }
-
-        var quality =
-            traceQuality(fit,points)*.85+
-            seeds[i].score*.15;
-
-        list.push({
-            seed:seeds[i],
-            points:fit.points,
-            fit:fit,
-            quality:quality
-        });
-    }
-
-    list.sort(function(a,b){
-        return b.quality-a.quality;
-    });
-
-    return list.slice(0,6);
-}
-
-
-function findBestRoadPair(
-    leftSeeds,
-    rightSeeds,
-    magnitude,
-    edgeAngle,
-    threshold
-){
-
-    var leftList =
-    collectTraceCandidates(
-        leftSeeds,
-        "left",
-        magnitude,
-        edgeAngle,
-        threshold
-    );
-
-    var rightList =
-    collectTraceCandidates(
-        rightSeeds,
-        "right",
-        magnitude,
-        edgeAngle,
-        threshold
-    );
-
-    if(
-        leftList.length===0 ||
-        rightList.length===0
-    ){
-        return null;
-    }
-
-    var best = null;
-
-    for(var i=0;i<leftList.length;i++){
-
-        for(var j=0;j<rightList.length;j++){
-
-            var L = leftList[i];
-            var R = rightList[j];
-
-            if(L.seed.x>=R.seed.x){
-                continue;
-            }
-
-            var seedWidth =
-                R.seed.x-L.seed.x;
-
-            if(
-                seedWidth<AW*.18 ||
-                seedWidth>AW*.95
-            ){
-                continue;
-            }
-
-            var pair =
-                validateRoadPair(L,R);
-
-            if(!pair){
-                continue;
-            }
-
-            var fitError =
-                (L.fit.error+R.fit.error)/2;
-
-            var fitScore =
-                1-clamp(fitError/7,0,1);
-
-            var traceScore =
-                (L.quality+R.quality)/2;
-
-            var pairScore =
-                traceScore*.46+
-                fitScore*.18+
-                pair.shrink*.20+
-                pair.symmetry*.16;
-
-            if(
-                !best ||
-                pairScore>best.score
-            ){
-                best = {
-                    left:L,
-                    right:R,
-                    geometry:pair,
-                    vp:pair.vp,
-                    score:pairScore
-                };
-            }
-        }
-    }
-
-    return best;
-}
-
-
-/* =========================================================
- MAIN ANALYSIS
-========================================================= */
-
-function analyzeRoad(){
-
-    if(video.readyState<2){
-        return null;
-    }
-
-    var edges = buildEdges();
-
-    if(!edges){
-        return null;
-    }
-
-    /*
-    STEP 1
-    只在畫面底部尋找左右道路入口。
-    */
-    var seeds =
-    findSeeds(
-        edges.magnitude,
-        edges.angle,
-        edges.threshold
-    );
-
-    if(
-        seeds.left.length===0 ||
-        seeds.right.length===0
-    ){
-        return null;
-    }
-
-    /*
-    STEP 2
-    V5.8.8：L/R 候選必須成對驗證。
-    */
-    var roadPair =
-    findBestRoadPair(
-        seeds.left,
-        seeds.right,
-        edges.magnitude,
-        edges.angle,
-        edges.threshold
-    );
-
-    if(!roadPair){
-        return null;
-    }
-
-    var leftTrace  = roadPair.left;
-    var rightTrace = roadPair.right;
-    var vp         = roadPair.vp;
-    var geometry   = roadPair.geometry;
-
-    var traceScore =
-        (leftTrace.quality+rightTrace.quality)/2;
-
-    var fitError =
-        (leftTrace.fit.error+rightTrace.fit.error)/2;
-
-    var fitScore =
-        1-clamp(
-            fitError/7,
-            0,
-            1
-        );
-
-    var confidence =
-        .12+
-        traceScore*.38+
-        fitScore*.18+
-        geometry.shrink*.18+
-        geometry.symmetry*.14;
-
-    confidence =
-    clamp(
-        confidence,
-        .25,
-        .90
-    );
-
-    return{
-        vx:vp.x/AW,
-        vy:vp.y/AH,
-        confidence:confidence,
-
-        leftPoints:leftTrace.points,
-        rightPoints:rightTrace.points,
-
-        leftLine:leftTrace.fit,
-        rightLine:rightTrace.fit,
-
-        leftSeed:leftTrace.seed,
-        rightSeed:rightTrace.seed
-    };
-}
-
-
-/* =========================================================
- DRAW POINTS
-========================================================= */
-
-function drawTrackedPoints(
-    points,
-    label
-){
-
-    if(!points){
-        return;
-    }
-
-
-    var w =
-    overlay.clientWidth;
-
-    var h =
-    overlay.clientHeight;
-
-
-    ctx.save();
-
-
-    ctx.fillStyle =
-    "#ffffff";
-
-
-    for(
-        var i=0;
-        i<points.length;
-        i++
-    ){
-
-        var x =
-        points[i].x/AW*w;
-
-
-        var y =
-        points[i].y/AH*h;
-
-
-        ctx.beginPath();
-
-        ctx.arc(
-            x,
-            y,
-            3.2,
-            0,
-            Math.PI*2
-        );
-
-        ctx.fill();
-
-    }
-
-
-    /*
-    第一個點標 L/R
-    */
-
-    if(points.length){
-
-        var first =
-        points[0];
-
-
-        ctx.fillStyle =
-        "#ffffff";
-
-        ctx.font =
-        "bold 14px -apple-system,Arial";
-
-
-        ctx.fillText(
-            label,
-            first.x/AW*w+8,
-            first.y/AH*h-8
-        );
-
-    }
-
-
-    ctx.restore();
-
-}
-
-
-/* =========================================================
- DRAW FITTED LINE
-========================================================= */
-
-function drawFittedLine(
-    line,
-    label
-){
-
-    if(!line){
-        return;
-    }
-
-
-    var w =
-    overlay.clientWidth;
-
-    var h =
-    overlay.clientHeight;
-
-
-    /*
-    畫線範圍：
-
-    從畫面底部
-    到 VP 附近。
-
-    DEBUG 時直接畫完整擬合。
-    */
-
-    var yBottom =
-    AH*.98;
-
-
-    var yTop =
-    AH*.30;
-
-
-    var xBottom =
-    line.a*yBottom+
-    line.b;
-
-
-    var xTop =
-    line.a*yTop+
-    line.b;
-
-
-    ctx.save();
-
+function setupGuide(){
 
     ctx.strokeStyle =
     "#ffd400";
 
+    ctx.fillStyle =
+    "#2cff67";
+
     ctx.lineWidth =
-    4;
+    2.5;
 
     ctx.setLineDash([]);
+
+}
+
+
+/* =========================================================
+ THIRDS
+========================================================= */
+
+function drawThirds(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
 
 
     ctx.beginPath();
 
 
     ctx.moveTo(
-        xBottom/AW*w,
-        yBottom/AH*h
+        w/3,
+        0
+    );
+
+    ctx.lineTo(
+        w/3,
+        h
     );
 
 
+    ctx.moveTo(
+        w*2/3,
+        0
+    );
+
     ctx.lineTo(
-        xTop/AW*w,
-        yTop/AH*h
+        w*2/3,
+        h
+    );
+
+
+    ctx.moveTo(
+        0,
+        h/3
+    );
+
+    ctx.lineTo(
+        w,
+        h/3
+    );
+
+
+    ctx.moveTo(
+        0,
+        h*2/3
+    );
+
+    ctx.lineTo(
+        w,
+        h*2/3
     );
 
 
     ctx.stroke();
 
 
-    ctx.fillStyle =
-    "#ffd400";
-
-    ctx.font =
-    "bold 15px -apple-system,Arial";
-
-
-    ctx.fillText(
-        label,
-        xBottom/AW*w+8,
-        yBottom/AH*h-10
+    drawTarget(
+        w/3,
+        h/3
     );
 
+    drawTarget(
+        w*2/3,
+        h/3
+    );
 
-    ctx.restore();
+    drawTarget(
+        w/3,
+        h*2/3
+    );
+
+    drawTarget(
+        w*2/3,
+        h*2/3
+    );
 
 }
 
 
 /* =========================================================
- DRAW VP
+ GOLDEN RATIO
 ========================================================= */
 
-function drawVP(){
-
-    if(!detectedPoint){
-        return;
-    }
-
+function drawGolden(){
 
     var w =
     overlay.clientWidth;
@@ -3448,52 +1399,151 @@ function drawVP(){
     overlay.clientHeight;
 
 
-    var x =
-    detectedPoint.vx*w;
-
-    var y =
-    detectedPoint.vy*h;
+    setupGuide();
 
 
-    ctx.save();
+    var x1 =
+    w*.382;
 
+    var x2 =
+    w*.618;
 
-    ctx.strokeStyle =
-    "#2cff67";
+    var y1 =
+    h*.382;
 
-    ctx.fillStyle =
-    "#2cff67";
-
-    ctx.lineWidth =
-    4;
-
-    ctx.setLineDash([]);
+    var y2 =
+    h*.618;
 
 
     ctx.beginPath();
 
-    ctx.arc(
-        x,
-        y,
-        25,
-        0,
-        Math.PI*2
+
+    ctx.moveTo(
+        x1,
+        0
     );
+
+    ctx.lineTo(
+        x1,
+        h
+    );
+
+
+    ctx.moveTo(
+        x2,
+        0
+    );
+
+    ctx.lineTo(
+        x2,
+        h
+    );
+
+
+    ctx.moveTo(
+        0,
+        y1
+    );
+
+    ctx.lineTo(
+        w,
+        y1
+    );
+
+
+    ctx.moveTo(
+        0,
+        y2
+    );
+
+    ctx.lineTo(
+        w,
+        y2
+    );
+
 
     ctx.stroke();
 
 
-    ctx.beginPath();
-
-    ctx.arc(
-        x,
-        y,
-        9,
-        0,
-        Math.PI*2
+    drawTarget(
+        x1,
+        y1
     );
 
-    ctx.fill();
+    drawTarget(
+        x2,
+        y1
+    );
+
+}
+
+
+/* =========================================================
+ CENTER
+========================================================= */
+
+function drawCenter(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        w/2,
+        0
+    );
+
+    ctx.lineTo(
+        w/2,
+        h
+    );
+
+
+    ctx.moveTo(
+        0,
+        h/2
+    );
+
+    ctx.lineTo(
+        w,
+        h/2
+    );
+
+
+    ctx.stroke();
+
+
+    drawTarget(
+        w/2,
+        h/2
+    );
+
+}
+
+
+/* =========================================================
+ SYMMETRY
+========================================================= */
+
+function drawSymmetry(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
 
 
     ctx.lineWidth =
@@ -3502,181 +1552,1103 @@ function drawVP(){
 
     ctx.beginPath();
 
-
     ctx.moveTo(
-        x-43,
-        y
+        w/2,
+        0
     );
 
     ctx.lineTo(
-        x-30,
-        y
+        w/2,
+        h
+    );
+
+    ctx.stroke();
+
+
+    ctx.setLineDash(
+        [8,8]
     );
 
 
+    ctx.beginPath();
+
     ctx.moveTo(
-        x+30,
-        y
+        w*.20,
+        h*.20
     );
 
     ctx.lineTo(
-        x+43,
-        y
-    );
-
-
-    ctx.moveTo(
-        x,
-        y-43
-    );
-
-    ctx.lineTo(
-        x,
-        y-30
+        w*.20,
+        h*.80
     );
 
 
     ctx.moveTo(
-        x,
-        y+30
+        w*.80,
+        h*.20
     );
 
     ctx.lineTo(
-        x,
-        y+43
+        w*.80,
+        h*.80
+    );
+
+    ctx.stroke();
+
+
+    ctx.setLineDash([]);
+
+}
+
+
+/* =========================================================
+ LEADING LINES
+========================================================= */
+
+function drawLeading(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    var targetX =
+    w*.50;
+
+    var targetY =
+    h*.40;
+
+
+    ctx.lineWidth =
+    4;
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        w*.08,
+        h
+    );
+
+    ctx.lineTo(
+        targetX,
+        targetY
+    );
+
+
+    ctx.moveTo(
+        w*.92,
+        h
+    );
+
+    ctx.lineTo(
+        targetX,
+        targetY
     );
 
 
     ctx.stroke();
 
 
+    drawTarget(
+        targetX,
+        targetY
+    );
+
+}
+
+
+/* =========================================================
+ PERSPECTIVE
+========================================================= */
+
+function drawPerspective(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    var vx =
+    w*.50;
+
+    var vy =
+    h*.42;
+
+
+    ctx.lineWidth =
+    3;
+
+
+    var starts = [
+
+        [0,h],
+        [w*.25,h],
+        [w*.75,h],
+        [w,h],
+
+        [0,h*.65],
+        [w,h*.65]
+
+    ];
+
+
+    ctx.beginPath();
+
+
+    starts.forEach(
+        function(p){
+
+            ctx.moveTo(
+                p[0],
+                p[1]
+            );
+
+            ctx.lineTo(
+                vx,
+                vy
+            );
+
+        }
+    );
+
+
+    ctx.stroke();
+
+
+    drawTarget(
+        vx,
+        vy
+    );
+
+}
+
+
+/* =========================================================
+ DIAGONAL
+========================================================= */
+
+function drawDiagonal(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        0,
+        h
+    );
+
+    ctx.lineTo(
+        w,
+        0
+    );
+
+    ctx.stroke();
+
+
+    drawTarget(
+        w*.62,
+        h*.38
+    );
+
+}
+
+
+/* =========================================================
+ FRAME
+========================================================= */
+
+function drawFrame(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.lineWidth =
+    3;
+
+
+    var marginX =
+    w*.12;
+
+    var marginY =
+    h*.13;
+
+
+    ctx.strokeRect(
+        marginX,
+        marginY,
+        w-marginX*2,
+        h-marginY*2
+    );
+
+
+    drawTarget(
+        w/2,
+        h/2
+    );
+
+}
+
+
+/* =========================================================
+ PORTRAIT THIRDS
+========================================================= */
+
+function drawPortraitThirds(){
+
+    drawThirds();
+
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.strokeStyle =
+    "#2cff67";
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        w*.36,
+        h*.34,
+        w*.10,
+        h*.085,
+        0,
+        0,
+        Math.PI*2
+    );
+
+    ctx.stroke();
+
+}
+
+
+/* =========================================================
+ CENTER PORTRAIT
+========================================================= */
+
+function drawCenterPortrait(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.strokeStyle =
+    "#2cff67";
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        w*.50,
+        h*.31,
+        w*.11,
+        h*.09,
+        0,
+        0,
+        Math.PI*2
+    );
+
+    ctx.stroke();
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        w*.50,
+        h*.40
+    );
+
+    ctx.lineTo(
+        w*.50,
+        h*.78
+    );
+
+    ctx.stroke();
+
+}
+
+
+/* =========================================================
+ HEADROOM
+========================================================= */
+
+function drawHeadroom(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.setLineDash(
+        [8,7]
+    );
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        0,
+        h*.28
+    );
+
+    ctx.lineTo(
+        w,
+        h*.28
+    );
+
+    ctx.stroke();
+
+
+    ctx.setLineDash([]);
+
+
+    ctx.strokeStyle =
+    "#2cff67";
+
+    ctx.strokeRect(
+        w*.18,
+        h*.30,
+        w*.25,
+        h*.43
+    );
+
+
+    /* 視線方向 */
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        w*.43,
+        h*.38
+    );
+
+    ctx.lineTo(
+        w*.75,
+        h*.38
+    );
+
+    ctx.stroke();
+
+
+    drawArrowHead(
+        w*.75,
+        h*.38,
+        "right"
+    );
+
+}
+
+
+/* =========================================================
+ FULL BODY
+========================================================= */
+
+function drawFullBody(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.strokeStyle =
+    "#2cff67";
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.strokeRect(
+        w*.36,
+        h*.10,
+        w*.28,
+        h*.80
+    );
+
+
+    ctx.setLineDash(
+        [6,6]
+    );
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        0,
+        h*.10
+    );
+
+    ctx.lineTo(
+        w,
+        h*.10
+    );
+
+
+    ctx.moveTo(
+        0,
+        h*.90
+    );
+
+    ctx.lineTo(
+        w,
+        h*.90
+    );
+
+    ctx.stroke();
+
+
+    ctx.setLineDash([]);
+
+}
+
+
+/* =========================================================
+ ENVIRONMENT PORTRAIT
+========================================================= */
+
+function drawEnvironmentPortrait(){
+
+    drawThirds();
+
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    ctx.save();
+
+    ctx.strokeStyle =
+    "#2cff67";
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.strokeRect(
+        w*.20,
+        h*.28,
+        w*.22,
+        h*.45
+    );
+
+
+    ctx.restore();
+
+}
+
+
+/* =========================================================
+ REFLECTION
+========================================================= */
+
+function drawReflection(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        0,
+        h/2
+    );
+
+    ctx.lineTo(
+        w,
+        h/2
+    );
+
+    ctx.stroke();
+
+
+    ctx.setLineDash(
+        [7,7]
+    );
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        w*.25,
+        h*.25
+    );
+
+    ctx.lineTo(
+        w*.25,
+        h*.75
+    );
+
+
+    ctx.moveTo(
+        w*.75,
+        h*.25
+    );
+
+    ctx.lineTo(
+        w*.75,
+        h*.75
+    );
+
+    ctx.stroke();
+
+
+    ctx.setLineDash([]);
+
+}
+
+
+/* =========================================================
+ FOOD CENTER
+========================================================= */
+
+function drawFoodCenter(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.strokeStyle =
+    "#2cff67";
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        w*.50,
+        h*.50,
+        Math.min(w,h)*.24,
+        0,
+        Math.PI*2
+    );
+
+    ctx.stroke();
+
+
+    drawTarget(
+        w*.50,
+        h*.50
+    );
+
+}
+
+
+/* =========================================================
+ FOOD THIRDS
+========================================================= */
+
+function drawFoodThirds(){
+
+    drawThirds();
+
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    ctx.save();
+
+    ctx.strokeStyle =
+    "#2cff67";
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        w*.36,
+        h*.62,
+        Math.min(w,h)*.15,
+        0,
+        Math.PI*2
+    );
+
+    ctx.stroke();
+
+
+    ctx.restore();
+
+}
+
+
+/* =========================================================
+ FOOD DIAGONAL
+========================================================= */
+
+function drawFoodDiagonal(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        w*.10,
+        h*.82
+    );
+
+    ctx.lineTo(
+        w*.90,
+        h*.18
+    );
+
+    ctx.stroke();
+
+
+    var points = [
+
+        [w*.25,h*.70],
+        [w*.50,h*.50],
+        [w*.75,h*.30]
+
+    ];
+
+
+    points.forEach(
+        function(p){
+
+            ctx.beginPath();
+
+            ctx.arc(
+                p[0],
+                p[1],
+                Math.min(w,h)*.09,
+                0,
+                Math.PI*2
+            );
+
+            ctx.stroke();
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+ FOOD TOP
+========================================================= */
+
+function drawFoodTop(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.strokeStyle =
+    "#2cff67";
+
+    ctx.lineWidth =
+    3;
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        w*.50,
+        h*.50,
+        Math.min(w,h)*.23,
+        0,
+        Math.PI*2
+    );
+
+    ctx.stroke();
+
+
+    ctx.setLineDash(
+        [6,6]
+    );
+
+
+    ctx.strokeRect(
+        w*.15,
+        h*.18,
+        w*.70,
+        h*.64
+    );
+
+
+    ctx.setLineDash([]);
+
+}
+
+
+/* =========================================================
+ FILL FRAME
+========================================================= */
+
+function drawFill(){
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    setupGuide();
+
+
+    ctx.strokeStyle =
+    "#2cff67";
+
+    ctx.lineWidth =
+    4;
+
+
+    ctx.strokeRect(
+        w*.06,
+        h*.06,
+        w*.88,
+        h*.88
+    );
+
+
     ctx.font =
-    "bold 16px -apple-system,Arial";
+    "bold 15px -apple-system,Arial";
 
     ctx.textAlign =
     "center";
 
-
     ctx.fillText(
-        "● AI 消失點",
-        x,
-        y-50
+        "靠近主體填滿畫面",
+        w/2,
+        h*.12
     );
-
-
-    ctx.restore();
 
 }
 
 
-
 /* =========================================================
- DRAW BOTTOM ENTRY SEEDS
-
- 藍點 = V5.8.8 最終採用的道路底部左右入口
+ TARGET
 ========================================================= */
 
-function drawSeed(seed,label){
-
-    if(!seed){
-        return;
-    }
-
-    var w = overlay.clientWidth;
-    var h = overlay.clientHeight;
-
-    var x = seed.x/AW*w;
-    var y = seed.y/AH*h;
+function drawTarget(x,y){
 
     ctx.save();
 
-    ctx.fillStyle = "#00a8ff";
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 2;
+
+    ctx.strokeStyle =
+    "#2cff67";
+
+    ctx.fillStyle =
+    "#2cff67";
+
+    ctx.lineWidth =
+    3;
+
 
     ctx.beginPath();
+
     ctx.arc(
         x,
         y,
-        7,
+        12,
         0,
         Math.PI*2
     );
-    ctx.fill();
+
     ctx.stroke();
 
-    ctx.fillStyle = "#00a8ff";
-    ctx.font =
-        "bold 14px -apple-system,Arial";
 
-    ctx.fillText(
-        label+" Seed",
-        x+10,
-        y-10
+    ctx.beginPath();
+
+    ctx.arc(
+        x,
+        y,
+        4,
+        0,
+        Math.PI*2
     );
 
+    ctx.fill();
+
+
     ctx.restore();
+
 }
 
 
 /* =========================================================
- DRAW DEBUG
+ ARROW
 ========================================================= */
 
-function drawDebug(){
+function drawArrowHead(
+    x,
+    y,
+    direction
+){
 
-    if(!debugResult){
-        return;
+    ctx.save();
+
+
+    ctx.fillStyle =
+    "#2cff67";
+
+
+    ctx.beginPath();
+
+
+    if(direction==="right"){
+
+        ctx.moveTo(
+            x,
+            y
+        );
+
+        ctx.lineTo(
+            x-13,
+            y-8
+        );
+
+        ctx.lineTo(
+            x-13,
+            y+8
+        );
+
     }
 
 
-    /*
-    黃線先畫。
-    */
+    ctx.closePath();
 
-    drawFittedLine(
-        debugResult.leftLine,
-        "L"
-    );
+    ctx.fill();
 
 
-    drawFittedLine(
-        debugResult.rightLine,
-        "R"
-    );
+    ctx.restore();
+
+}
 
 
-    /*
-    V5.8.8：藍點先標出真正採用的道路底部入口。
-    */
-    drawSeed(
-        debugResult.leftSeed,
-        "L"
-    );
+/* =========================================================
+ DRAW SELECTED COMPOSITION
+========================================================= */
 
-    drawSeed(
-        debugResult.rightSeed,
-        "R"
-    );
+function drawComposition(){
+
+    clearOverlay();
 
 
-    /*
-    再畫真正追蹤點。
-
-    白點在黃線上方，
-    比較容易看清楚。
-    */
-
-    drawTrackedPoints(
-        debugResult.leftPoints,
-        "L"
-    );
+    switch(currentComposition){
 
 
-    drawTrackedPoints(
-        debugResult.rightPoints,
-        "R"
-    );
+        case "thirds":
+
+            drawThirds();
+            break;
+
+
+        case "golden":
+
+            drawGolden();
+            break;
+
+
+        case "leading":
+
+            drawLeading();
+            break;
+
+
+        case "center":
+
+            drawCenter();
+            break;
+
+
+        case "frame":
+
+            drawFrame();
+            break;
+
+
+        case "perspective":
+
+            drawPerspective();
+            break;
+
+
+        case "symmetry":
+
+            drawSymmetry();
+            break;
+
+
+        case "diagonal":
+
+            drawDiagonal();
+            break;
+
+
+        case "thirdsPortrait":
+
+            drawPortraitThirds();
+            break;
+
+
+        case "centerPortrait":
+
+            drawCenterPortrait();
+            break;
+
+
+        case "headroom":
+
+            drawHeadroom();
+            break;
+
+
+        case "fullbody":
+
+            drawFullBody();
+            break;
+
+
+        case "environmentPortrait":
+
+            drawEnvironmentPortrait();
+            break;
+
+
+        case "reflection":
+
+            drawReflection();
+            break;
+
+
+        case "foodCenter":
+
+            drawFoodCenter();
+            break;
+
+
+        case "foodThirds":
+
+            drawFoodThirds();
+            break;
+
+
+        case "foodDiagonal":
+
+            drawFoodDiagonal();
+            break;
+
+
+        case "foodTop":
+
+            drawFoodTop();
+            break;
+
+
+        case "fill":
+
+            drawFill();
+            break;
+
+    }
 
 }
 
@@ -3717,33 +2689,16 @@ function resizeOverlay(){
         0
     );
 
-}
 
-
-/* =========================================================
- DRAW LOOP
-========================================================= */
-
-function loop(){
-
-    ctx.clearRect(
-        0,
-        0,
-        overlay.clientWidth,
-        overlay.clientHeight
-    );
-
-
-    drawDebug();
-
-    drawVP();
-
-
-    requestAnimationFrame(
-        loop
-    );
+    drawComposition();
 
 }
+
+
+window.addEventListener(
+    "resize",
+    resizeOverlay
+);
 
 
 /* =========================================================
@@ -3763,29 +2718,6 @@ zoom.addEventListener(
         zoomText.innerText =
         value.toFixed(1)+
         "×";
-
-
-        /*
-        改倍率後舊結果無效。
-        */
-
-        detectedPoint =
-        null;
-
-        debugResult =
-        null;
-
-
-        scoreEl.innerHTML =
-        '-- <small>%</small>';
-
-
-        compositionEl.innerText =
-        "倍率已變更";
-
-
-        descEl.innerText =
-        "請重新執行 AI 分析";
 
 
         if(!stream){
@@ -3829,10 +2761,12 @@ zoom.addEventListener(
         try{
 
             var actualZoom =
-            clamp(
-                value,
+            Math.max(
                 capabilities.zoom.min,
-                capabilities.zoom.max
+                Math.min(
+                    capabilities.zoom.max,
+                    value
+                )
             );
 
 
@@ -3848,6 +2782,7 @@ zoom.addEventListener(
             });
 
         }
+
         catch(error){
 
             console.log(
@@ -3862,84 +2797,30 @@ zoom.addEventListener(
 
 
 /* =========================================================
- ERROR
+ INIT
 ========================================================= */
 
-window.onerror =
-function(
-    message,
-    source,
-    line
-){
+function init(){
 
-    console.log(
-        message,
-        source,
-        line
+    buildCompositionButtons();
+
+
+    selectComposition(
+        modeDatabase[
+            currentMode
+        ].default
     );
 
 
-    messageEl.innerText =
-    "⚠️ 程式錯誤："+
-    message+
-    "｜第"+
-    line+
-    "行";
+    resizeOverlay();
 
 
-    return false;
+    startCamera();
 
-};
-
-
-window.addEventListener(
-    "unhandledrejection",
-    function(event){
-
-        console.log(
-            event.reason
-        );
+}
 
 
-        messageEl.innerText =
-        "⚠️ 執行錯誤，請重新整理";
-
-    }
-);
-
-
-/* =========================================================
- EVENTS
-========================================================= */
-
-window.addEventListener(
-    "resize",
-    resizeOverlay
-);
-
-
-window.addEventListener(
-    "orientationchange",
-    function(){
-
-        setTimeout(
-            resizeOverlay,
-            250
-        );
-
-    }
-);
-
-
-/* =========================================================
- START
-========================================================= */
-
-startCamera();
-
-requestAnimationFrame(
-    loop
-);
+init();
 
 </script>
 
