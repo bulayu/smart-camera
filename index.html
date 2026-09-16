@@ -9,7 +9,7 @@ initial-scale=1,
 maximum-scale=1,
 user-scalable=no">
 
-<title>AI 構圖助手 V5.8.3</title>
+<title>AI 構圖助手 V5.8.4</title>
 
 <style>
 
@@ -215,7 +215,7 @@ button{
     </div>
 
     <div id="version">
-        V5.8.3
+        V5.8.4
     </div>
 
 </div>
@@ -264,7 +264,7 @@ button{
     </div>
 
     <div id="status">
-        V5.8.3｜景深收斂版
+        V5.8.4｜地平線約束版
     </div>
 
 </div>
@@ -274,31 +274,22 @@ button{
 
 /* =========================================================
 
-   AI 構圖助手 V5.8.3
-   景深收斂版
+   AI 構圖助手 V5.8.4
+   地平線約束版
 
-   這一版只處理：
-
-   ● 真正消失點
-
-   不處理：
-   ○ 建議構圖點
-   ○ 導航
-   ○ 構圖完成分數
-
-
-   V5.8.3 核心：
+   V5.8.4 核心：
 
    1. Sobel 找邊緣
    2. 每個區塊最多留下 2 個不同方向
-   3. 不用「線越強票越多」
-   4. 建立候選消失點網格
-   5. 每條線對候選 VP 只提供有限票數
-   6. 左右來源必須同時支持
-   7. 下方 / 中段必須同時有支持
-   8. 強化「近處分散 → 遠處收窄」
-   9. 樹枝、窗框等單區域線條降權
-   10. 最後再用支持線交點精修
+   3. 建立候選消失點網格
+   4. 左右來源必須同時支持
+   5. 下方 / 中段必須同時有支持
+   6. 強化「近處分散 → 遠處收窄」
+   7. 樹枝、窗框等單區域線條降權
+   8. 強化道路 / 步道下半部證據
+   9. 上方樹冠區 VP 大幅降權
+   10. 中間地平線區域適度加權
+   11. 最後再用支持線交點精修
 
 ========================================================= */
 
@@ -348,20 +339,15 @@ document.getElementById("zoomText");
    STATE
 ========================================================= */
 
-var stream =
-null;
+var stream = null;
 
-var facing =
-"environment";
+var facing = "environment";
 
-var detectedPoint =
-null;
+var detectedPoint = null;
 
-var analyzing =
-false;
+var analyzing = false;
 
-var confidence =
-0;
+var confidence = 0;
 
 
 /* =========================================================
@@ -548,8 +534,7 @@ async function startCamera(){
 
 async function changeCamera(mode){
 
-    facing =
-    mode;
+    facing = mode;
 
     await startCamera();
 
@@ -562,14 +547,11 @@ async function changeCamera(mode){
 
 function resetAnalysis(){
 
-    detectedPoint =
-    null;
+    detectedPoint = null;
 
-    analyzing =
-    false;
+    analyzing = false;
 
-    confidence =
-    0;
+    confidence = 0;
 
     scoreEl.innerHTML =
     '-- <small>%</small>';
@@ -607,11 +589,9 @@ function runAI(){
 
     }
 
-    analyzing =
-    true;
+    analyzing = true;
 
-    detectedPoint =
-    null;
+    detectedPoint = null;
 
     scoreEl.innerHTML =
     '-- <small>%</small>';
@@ -620,10 +600,10 @@ function runAI(){
     "AI 分析中";
 
     descEl.innerText =
-    "正在分析近處到遠處的收斂方向";
+    "正在分析道路與景深收斂方向";
 
     messageEl.innerText =
-    "🔍 尋找景深收斂點...";
+    "🔍 尋找真正消失點...";
 
 
     var results = [];
@@ -651,8 +631,7 @@ function runAI(){
 
                 clearInterval(timer);
 
-                analyzing =
-                false;
+                analyzing = false;
 
                 finishAnalysis(
                     results
@@ -785,10 +764,6 @@ function finishAnalysis(results){
     );
 
 
-    /*
-    幀間穩定度
-    */
-
     var spread =
     median(
         filtered.map(
@@ -862,11 +837,9 @@ function finishAnalysis(results){
 
 function failAnalysis(){
 
-    detectedPoint =
-    null;
+    detectedPoint = null;
 
-    confidence =
-    0;
+    confidence = 0;
 
     scoreEl.innerHTML =
     '-- <small>%</small>';
@@ -885,14 +858,6 @@ function failAnalysis(){
 
 /* =========================================================
    ORIENTATION SUPPORT
-
-   檢查候選線附近是否真的有
-   相同方向的邊緣延續。
-
-   這一項主要壓制：
-   樹葉
-   雜訊
-   細碎紋理
 ========================================================= */
 
 function orientationSupport(
@@ -952,13 +917,8 @@ function orientationSupport(
         total++;
 
 
-        var found =
-        false;
+        var found = false;
 
-
-        /*
-        3x3附近找方向一致的強邊緣
-        */
 
         for(
             var oy=-1;
@@ -999,8 +959,7 @@ function orientationSupport(
                     diff < .24
                 ){
 
-                    found =
-                    true;
+                    found = true;
 
                     break;
 
@@ -1095,11 +1054,6 @@ function extractLines(
                     edgeAngle[id];
 
 
-                    /*
-                    幾乎水平：
-                    對單點景深幫助低
-                    */
-
                     if(
                         Math.abs(a)
                         <
@@ -1108,12 +1062,6 @@ function extractLines(
                         continue;
                     }
 
-
-                    /*
-                    幾乎垂直：
-                    樹幹、電線桿、建築垂直邊
-                    很容易造成假交點。
-                    */
 
                     if(
                         Math.abs(a)
@@ -1153,14 +1101,6 @@ function extractLines(
             );
 
 
-            /*
-            每格最多2條。
-
-            第二條必須與第一條
-            有足夠方向差，
-            避免粗邊緣重複投票。
-            */
-
             var selected = [];
 
 
@@ -1174,8 +1114,7 @@ function extractLines(
                 local[k];
 
 
-                var different =
-                true;
+                var different = true;
 
 
                 for(
@@ -1193,8 +1132,7 @@ function extractLines(
                         .18
                     ){
 
-                        different =
-                        false;
+                        different = false;
 
                         break;
 
@@ -1254,13 +1192,6 @@ function extractLines(
                 selected[n];
 
 
-                /*
-                每一條線基礎票數刻意壓平。
-
-                不再讓非常粗、
-                非常亮的邊緣霸榜。
-                */
-
                 var strength =
                 clamp(
                     L.mag/
@@ -1279,20 +1210,31 @@ function extractLines(
 
 
                 /*
-                來源位置。
+                V5.8.4
 
-                越靠近畫面下半部，
-                越有機會描述景深。
-
-                但只做溫和加權。
+                下半部來源略微加強。
+                道路、步道、鐵軌等近景線
+                通常比上方樹枝更可靠。
                 */
 
+                var yn =
+                L.y/AH;
+
+
                 var depthSource =
-                .72
+                .66
                 +
-                (
-                    L.y/AH
-                )*.38;
+                yn*.48;
+
+
+                if(
+                    yn > .52
+                ){
+
+                    depthSource *=
+                    1.08;
+
+                }
 
 
                 L.weight =
@@ -1302,12 +1244,6 @@ function extractLines(
                 *
                 depthSource;
 
-
-                /*
-                區域ID：
-                後面用來避免同一棟建築
-                /同一片樹枝大量灌票。
-                */
 
                 L.regionX =
                 Math.floor(
@@ -1337,12 +1273,6 @@ function extractLines(
 
 /* =========================================================
    CANDIDATE VP SCORE
-
-   直接問：
-
-   「如果這裡是消失點，
-     有多少不同區域的線真的指向它？」
-
 ========================================================= */
 
 function scoreCandidateVP(
@@ -1372,14 +1302,6 @@ function scoreCandidateVP(
         lines[i];
 
 
-        /*
-        消失點下方的線
-        才最能描述「近 → 遠」。
-
-        VP上方樹枝、屋頂等，
-        大幅降低作用。
-        */
-
         var below =
         L.y-vy;
 
@@ -1390,10 +1312,6 @@ function scoreCandidateVP(
             continue;
         }
 
-
-        /*
-        線到VP距離
-        */
 
         var dist =
         lineDistance(
@@ -1409,11 +1327,6 @@ function scoreCandidateVP(
             continue;
         }
 
-
-        /*
-        從線的位置指向VP的角度
-        應該與線本身方向一致。
-        */
 
         var toVP =
         Math.atan2(
@@ -1450,10 +1363,6 @@ function scoreCandidateVP(
         }
 
 
-        /*
-        距離分數
-        */
-
         var distanceScore =
         1 -
         clamp(
@@ -1468,10 +1377,6 @@ function scoreCandidateVP(
         distanceScore;
 
 
-        /*
-        方向分數
-        */
-
         var angleScore =
         1 -
         clamp(
@@ -1480,16 +1385,6 @@ function scoreCandidateVP(
             1
         );
 
-
-        /*
-        景深分數：
-
-        VP附近本身的短線，
-        證據比較弱。
-
-        離VP越遠、仍然精準指向VP，
-        才是強透視證據。
-        */
 
         var radial =
         Math.hypot(
@@ -1521,15 +1416,6 @@ function scoreCandidateVP(
         *
         radialScore;
 
-
-        /*
-        每個大區域只保留最佳線。
-
-        這是抑制：
-        一整片窗框
-        一整片樹枝
-        同區域大量灌票
-        */
 
         var key =
         L.regionX +
@@ -1650,10 +1536,6 @@ function scoreCandidateVP(
         }
 
 
-        /*
-        垂直景深分布
-        */
-
         var relativeY =
         (L.y-vy) /
         Math.max(
@@ -1714,7 +1596,7 @@ function scoreCandidateVP(
 
 
     /*
-    必須左右都有證據
+    左右都必須有景深線。
     */
 
     if(
@@ -1729,27 +1611,23 @@ function scoreCandidateVP(
 
 
     /*
-    必須至少有中段或近段證據。
+    V5.8.4：
+    中段 + 近段必須占更高比例。
 
-    避免只靠樹冠、
-    建築頂部的小區域交會。
+    降低只有上方樹枝支持的假VP。
     */
 
     if(
         nearWeight +
         middleWeight
         <
-        total*.28
+        total*.34
     ){
 
         return null;
 
     }
 
-
-    /*
-    左右平衡
-    */
 
     var balance =
     Math.min(
@@ -1763,10 +1641,6 @@ function scoreCandidateVP(
     );
 
 
-    /*
-    左右來源總跨度
-    */
-
     var horizontalSpan =
     maxX-minX;
 
@@ -1779,13 +1653,6 @@ function scoreCandidateVP(
         1
     );
 
-
-    /*
-    垂直來源分布
-
-    只有某一個高度的線很多，
-    不如從中段一路延伸到近處。
-    */
 
     var bandCount = 0;
 
@@ -1816,14 +1683,6 @@ function scoreCandidateVP(
     /*
     =====================================================
     近寬 → 遠窄
-
-    若下方線來源跨度大，
-    上方靠近VP時跨度變小，
-    是典型景深結構。
-
-    注意：
-    沒有足夠上下資料時，
-    不直接判死刑。
     =====================================================
     */
 
@@ -1883,18 +1742,22 @@ function scoreCandidateVP(
 
 
     /*
-    下半部證據比例。
+    =====================================================
+    V5.8.4 景深證據
 
-    這是實拍樹林步道的重要修正。
+    近景道路：1.35
+    中景道路：1.05
+    遠處碎線：0.30
+    =====================================================
     */
 
     var depthEvidence =
     (
-        nearWeight*1.15
+        nearWeight*1.35
         +
-        middleWeight*.95
+        middleWeight*1.05
         +
-        farWeight*.45
+        farWeight*.30
     )
     /
     Math.max(
@@ -1906,15 +1769,13 @@ function scoreCandidateVP(
     depthEvidence =
     clamp(
         depthEvidence,
-        .35,
-        1.15
+        .30,
+        1.20
     );
 
 
     /*
-    不強迫中央。
-
-    只對極端邊緣VP稍微降權。
+    X方向極端位置降權。
     */
 
     var nx =
@@ -1949,45 +1810,99 @@ function scoreCandidateVP(
 
 
     /*
-    VP太低：
-    很容易只是近景地面交點。
+    =====================================================
+    V5.8.4 地平線約束
 
-    但不完全禁止。
+    上方樹冠 / 天空：
+    強烈降權。
+
+    中間景深區：
+    適度加分。
+
+    不完全禁止高VP，
+    保留上坡、樓梯等情況。
+    =====================================================
     */
 
     var ny =
     vy/AH;
 
 
-    var lowPenalty =
+    var horizonPenalty =
     1;
 
 
     if(
-        ny > .70
+        ny < .22
     ){
 
-        lowPenalty =
-        .62;
+        horizonPenalty =
+        .28;
 
     }
     else
     if(
-        ny > .62
+        ny < .30
     ){
 
-        lowPenalty =
-        .82;
+        horizonPenalty =
+        .48;
+
+    }
+    else
+    if(
+        ny < .36
+    ){
+
+        horizonPenalty =
+        .72;
+
+    }
+
+
+    var horizonBonus =
+    1;
+
+
+    if(
+        ny >= .40
+        &&
+        ny <= .64
+    ){
+
+        horizonBonus =
+        1.13;
 
     }
 
 
     /*
-    最終分數。
-
-    sqrt(left*right)
-    讓單側再多線也無法霸榜。
+    太低也要壓制，
+    避免路面裂縫交點。
     */
+
+    var lowPenalty =
+    1;
+
+
+    if(
+        ny > .74
+    ){
+
+        lowPenalty =
+        .55;
+
+    }
+    else
+    if(
+        ny > .67
+    ){
+
+        lowPenalty =
+        .76;
+
+    }
+
 
     var bilateral =
     Math.sqrt(
@@ -2022,6 +1937,10 @@ function scoreCandidateVP(
     depthEvidence
     *
     edgePenalty
+    *
+    horizonPenalty
+    *
+    horizonBonus
     *
     lowPenalty;
 
@@ -2137,9 +2056,6 @@ function lineIntersection(A,B){
 
 /* =========================================================
    REFINE VP
-
-   用勝出候選點附近真正支持它的
-   左右線交點進行精修。
 ========================================================= */
 
 function refineVP(
@@ -2295,10 +2211,6 @@ function refineVP(
     );
 
 
-    /*
-    不讓精修一次跳太遠
-    */
-
     var dx =
     mx-vx;
 
@@ -2385,9 +2297,7 @@ function analyzeDepthVanishingPoint(){
 
 
     /*
-    =====================================================
     GRAYSCALE
-    =====================================================
     */
 
     for(
@@ -2411,9 +2321,7 @@ function analyzeDepthVanishingPoint(){
 
 
     /*
-    =====================================================
     SOBEL
-    =====================================================
     */
 
     var magnitude =
@@ -2494,11 +2402,6 @@ function analyzeDepthVanishingPoint(){
             mag;
 
 
-            /*
-            Sobel是法線方向。
-            +90° = 邊緣線方向。
-            */
-
             var a =
             Math.atan2(
                 gy,
@@ -2549,12 +2452,6 @@ function analyzeDepthVanishingPoint(){
     );
 
 
-    /*
-    比V5.8.2稍微放寬，
-    因為實景道路邊界
-    不一定像測試圖那麼銳利。
-    */
-
     var threshold =
     values[
         Math.floor(
@@ -2574,9 +2471,7 @@ function analyzeDepthVanishingPoint(){
 
 
     /*
-    =====================================================
     LINE EXTRACTION
-    =====================================================
     */
 
     var lines =
@@ -2598,33 +2493,21 @@ function analyzeDepthVanishingPoint(){
 
     /*
     =====================================================
-    VP SEARCH
+    V5.8.4 VP 粗搜尋
 
-    第一階段：
-    粗網格。
+    Y由20%開始。
 
-    不再先算所有兩線交點。
-    直接測試每個位置是否有
-    「全局景深共識」。
+    上方仍保留一些搜尋空間，
+    但不再從12%開始大量尋找樹冠交點。
     =====================================================
     */
 
-    var best =
-    null;
+    var best = null;
 
-
-    /*
-    搜尋範圍：
-
-    X 7% ~ 93%
-    Y 12% ~ 72%
-
-    不強迫中央。
-    */
 
     for(
-        var gy=AH*.12;
-        gy<=AH*.72;
+        var gy=AH*.20;
+        gy<=AH*.74;
         gy+=8
     ){
 
@@ -2658,6 +2541,7 @@ function analyzeDepthVanishingPoint(){
 
                     x:gx,
                     y:gy,
+
                     score:
                     result.score,
 
@@ -2680,8 +2564,7 @@ function analyzeDepthVanishingPoint(){
 
     /*
     =====================================================
-    第二階段：
-    在最佳粗點附近細搜
+    細搜尋
     =====================================================
     */
 
@@ -2697,9 +2580,9 @@ function analyzeDepthVanishingPoint(){
     ){
 
         if(
-            fy < AH*.08
+            fy < AH*.16
             ||
-            fy > AH*.75
+            fy > AH*.77
         ){
             continue;
         }
@@ -2743,6 +2626,7 @@ function analyzeDepthVanishingPoint(){
 
                     x:fx,
                     y:fy,
+
                     score:
                     fine.score,
 
@@ -2759,9 +2643,7 @@ function analyzeDepthVanishingPoint(){
 
 
     /*
-    =====================================================
     精修
-    =====================================================
     */
 
     var refined =
@@ -2780,16 +2662,21 @@ function analyzeDepthVanishingPoint(){
     );
 
 
+    /*
+    V5.8.4：
+    精修後仍限制在合理垂直範圍。
+    */
+
     var vy =
     clamp(
         refined.y,
-        AH*.07,
-        AH*.77
+        AH*.15,
+        AH*.78
     );
 
 
     /*
-    精修後再驗證一次
+    精修後再驗證。
     */
 
     var finalCheck =
@@ -2815,11 +2702,8 @@ function analyzeDepthVanishingPoint(){
 
 
     /*
-    =====================================================
     CONFIDENCE
-
     這是辨識信心，不是構圖分數。
-    =====================================================
     */
 
     var balance =
@@ -2935,10 +2819,6 @@ function drawDetectedPoint(){
     ctx.setLineDash([]);
 
 
-    /*
-    外圈
-    */
-
     ctx.beginPath();
 
     ctx.arc(
@@ -2952,10 +2832,6 @@ function drawDetectedPoint(){
     ctx.stroke();
 
 
-    /*
-    中心點
-    */
-
     ctx.beginPath();
 
     ctx.arc(
@@ -2968,10 +2844,6 @@ function drawDetectedPoint(){
 
     ctx.fill();
 
-
-    /*
-    十字
-    */
 
     ctx.lineWidth =
     3;
@@ -3025,10 +2897,6 @@ function drawDetectedPoint(){
 
     ctx.stroke();
 
-
-    /*
-    Label
-    */
 
     ctx.font =
     "bold 16px -apple-system,Arial";
