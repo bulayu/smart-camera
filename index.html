@@ -2,17 +2,12 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-
 <meta name="viewport"
-content="width=device-width,
-initial-scale=1,
-maximum-scale=1,
-user-scalable=no">
+content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 
-<title>AI 構圖助手 V6.0</title>
+<title>構圖導航 V6.1</title>
 
 <style>
-
 *{
     box-sizing:border-box;
     -webkit-tap-highlight-color:transparent;
@@ -25,12 +20,7 @@ html,body{
     overflow:hidden;
     background:#000;
     color:#fff;
-    font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Arial,
-    sans-serif;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
 }
 
 body{
@@ -38,17 +28,13 @@ body{
     flex-direction:column;
 }
 
-/* =========================
-   CAMERA
-========================= */
-
 #cameraArea{
     position:relative;
     width:100%;
     flex:1;
     min-height:0;
-    background:#111;
     overflow:hidden;
+    background:#111;
 }
 
 #video{
@@ -68,36 +54,32 @@ body{
     z-index:5;
 }
 
-/* =========================
-   INFO
-========================= */
-
 #info{
     position:absolute;
-    top:16px;
-    left:15px;
-    width:260px;
-    padding:15px 17px;
-    border-radius:20px;
-    background:rgba(0,0,0,.72);
-    backdrop-filter:blur(6px);
+    top:14px;
+    left:14px;
+    max-width:270px;
+    padding:13px 16px;
+    border-radius:18px;
+    background:rgba(0,0,0,.70);
+    backdrop-filter:blur(7px);
     z-index:10;
 }
 
 #modeTitle{
-    font-size:14px;
-    opacity:.70;
-    margin-bottom:5px;
+    font-size:13px;
+    opacity:.72;
+    margin-bottom:4px;
 }
 
 #composition{
-    font-size:25px;
+    font-size:23px;
     font-weight:800;
 }
 
 #desc{
-    margin-top:7px;
-    font-size:14px;
+    margin-top:5px;
+    font-size:13px;
     line-height:1.45;
     opacity:.85;
 }
@@ -105,65 +87,55 @@ body{
 #message{
     position:absolute;
     left:50%;
-    bottom:15px;
+    bottom:14px;
     transform:translateX(-50%);
     width:92%;
-    padding:13px;
-    border-radius:18px;
+    padding:12px;
+    border-radius:17px;
     background:rgba(0,0,0,.78);
     text-align:center;
-    font-size:15px;
+    font-size:14px;
     font-weight:700;
     z-index:10;
 }
 
 #version{
     position:absolute;
-    left:8px;
-    bottom:4px;
-    font-size:11px;
-    opacity:.65;
+    left:7px;
+    bottom:3px;
+    font-size:10px;
+    opacity:.55;
     z-index:20;
 }
 
-/* =========================
-   CONTROLS
-========================= */
-
 #controls{
     flex:0 0 auto;
-    padding:
-    10px
-    12px
-    calc(12px + env(safe-area-inset-bottom));
+    padding:9px 11px calc(11px + env(safe-area-inset-bottom));
     background:#000;
 }
-
-/* =========================
-   MODES
-========================= */
 
 #modeRow{
     display:flex;
     gap:7px;
     overflow-x:auto;
-    padding-bottom:9px;
+    padding-bottom:8px;
     scrollbar-width:none;
 }
 
-#modeRow::-webkit-scrollbar{
+#modeRow::-webkit-scrollbar,
+#compositionRow::-webkit-scrollbar{
     display:none;
 }
 
 .modeBtn{
     flex:0 0 auto;
-    min-width:73px;
-    padding:9px 9px;
-    border:none;
-    border-radius:18px;
+    min-width:67px;
+    padding:8px 8px;
+    border:0;
+    border-radius:17px;
     background:#242424;
     color:#fff;
-    font-size:13px;
+    font-size:12px;
     font-weight:700;
 }
 
@@ -174,34 +146,34 @@ body{
 
 .modeIcon{
     display:block;
-    font-size:20px;
-    margin-bottom:3px;
+    font-size:19px;
+    margin-bottom:2px;
 }
 
-/* =========================
-   COMPOSITION CHIPS
-========================= */
+.autoBtn{
+    background:#292929;
+}
+
+.autoBtn.active{
+    background:#ffd400;
+    color:#000;
+}
 
 #compositionRow{
     display:flex;
     gap:7px;
     overflow-x:auto;
-    padding-bottom:9px;
-    scrollbar-width:none;
-}
-
-#compositionRow::-webkit-scrollbar{
-    display:none;
+    padding-bottom:8px;
 }
 
 .compBtn{
     flex:0 0 auto;
-    padding:8px 13px;
-    border-radius:18px;
+    padding:7px 12px;
+    border-radius:17px;
     border:1px solid #444;
     background:#151515;
     color:#ddd;
-    font-size:13px;
+    font-size:12px;
 }
 
 .compBtn.active{
@@ -209,2196 +181,1090 @@ body{
     color:#ffd400;
 }
 
-/* =========================
-   AI BUTTON
-========================= */
-
-#aiButton{
+#autoButton{
     width:100%;
-    padding:13px;
-    border:none;
-    border-radius:25px;
+    padding:12px;
+    border:0;
+    border-radius:24px;
     background:#fff;
     color:#000;
-    font-size:17px;
+    font-size:16px;
     font-weight:800;
-    margin-bottom:9px;
+    margin-bottom:8px;
 }
-
-/* =========================
-   CAMERA BUTTONS
-========================= */
 
 #bottomRow{
     display:flex;
     align-items:center;
-    gap:8px;
+    gap:7px;
 }
 
 .cameraBtn{
     flex:0 0 auto;
-    padding:9px 13px;
+    padding:8px 11px;
+    border:0;
+    border-radius:18px;
     background:#292929;
     color:#fff;
-    border:none;
-    border-radius:20px;
-    font-size:13px;
+    font-size:12px;
 }
 
 #zoomArea{
     flex:1;
     display:flex;
     align-items:center;
-    gap:6px;
+    gap:5px;
 }
 
 #zoom{
     flex:1;
-    min-width:60px;
+    min-width:50px;
 }
 
 #zoomText{
-    font-size:12px;
-    min-width:34px;
+    min-width:32px;
+    font-size:11px;
 }
 
 #status{
-    margin-top:7px;
+    margin-top:6px;
     text-align:center;
-    font-size:11px;
+    font-size:10px;
     opacity:.40;
 }
-
 </style>
 </head>
 
 <body>
 
-<!-- =========================
-     CAMERA AREA
-========================= -->
-
 <div id="cameraArea">
 
-    <video
-    id="video"
-    autoplay
-    playsinline
-    muted>
-    </video>
-
+    <video id="video" autoplay playsinline muted></video>
     <canvas id="overlay"></canvas>
 
     <div id="info">
-
-        <div id="modeTitle">
-            🏞️ 風景模式
-        </div>
-
-        <div id="composition">
-            三分法
-        </div>
-
-        <div id="desc">
-            將主體安排在三分交叉點附近
-        </div>
-
+        <div id="modeTitle">✨ 自動構圖</div>
+        <div id="composition">準備分析</div>
+        <div id="desc">選擇拍攝模式，或使用自動構圖</div>
     </div>
 
     <div id="message">
-        ✨ 選擇拍攝模式，再按 AI 構圖建議
+        📷 對準想拍攝的畫面
     </div>
 
-    <div id="version">
-        V6.0
-    </div>
+    <div id="version">V6.1</div>
 
 </div>
 
-
-<!-- =========================
-     CONTROLS
-========================= -->
-
 <div id="controls">
-
-    <!-- 六大模式 -->
 
     <div id="modeRow">
 
-        <button
-        class="modeBtn active"
-        data-mode="landscape"
+        <button class="modeBtn autoBtn active"
+        onclick="selectMode('auto',this)">
+            <span class="modeIcon">✨</span>自動
+        </button>
+
+        <button class="modeBtn"
         onclick="selectMode('landscape',this)">
-
-            <span class="modeIcon">🏞️</span>
-            風景
-
+            <span class="modeIcon">🏞️</span>風景
         </button>
 
-
-        <button
-        class="modeBtn"
-        data-mode="street"
+        <button class="modeBtn"
         onclick="selectMode('street',this)">
-
-            <span class="modeIcon">🏙️</span>
-            街景
-
+            <span class="modeIcon">🏙️</span>街景
         </button>
 
-
-        <button
-        class="modeBtn"
-        data-mode="portrait"
+        <button class="modeBtn"
         onclick="selectMode('portrait',this)">
-
-            <span class="modeIcon">👤</span>
-            人像
-
+            <span class="modeIcon">👤</span>人像
         </button>
 
-
-        <button
-        class="modeBtn"
-        data-mode="night"
+        <button class="modeBtn"
         onclick="selectMode('night',this)">
-
-            <span class="modeIcon">🌙</span>
-            夜景
-
+            <span class="modeIcon">🌙</span>夜景
         </button>
 
-
-        <button
-        class="modeBtn"
-        data-mode="indoor"
+        <button class="modeBtn"
         onclick="selectMode('indoor',this)">
-
-            <span class="modeIcon">🏠</span>
-            室內
-
+            <span class="modeIcon">🏠</span>室內
         </button>
 
-
-        <button
-        class="modeBtn"
-        data-mode="food"
+        <button class="modeBtn"
         onclick="selectMode('food',this)">
+            <span class="modeIcon">🍜</span>美食
+        </button>
 
-            <span class="modeIcon">🍜</span>
-            美食
+        <button class="modeBtn"
+        onclick="selectMode('macro',this)">
+            <span class="modeIcon">🌸</span>近拍
+        </button>
 
+        <button class="modeBtn"
+        onclick="selectMode('pet',this)">
+            <span class="modeIcon">🐶</span>寵物
+        </button>
+
+        <button class="modeBtn"
+        onclick="selectMode('product',this)">
+            <span class="modeIcon">📦</span>商品
         </button>
 
     </div>
 
+    <div id="compositionRow"></div>
 
-    <!-- 構圖選擇 -->
-
-    <div id="compositionRow">
-    </div>
-
-
-    <!-- AI -->
-
-    <button
-    id="aiButton"
-    onclick="runAI()">
-        ✨ AI 構圖建議
+    <button id="autoButton" onclick="runComposition()">
+        ✨ 自動構圖
     </button>
-
-
-    <!-- CAMERA -->
 
     <div id="bottomRow">
 
-        <button
-        class="cameraBtn"
+        <button class="cameraBtn"
         onclick="changeCamera('user')">
             🤳 前鏡
         </button>
 
-        <button
-        class="cameraBtn"
+        <button class="cameraBtn"
         onclick="changeCamera('environment')">
             📷 後鏡
         </button>
 
         <div id="zoomArea">
+            <span style="font-size:11px">倍率</span>
 
-            <span style="font-size:12px">
-                倍率
-            </span>
-
-            <input
-            id="zoom"
+            <input id="zoom"
             type="range"
             min="1"
             max="3"
             step=".1"
             value="1">
 
-            <span id="zoomText">
-                1.0×
-            </span>
-
+            <span id="zoomText">1.0×</span>
         </div>
 
     </div>
 
-
     <div id="status">
-        V6.0｜六大拍攝模式架構版
+        V6.1｜智慧構圖架構版
     </div>
 
 </div>
 
-
 <script>
 
 /* =========================================================
+   構圖導航 V6.1
+   AI 字樣全面移除
 
- AI 構圖助手 V6.0
+   架構：
+   自動 + 9 大拍攝模式
 
- 六大拍攝模式架構版
-
- 模式：
-
- 1. 風景
- 2. 街景
- 3. 人像
- 4. 夜景
- 5. 室內
- 6. 美食
-
-
- V6.0 目標：
-
- 不再把道路消失點當成整個 App 核心。
-
- 改為：
-
- 拍攝模式
- ↓
- 構圖知識庫
- ↓
- 場景分析
- ↓
- 選擇構圖
- ↓
- 畫輔助線
- ↓
- 未來加入手機移動導航
-
-
- V6.0：
-
- 目前先完成：
-
- ✓ 六大模式
- ✓ 每個模式獨立構圖法
- ✓ 構圖模板
- ✓ 輔助線
- ✓ 相機
- ✓ 前後鏡頭
- ✓ Zoom
-
- 下一階段：
-
- V6.1
- 加入場景辨識與自動構圖選擇
-
+   V6.1：
+   1. 六大模式擴充為九大模式
+   2. 加入「自動」
+   3. 建立各模式構圖知識庫
+   4. 建立構圖推薦流程
+   5. 保留相機 / Zoom / 輔助線
 ========================================================= */
+
+var video=document.getElementById("video");
+var overlay=document.getElementById("overlay");
+var ctx=overlay.getContext("2d");
+var messageEl=document.getElementById("message");
+var modeTitle=document.getElementById("modeTitle");
+var compositionEl=document.getElementById("composition");
+var descEl=document.getElementById("desc");
+var compositionRow=document.getElementById("compositionRow");
+var zoom=document.getElementById("zoom");
+var zoomText=document.getElementById("zoomText");
+
+var stream=null;
+var facing="environment";
+
+var currentMode="auto";
+var currentComposition=null;
 
 
 /* =========================================================
- DOM
+   構圖知識庫
 ========================================================= */
 
-var video =
-document.getElementById("video");
-
-var overlay =
-document.getElementById("overlay");
-
-var ctx =
-overlay.getContext("2d");
-
-var cameraArea =
-document.getElementById("cameraArea");
-
-var modeTitle =
-document.getElementById("modeTitle");
-
-var compositionEl =
-document.getElementById("composition");
-
-var descEl =
-document.getElementById("desc");
-
-var messageEl =
-document.getElementById("message");
-
-var compositionRow =
-document.getElementById("compositionRow");
-
-var zoom =
-document.getElementById("zoom");
-
-var zoomText =
-document.getElementById("zoomText");
-
-
-/* =========================================================
- STATE
-========================================================= */
-
-var stream = null;
-
-var facing =
-"environment";
-
-var currentMode =
-"landscape";
-
-var currentComposition =
-"thirds";
-
-
-/* =========================================================
- COMPOSITION DATABASE
-========================================================= */
-
-var modeDatabase = {
-
-
-/* =========================
-   LANDSCAPE
-========================= */
+var database={
 
 landscape:{
-
     icon:"🏞️",
-
     name:"風景",
-
     default:"thirds",
-
-    compositions:[
-
-        {
-            id:"thirds",
-            name:"三分法",
-            desc:"將地平線與主要景物安排在三分位置"
-        },
-
-        {
-            id:"golden",
-            name:"黃金比例",
-            desc:"利用黃金比例安排視覺重心"
-        },
-
-        {
-            id:"leading",
-            name:"引導線",
-            desc:"利用道路、河流或山脈線條引導視線"
-        },
-
-        {
-            id:"center",
-            name:"中央構圖",
-            desc:"將主要風景主體放在畫面中央"
-        },
-
-        {
-            id:"frame",
-            name:"框景",
-            desc:"利用樹木、門窗或前景包圍主體"
-        }
-
+    comps:[
+        ["thirds","三分法","安排天空、地面與主要景物的比例"],
+        ["golden","黃金比例","讓主要視覺重心落在自然舒適的位置"],
+        ["leading","引導線","利用道路、河流或地形引導視線"],
+        ["center","中央構圖","適合明確而突出的單一主體"],
+        ["frame","框景","利用樹木或前景形成天然畫框"]
     ]
-
 },
-
-
-/* =========================
-   STREET
-========================= */
 
 street:{
-
     icon:"🏙️",
-
     name:"街景",
-
     default:"leading",
-
-    compositions:[
-
-        {
-            id:"leading",
-            name:"引導線",
-            desc:"利用道路與建築線條把視線帶向主體"
-        },
-
-        {
-            id:"perspective",
-            name:"單點透視",
-            desc:"利用道路或建築的收斂方向強化縱深"
-        },
-
-        {
-            id:"symmetry",
-            name:"對稱",
-            desc:"利用左右對稱創造穩定且強烈的視覺效果"
-        },
-
-        {
-            id:"thirds",
-            name:"三分法",
-            desc:"將街景主體安排在三分位置"
-        },
-
-        {
-            id:"diagonal",
-            name:"對角線",
-            desc:"利用斜向線條增加畫面的動態感"
-        }
-
+    comps:[
+        ["leading","引導線","利用道路與建築線條引導視線"],
+        ["perspective","單點透視","利用收斂線條強化空間深度"],
+        ["symmetry","對稱","適合左右結構明顯的街景"],
+        ["thirds","三分法","讓主要街景主體避開死板置中"],
+        ["diagonal","對角線","利用斜向結構增加動態感"]
     ]
-
 },
-
-
-/* =========================
-   PORTRAIT
-========================= */
 
 portrait:{
-
     icon:"👤",
-
     name:"人像",
-
-    default:"thirdsPortrait",
-
-    compositions:[
-
-        {
-            id:"thirdsPortrait",
-            name:"三分人像",
-            desc:"將人物眼睛與身體安排在三分位置"
-        },
-
-        {
-            id:"centerPortrait",
-            name:"中央人像",
-            desc:"人物置中，強調臉部與視線"
-        },
-
-        {
-            id:"headroom",
-            name:"視線留白",
-            desc:"在人物視線方向保留適當空間"
-        },
-
-        {
-            id:"fullbody",
-            name:"全身構圖",
-            desc:"保留頭頂與腳部空間，避免關節位置被裁切"
-        },
-
-        {
-            id:"environmentPortrait",
-            name:"環境人像",
-            desc:"人物與周圍環境一起成為構圖的一部分"
-        }
-
+    default:"portraitThirds",
+    comps:[
+        ["portraitThirds","三分人像","將人物安排在三分位置"],
+        ["portraitCenter","中央人像","適合正面人物與強烈視線"],
+        ["lookSpace","視線留白","人物面向哪裡，就在前方保留空間"],
+        ["fullbody","全身構圖","保留頭頂與腳部並避免關節裁切"],
+        ["environment","環境人像","人物與背景共同說明場景"]
     ]
-
 },
-
-
-/* =========================
-   NIGHT
-========================= */
 
 night:{
-
     icon:"🌙",
-
     name:"夜景",
-
     default:"thirds",
-
-    compositions:[
-
-        {
-            id:"thirds",
-            name:"三分夜景",
-            desc:"利用三分位置安排夜景主體與天空"
-        },
-
-        {
-            id:"reflection",
-            name:"倒影構圖",
-            desc:"利用水面或玻璃倒影形成上下呼應"
-        },
-
-        {
-            id:"leading",
-            name:"燈光引導",
-            desc:"利用街燈與光軌形成視覺引導"
-        },
-
-        {
-            id:"center",
-            name:"中央構圖",
-            desc:"將夜景主要光源或建築置中"
-        },
-
-        {
-            id:"symmetry",
-            name:"夜景對稱",
-            desc:"利用建築與燈光形成左右對稱"
-        }
-
+    comps:[
+        ["thirds","三分夜景","平衡天空、建築與燈光"],
+        ["leading","燈光引導","利用路燈或光軌引導視線"],
+        ["reflection","倒影","利用水面或玻璃形成上下呼應"],
+        ["symmetry","對稱","適合夜間建築與倒影"],
+        ["center","中央構圖","突出單一夜景主體"]
     ]
-
 },
-
-
-/* =========================
-   INDOOR
-========================= */
 
 indoor:{
-
     icon:"🏠",
-
     name:"室內",
-
     default:"symmetry",
-
-    compositions:[
-
-        {
-            id:"symmetry",
-            name:"對稱",
-            desc:"保持左右平衡，適合室內空間與建築"
-        },
-
-        {
-            id:"perspective",
-            name:"空間透視",
-            desc:"利用牆面與走廊線條表現空間深度"
-        },
-
-        {
-            id:"thirds",
-            name:"三分法",
-            desc:"將家具或主要物件安排在三分位置"
-        },
-
-        {
-            id:"frame",
-            name:"門框構圖",
-            desc:"利用門框或窗框形成天然畫框"
-        },
-
-        {
-            id:"center",
-            name:"中央構圖",
-            desc:"將室內主要視覺中心放在畫面中央"
-        }
-
+    comps:[
+        ["symmetry","對稱","保持左右空間平衡"],
+        ["perspective","空間透視","利用牆面與走廊表現深度"],
+        ["center","中央構圖","突出室內主要視覺中心"],
+        ["thirds","三分法","安排家具與空間比例"],
+        ["frame","門框構圖","利用門窗形成天然畫框"]
     ]
-
 },
 
-
-/* =========================
-   FOOD
-========================= */
-
 food:{
-
     icon:"🍜",
-
     name:"美食",
-
     default:"foodCenter",
-
-    compositions:[
-
-        {
-            id:"foodCenter",
-            name:"置中美食",
-            desc:"將主要餐點放在畫面視覺中心"
-        },
-
-        {
-            id:"foodThirds",
-            name:"三分美食",
-            desc:"將主餐安排在三分交叉點"
-        },
-
-        {
-            id:"foodDiagonal",
-            name:"對角排列",
-            desc:"多個餐盤沿對角線排列增加層次"
-        },
-
-        {
-            id:"foodTop",
-            name:"俯拍構圖",
-            desc:"從上方整理餐盤與桌面的幾何關係"
-        },
-
-        {
-            id:"fill",
-            name:"滿版特寫",
-            desc:"靠近餐點，減少背景干擾"
-        }
-
+    comps:[
+        ["foodCenter","置中美食","適合單一主餐或餐盤"],
+        ["foodThirds","三分美食","讓主餐與配菜形成平衡"],
+        ["foodDiagonal","對角排列","適合多盤料理"],
+        ["foodTop","俯拍構圖","適合桌面與多道料理"],
+        ["fill","滿版特寫","強調食物細節與質感"]
     ]
+},
 
+macro:{
+    icon:"🌸",
+    name:"近拍",
+    default:"macroThirds",
+    comps:[
+        ["macroThirds","近拍三分","將花朵或小物放在三分交叉點"],
+        ["macroCenter","中央近拍","突出單一花朵或小型物件"],
+        ["diagonal","對角線","利用枝葉或物體方向形成動態"],
+        ["negative","留白","讓小型主體周圍保留乾淨空間"],
+        ["fill","滿版特寫","靠近主體突出細節"]
+    ]
+},
+
+pet:{
+    icon:"🐶",
+    name:"寵物",
+    default:"petThirds",
+    comps:[
+        ["petThirds","眼睛三分","讓寵物眼睛靠近三分交叉點"],
+        ["petCenter","中央萌拍","適合正面看鏡頭"],
+        ["petLook","方向留白","在寵物面向方向保留空間"],
+        ["petFull","全身構圖","完整保留身體與腳部"],
+        ["petAction","動態留白","在移動方向預留畫面空間"]
+    ]
+},
+
+product:{
+    icon:"📦",
+    name:"商品",
+    default:"productCenter",
+    comps:[
+        ["productCenter","商品置中","適合單一商品展示"],
+        ["productThirds","商品三分","適合帶背景的商品照片"],
+        ["symmetry","對稱","適合幾何外型明確的商品"],
+        ["product45","45°構圖","呈現商品正面與側面立體感"],
+        ["foodTop","俯拍排列","適合多件商品平鋪"],
+        ["negative","留白","保留文字或版面設計空間"]
+    ]
 }
 
 };
 
 
 /* =========================================================
- CAMERA
+   相機
 ========================================================= */
 
 async function startCamera(){
 
     try{
 
-        messageEl.innerText =
-        "📷 正在開啟相機...";
-
+        messageEl.innerText="📷 正在開啟相機...";
 
         if(stream){
-
-            stream
-            .getTracks()
-            .forEach(
-                function(track){
-                    track.stop();
-                }
-            );
-
+            stream.getTracks().forEach(function(t){
+                t.stop();
+            });
         }
 
-
-        if(
-            !navigator.mediaDevices ||
-            !navigator.mediaDevices.getUserMedia
-        ){
-
-            throw new Error(
-                "getUserMedia 不支援"
-            );
-
-        }
-
-
-        stream =
-        await navigator.mediaDevices
-        .getUserMedia({
-
+        stream=await navigator.mediaDevices.getUserMedia({
             video:{
-
-                facingMode:{
-                    ideal:facing
-                },
-
-                width:{
-                    ideal:1280
-                },
-
-                height:{
-                    ideal:720
-                }
-
+                facingMode:{ideal:facing},
+                width:{ideal:1280},
+                height:{ideal:720}
             },
-
             audio:false
-
         });
 
-
-        video.srcObject =
-        stream;
-
+        video.srcObject=stream;
 
         await video.play();
 
-
         resizeOverlay();
 
+        messageEl.innerText="📷 對準想拍攝的畫面";
 
-        messageEl.innerText =
-        "✨ 選擇拍攝模式，再按 AI 構圖建議";
+    }catch(e){
 
-    }
+        console.log(e);
 
-    catch(error){
-
-        console.log(
-            "Camera error:",
-            error
-        );
-
-
-        var name =
-        error && error.name
-        ?
-        error.name
-        :
-        "UnknownError";
-
-
-        if(name==="NotAllowedError"){
-
-            messageEl.innerText =
-            "❌ 請允許網站使用相機";
-
+        if(e.name==="NotAllowedError"){
+            messageEl.innerText="❌ 請允許網站使用相機";
         }
-
-        else if(name==="NotFoundError"){
-
-            messageEl.innerText =
-            "❌ 找不到可用相機";
-
+        else if(e.name==="NotFoundError"){
+            messageEl.innerText="❌ 找不到可用相機";
         }
-
-        else if(name==="NotReadableError"){
-
-            messageEl.innerText =
-            "❌ 相機可能被其他程式占用";
-
+        else if(e.name==="NotReadableError"){
+            messageEl.innerText="❌ 相機可能被其他程式占用";
         }
-
         else{
-
-            messageEl.innerText =
-            "❌ 相機錯誤："+name;
-
+            messageEl.innerText="❌ 相機無法開啟";
         }
-
     }
-
 }
-
 
 async function changeCamera(mode){
-
-    facing =
-    mode;
-
+    facing=mode;
     await startCamera();
-
 }
 
 
 /* =========================================================
- MODE
+   模式
 ========================================================= */
 
-function selectMode(
-    mode,
-    button
-){
+function selectMode(mode,button){
 
-    currentMode =
-    mode;
+    currentMode=mode;
 
-
-    var buttons =
-    document.querySelectorAll(
-        ".modeBtn"
-    );
-
-
-    buttons.forEach(
-        function(btn){
-
-            btn.classList
-            .remove("active");
-
-        }
-    );
-
+    document.querySelectorAll(".modeBtn")
+    .forEach(function(b){
+        b.classList.remove("active");
+    });
 
     if(button){
-
-        button.classList
-        .add("active");
-
+        button.classList.add("active");
     }
 
+    if(mode==="auto"){
 
-    var data =
-    modeDatabase[mode];
+        currentComposition=null;
 
+        compositionRow.innerHTML="";
 
-    currentComposition =
-    data.default;
+        modeTitle.innerText="✨ 自動構圖";
+        compositionEl.innerText="準備分析";
+        descEl.innerText="系統將依拍攝情境選擇合適的構圖方式";
 
+        clearOverlay();
 
-    modeTitle.innerText =
-    data.icon+
-    " "+
-    data.name+
-    "模式";
+        messageEl.innerText=
+        "📷 對準畫面後按「自動構圖」";
 
+        return;
+    }
 
-    buildCompositionButtons();
+    var d=database[mode];
 
+    modeTitle.innerText=d.icon+" "+d.name+"模式";
 
-    selectComposition(
-        currentComposition
-    );
+    buildCompButtons();
 
+    selectComposition(d.default);
 
-    messageEl.innerText =
-    "✨ "+
-    data.name+
-    "模式｜按 AI 取得構圖建議";
-
+    messageEl.innerText=
+    "📷 "+d.name+"模式｜可手動選擇構圖";
 }
 
 
 /* =========================================================
- BUILD COMPOSITION BUTTONS
+   建立構圖按鈕
 ========================================================= */
 
-function buildCompositionButtons(){
+function buildCompButtons(){
 
-    compositionRow.innerHTML =
-    "";
+    compositionRow.innerHTML="";
 
+    database[currentMode].comps
+    .forEach(function(c){
 
-    var data =
-    modeDatabase[currentMode];
+        var b=document.createElement("button");
 
+        b.className="compBtn";
+        b.dataset.id=c[0];
+        b.innerText=c[1];
 
-    data.compositions
-    .forEach(
-        function(comp){
+        b.onclick=function(){
+            selectComposition(c[0]);
+        };
 
-            var button =
-            document.createElement(
-                "button"
-            );
-
-
-            button.className =
-            "compBtn";
-
-
-            button.innerText =
-            comp.name;
-
-
-            button.dataset.id =
-            comp.id;
-
-
-            button.onclick =
-            function(){
-
-                selectComposition(
-                    comp.id
-                );
-
-            };
-
-
-            compositionRow
-            .appendChild(
-                button
-            );
-
-        }
-    );
-
+        compositionRow.appendChild(b);
+    });
 }
 
 
 /* =========================================================
- SELECT COMPOSITION
+   選擇構圖
 ========================================================= */
 
 function selectComposition(id){
 
-    currentComposition =
-    id;
+    currentComposition=id;
+
+    var d=database[currentMode];
+
+    if(!d)return;
+
+    var comp=d.comps.find(function(c){
+        return c[0]===id;
+    });
+
+    if(!comp)return;
+
+    compositionEl.innerText=comp[1];
+    descEl.innerText=comp[2];
+
+    document.querySelectorAll(".compBtn")
+    .forEach(function(b){
+
+        b.classList.toggle(
+            "active",
+            b.dataset.id===id
+        );
+    });
+
+    drawComposition();
+}
 
 
-    var data =
-    modeDatabase[currentMode];
+/* =========================================================
+   自動構圖
+========================================================= */
 
+function runComposition(){
 
-    var comp =
-    data.compositions.find(
-        function(c){
-            return c.id===id;
-        }
-    );
+    /*
+       V6.1 的自動入口。
 
+       注意：
+       目前不是假裝已經辨識場景。
 
-    if(!comp){
+       使用者選手動模式：
+       → 推薦該模式的預設構圖。
+
+       使用自動模式：
+       → V6.2 再接入真正影像辨識。
+
+       所以這一版不亂宣稱：
+       「已辨識出街景」
+    */
+
+    if(currentMode==="auto"){
+
+        modeTitle.innerText="✨ 自動構圖";
+
+        compositionEl.innerText="自動辨識待啟用";
+
+        descEl.innerText=
+        "自動模式的場景辨識將在下一階段加入";
+
+        messageEl.innerText=
+        "👉 目前請先選擇風景、街景、人像等拍攝模式";
+
+        clearOverlay();
+
         return;
     }
 
+    var d=database[currentMode];
 
-    compositionEl.innerText =
-    comp.name;
+    selectComposition(d.default);
 
+    var comp=d.comps.find(function(c){
+        return c[0]===d.default;
+    });
 
-    descEl.innerText =
-    comp.desc;
-
-
-    var buttons =
-    document.querySelectorAll(
-        ".compBtn"
-    );
-
-
-    buttons.forEach(
-        function(btn){
-
-            if(
-                btn.dataset.id===id
-            ){
-
-                btn.classList
-                .add("active");
-
-            }
-
-            else{
-
-                btn.classList
-                .remove("active");
-
-            }
-
-        }
-    );
-
-
-    drawComposition();
-
+    messageEl.innerText=
+    "✓ 推薦："+comp[1]+"｜依照輔助線調整畫面";
 }
 
 
 /* =========================================================
- AI
-
- V6.0：
-
- 這裡先建立「決策入口」。
-
- 現在會依照模式選擇預設推薦。
-
- V6.1 開始，
- 這裡會接真正的畫面分析。
-========================================================= */
-
-function runAI(){
-
-    var data =
-    modeDatabase[currentMode];
-
-
-    var recommendation =
-    data.default;
-
-
-    /*
-    V6.0 先採模式預設構圖。
-
-    未來 V6.1：
-
-    analyzeScene()
-        ↓
-    detectSubject()
-        ↓
-    detectLines()
-        ↓
-    detectHorizon()
-        ↓
-    compositionDecision()
-    */
-
-
-    selectComposition(
-        recommendation
-    );
-
-
-    var comp =
-    data.compositions.find(
-        function(c){
-            return c.id===
-            recommendation;
-        }
-    );
-
-
-    messageEl.innerText =
-    "✨ AI 建議："+
-    comp.name+
-    "｜依照黃色輔助線調整畫面";
-
-}
-
-
-/* =========================================================
- DRAW
+   Canvas
 ========================================================= */
 
 function clearOverlay(){
-
     ctx.clearRect(
-        0,
-        0,
+        0,0,
         overlay.clientWidth,
         overlay.clientHeight
     );
-
 }
 
+function setup(){
 
-/* =========================================================
- COMMON DRAW SETTINGS
-========================================================= */
-
-function setupGuide(){
-
-    ctx.strokeStyle =
-    "#ffd400";
-
-    ctx.fillStyle =
-    "#2cff67";
-
-    ctx.lineWidth =
-    2.5;
-
+    ctx.strokeStyle="#ffd400";
+    ctx.fillStyle="#2cff67";
+    ctx.lineWidth=2.5;
     ctx.setLineDash([]);
+}
 
+function target(x,y){
+
+    ctx.save();
+
+    ctx.strokeStyle="#2cff67";
+    ctx.fillStyle="#2cff67";
+    ctx.lineWidth=3;
+
+    ctx.beginPath();
+    ctx.arc(x,y,11,0,Math.PI*2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(x,y,4,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.restore();
 }
 
 
 /* =========================================================
- THIRDS
+   三分法
 ========================================================= */
 
 function drawThirds(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
-
-
-    setupGuide();
-
+    setup();
 
     ctx.beginPath();
 
+    ctx.moveTo(w/3,0);
+    ctx.lineTo(w/3,h);
 
-    ctx.moveTo(
-        w/3,
-        0
-    );
+    ctx.moveTo(w*2/3,0);
+    ctx.lineTo(w*2/3,h);
 
-    ctx.lineTo(
-        w/3,
-        h
-    );
+    ctx.moveTo(0,h/3);
+    ctx.lineTo(w,h/3);
 
-
-    ctx.moveTo(
-        w*2/3,
-        0
-    );
-
-    ctx.lineTo(
-        w*2/3,
-        h
-    );
-
-
-    ctx.moveTo(
-        0,
-        h/3
-    );
-
-    ctx.lineTo(
-        w,
-        h/3
-    );
-
-
-    ctx.moveTo(
-        0,
-        h*2/3
-    );
-
-    ctx.lineTo(
-        w,
-        h*2/3
-    );
-
+    ctx.moveTo(0,h*2/3);
+    ctx.lineTo(w,h*2/3);
 
     ctx.stroke();
 
-
-    drawTarget(
-        w/3,
-        h/3
-    );
-
-    drawTarget(
-        w*2/3,
-        h/3
-    );
-
-    drawTarget(
-        w/3,
-        h*2/3
-    );
-
-    drawTarget(
-        w*2/3,
-        h*2/3
-    );
-
+    target(w/3,h/3);
+    target(w*2/3,h/3);
+    target(w/3,h*2/3);
+    target(w*2/3,h*2/3);
 }
 
 
 /* =========================================================
- GOLDEN RATIO
+   黃金比例
 ========================================================= */
 
 function drawGolden(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
+    setup();
 
-
-    setupGuide();
-
-
-    var x1 =
-    w*.382;
-
-    var x2 =
-    w*.618;
-
-    var y1 =
-    h*.382;
-
-    var y2 =
-    h*.618;
-
+    var x1=w*.382;
+    var x2=w*.618;
+    var y1=h*.382;
+    var y2=h*.618;
 
     ctx.beginPath();
 
+    ctx.moveTo(x1,0);
+    ctx.lineTo(x1,h);
 
-    ctx.moveTo(
-        x1,
-        0
-    );
+    ctx.moveTo(x2,0);
+    ctx.lineTo(x2,h);
 
-    ctx.lineTo(
-        x1,
-        h
-    );
+    ctx.moveTo(0,y1);
+    ctx.lineTo(w,y1);
 
-
-    ctx.moveTo(
-        x2,
-        0
-    );
-
-    ctx.lineTo(
-        x2,
-        h
-    );
-
-
-    ctx.moveTo(
-        0,
-        y1
-    );
-
-    ctx.lineTo(
-        w,
-        y1
-    );
-
-
-    ctx.moveTo(
-        0,
-        y2
-    );
-
-    ctx.lineTo(
-        w,
-        y2
-    );
-
+    ctx.moveTo(0,y2);
+    ctx.lineTo(w,y2);
 
     ctx.stroke();
 
-
-    drawTarget(
-        x1,
-        y1
-    );
-
-    drawTarget(
-        x2,
-        y1
-    );
-
+    target(x1,y1);
+    target(x2,y1);
 }
 
 
 /* =========================================================
- CENTER
+   中央
 ========================================================= */
 
 function drawCenter(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
-
-
-    setupGuide();
-
+    setup();
 
     ctx.beginPath();
 
+    ctx.moveTo(w/2,0);
+    ctx.lineTo(w/2,h);
 
-    ctx.moveTo(
-        w/2,
-        0
-    );
-
-    ctx.lineTo(
-        w/2,
-        h
-    );
-
-
-    ctx.moveTo(
-        0,
-        h/2
-    );
-
-    ctx.lineTo(
-        w,
-        h/2
-    );
-
+    ctx.moveTo(0,h/2);
+    ctx.lineTo(w,h/2);
 
     ctx.stroke();
 
-
-    drawTarget(
-        w/2,
-        h/2
-    );
-
+    target(w/2,h/2);
 }
 
 
 /* =========================================================
- SYMMETRY
-========================================================= */
-
-function drawSymmetry(){
-
-    var w =
-    overlay.clientWidth;
-
-    var h =
-    overlay.clientHeight;
-
-
-    setupGuide();
-
-
-    ctx.lineWidth =
-    3;
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w/2,
-        0
-    );
-
-    ctx.lineTo(
-        w/2,
-        h
-    );
-
-    ctx.stroke();
-
-
-    ctx.setLineDash(
-        [8,8]
-    );
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w*.20,
-        h*.20
-    );
-
-    ctx.lineTo(
-        w*.20,
-        h*.80
-    );
-
-
-    ctx.moveTo(
-        w*.80,
-        h*.20
-    );
-
-    ctx.lineTo(
-        w*.80,
-        h*.80
-    );
-
-    ctx.stroke();
-
-
-    ctx.setLineDash([]);
-
-}
-
-
-/* =========================================================
- LEADING LINES
+   引導線
 ========================================================= */
 
 function drawLeading(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
+    setup();
 
+    var vx=w*.5;
+    var vy=h*.4;
 
-    setupGuide();
-
-
-    var targetX =
-    w*.50;
-
-    var targetY =
-    h*.40;
-
-
-    ctx.lineWidth =
-    4;
-
+    ctx.lineWidth=4;
 
     ctx.beginPath();
 
+    ctx.moveTo(w*.08,h);
+    ctx.lineTo(vx,vy);
 
-    ctx.moveTo(
-        w*.08,
-        h
-    );
-
-    ctx.lineTo(
-        targetX,
-        targetY
-    );
-
-
-    ctx.moveTo(
-        w*.92,
-        h
-    );
-
-    ctx.lineTo(
-        targetX,
-        targetY
-    );
-
+    ctx.moveTo(w*.92,h);
+    ctx.lineTo(vx,vy);
 
     ctx.stroke();
 
-
-    drawTarget(
-        targetX,
-        targetY
-    );
-
+    target(vx,vy);
 }
 
 
 /* =========================================================
- PERSPECTIVE
+   單點透視
 ========================================================= */
 
 function drawPerspective(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
+    setup();
 
+    var vx=w*.5;
+    var vy=h*.42;
 
-    setupGuide();
-
-
-    var vx =
-    w*.50;
-
-    var vy =
-    h*.42;
-
-
-    ctx.lineWidth =
-    3;
-
-
-    var starts = [
-
+    var starts=[
         [0,h],
         [w*.25,h],
         [w*.75,h],
         [w,h],
-
         [0,h*.65],
         [w,h*.65]
-
     ];
-
 
     ctx.beginPath();
 
-
-    starts.forEach(
-        function(p){
-
-            ctx.moveTo(
-                p[0],
-                p[1]
-            );
-
-            ctx.lineTo(
-                vx,
-                vy
-            );
-
-        }
-    );
-
+    starts.forEach(function(p){
+        ctx.moveTo(p[0],p[1]);
+        ctx.lineTo(vx,vy);
+    });
 
     ctx.stroke();
 
-
-    drawTarget(
-        vx,
-        vy
-    );
-
+    target(vx,vy);
 }
 
 
 /* =========================================================
- DIAGONAL
+   對稱
+========================================================= */
+
+function drawSymmetry(){
+
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
+
+    setup();
+
+    ctx.lineWidth=3;
+
+    ctx.beginPath();
+    ctx.moveTo(w/2,0);
+    ctx.lineTo(w/2,h);
+    ctx.stroke();
+
+    ctx.setLineDash([8,8]);
+
+    ctx.beginPath();
+
+    ctx.moveTo(w*.2,h*.2);
+    ctx.lineTo(w*.2,h*.8);
+
+    ctx.moveTo(w*.8,h*.2);
+    ctx.lineTo(w*.8,h*.8);
+
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+}
+
+
+/* =========================================================
+   對角線
 ========================================================= */
 
 function drawDiagonal(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
+    setup();
 
-
-    setupGuide();
-
-
-    ctx.lineWidth =
-    3;
-
+    ctx.lineWidth=3;
 
     ctx.beginPath();
-
-    ctx.moveTo(
-        0,
-        h
-    );
-
-    ctx.lineTo(
-        w,
-        0
-    );
-
+    ctx.moveTo(0,h);
+    ctx.lineTo(w,0);
     ctx.stroke();
 
-
-    drawTarget(
-        w*.62,
-        h*.38
-    );
-
+    target(w*.62,h*.38);
 }
 
 
 /* =========================================================
- FRAME
+   框景
 ========================================================= */
 
 function drawFrame(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
-
-
-    setupGuide();
-
-
-    ctx.lineWidth =
-    3;
-
-
-    var marginX =
-    w*.12;
-
-    var marginY =
-    h*.13;
-
+    setup();
 
     ctx.strokeRect(
-        marginX,
-        marginY,
-        w-marginX*2,
-        h-marginY*2
+        w*.12,
+        h*.13,
+        w*.76,
+        h*.74
     );
 
-
-    drawTarget(
-        w/2,
-        h/2
-    );
-
+    target(w/2,h/2);
 }
 
 
 /* =========================================================
- PORTRAIT THIRDS
+   人像
 ========================================================= */
 
 function drawPortraitThirds(){
 
     drawThirds();
 
-
-    var w =
-    overlay.clientWidth;
-
-    var h =
-    overlay.clientHeight;
-
-
-    setupGuide();
-
-
-    ctx.strokeStyle =
-    "#2cff67";
-
-    ctx.lineWidth =
-    3;
-
-
-    ctx.beginPath();
-
-    ctx.ellipse(
-        w*.36,
-        h*.34,
-        w*.10,
-        h*.085,
-        0,
-        0,
-        Math.PI*2
-    );
-
-    ctx.stroke();
-
-}
-
-
-/* =========================================================
- CENTER PORTRAIT
-========================================================= */
-
-function drawCenterPortrait(){
-
-    var w =
-    overlay.clientWidth;
-
-    var h =
-    overlay.clientHeight;
-
-
-    setupGuide();
-
-
-    ctx.strokeStyle =
-    "#2cff67";
-
-    ctx.lineWidth =
-    3;
-
-
-    ctx.beginPath();
-
-    ctx.ellipse(
-        w*.50,
-        h*.31,
-        w*.11,
-        h*.09,
-        0,
-        0,
-        Math.PI*2
-    );
-
-    ctx.stroke();
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w*.50,
-        h*.40
-    );
-
-    ctx.lineTo(
-        w*.50,
-        h*.78
-    );
-
-    ctx.stroke();
-
-}
-
-
-/* =========================================================
- HEADROOM
-========================================================= */
-
-function drawHeadroom(){
-
-    var w =
-    overlay.clientWidth;
-
-    var h =
-    overlay.clientHeight;
-
-
-    setupGuide();
-
-
-    ctx.setLineDash(
-        [8,7]
-    );
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        0,
-        h*.28
-    );
-
-    ctx.lineTo(
-        w,
-        h*.28
-    );
-
-    ctx.stroke();
-
-
-    ctx.setLineDash([]);
-
-
-    ctx.strokeStyle =
-    "#2cff67";
-
-    ctx.strokeRect(
-        w*.18,
-        h*.30,
-        w*.25,
-        h*.43
-    );
-
-
-    /* 視線方向 */
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w*.43,
-        h*.38
-    );
-
-    ctx.lineTo(
-        w*.75,
-        h*.38
-    );
-
-    ctx.stroke();
-
-
-    drawArrowHead(
-        w*.75,
-        h*.38,
-        "right"
-    );
-
-}
-
-
-/* =========================================================
- FULL BODY
-========================================================= */
-
-function drawFullBody(){
-
-    var w =
-    overlay.clientWidth;
-
-    var h =
-    overlay.clientHeight;
-
-
-    setupGuide();
-
-
-    ctx.strokeStyle =
-    "#2cff67";
-
-    ctx.lineWidth =
-    3;
-
-
-    ctx.strokeRect(
-        w*.36,
-        h*.10,
-        w*.28,
-        h*.80
-    );
-
-
-    ctx.setLineDash(
-        [6,6]
-    );
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        0,
-        h*.10
-    );
-
-    ctx.lineTo(
-        w,
-        h*.10
-    );
-
-
-    ctx.moveTo(
-        0,
-        h*.90
-    );
-
-    ctx.lineTo(
-        w,
-        h*.90
-    );
-
-    ctx.stroke();
-
-
-    ctx.setLineDash([]);
-
-}
-
-
-/* =========================================================
- ENVIRONMENT PORTRAIT
-========================================================= */
-
-function drawEnvironmentPortrait(){
-
-    drawThirds();
-
-
-    var w =
-    overlay.clientWidth;
-
-    var h =
-    overlay.clientHeight;
-
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
     ctx.save();
 
-    ctx.strokeStyle =
-    "#2cff67";
+    ctx.strokeStyle="#2cff67";
+    ctx.lineWidth=3;
 
-    ctx.lineWidth =
-    3;
-
-
-    ctx.strokeRect(
-        w*.20,
-        h*.28,
-        w*.22,
-        h*.45
+    ctx.beginPath();
+    ctx.ellipse(
+        w*.36,h*.33,
+        w*.10,h*.085,
+        0,0,Math.PI*2
     );
-
+    ctx.stroke();
 
     ctx.restore();
+}
 
+function drawPortraitCenter(){
+
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
+
+    setup();
+
+    ctx.strokeStyle="#2cff67";
+    ctx.lineWidth=3;
+
+    ctx.beginPath();
+    ctx.ellipse(
+        w*.5,h*.3,
+        w*.11,h*.085,
+        0,0,Math.PI*2
+    );
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(w*.5,h*.39);
+    ctx.lineTo(w*.5,h*.78);
+    ctx.stroke();
+}
+
+function drawLookSpace(){
+
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
+
+    drawThirds();
+
+    ctx.save();
+
+    ctx.strokeStyle="#2cff67";
+    ctx.lineWidth=3;
+
+    ctx.strokeRect(
+        w*.18,h*.28,
+        w*.24,h*.46
+    );
+
+    ctx.beginPath();
+    ctx.moveTo(w*.43,h*.37);
+    ctx.lineTo(w*.76,h*.37);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function drawFullBody(){
+
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
+
+    setup();
+
+    ctx.strokeStyle="#2cff67";
+    ctx.lineWidth=3;
+
+    ctx.strokeRect(
+        w*.36,h*.10,
+        w*.28,h*.80
+    );
+
+    ctx.setLineDash([6,6]);
+
+    ctx.beginPath();
+    ctx.moveTo(0,h*.1);
+    ctx.lineTo(w,h*.1);
+
+    ctx.moveTo(0,h*.9);
+    ctx.lineTo(w,h*.9);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+}
+
+function drawEnvironment(){
+    drawPortraitThirds();
 }
 
 
 /* =========================================================
- REFLECTION
+   倒影
 ========================================================= */
 
 function drawReflection(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
+    setup();
 
-
-    setupGuide();
-
-
-    ctx.lineWidth =
-    3;
-
+    ctx.lineWidth=3;
 
     ctx.beginPath();
-
-    ctx.moveTo(
-        0,
-        h/2
-    );
-
-    ctx.lineTo(
-        w,
-        h/2
-    );
-
+    ctx.moveTo(0,h*.5);
+    ctx.lineTo(w,h*.5);
     ctx.stroke();
 
-
-    ctx.setLineDash(
-        [7,7]
-    );
-
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-        w*.25,
-        h*.25
-    );
-
-    ctx.lineTo(
-        w*.25,
-        h*.75
-    );
-
-
-    ctx.moveTo(
-        w*.75,
-        h*.25
-    );
-
-    ctx.lineTo(
-        w*.75,
-        h*.75
-    );
-
-    ctx.stroke();
-
-
-    ctx.setLineDash([]);
-
+    target(w*.5,h*.5);
 }
 
 
 /* =========================================================
- FOOD CENTER
+   美食
 ========================================================= */
 
 function drawFoodCenter(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
+    setup();
 
-
-    setupGuide();
-
-
-    ctx.strokeStyle =
-    "#2cff67";
-
-    ctx.lineWidth =
-    3;
-
+    ctx.strokeStyle="#2cff67";
+    ctx.lineWidth=3;
 
     ctx.beginPath();
-
     ctx.arc(
-        w*.50,
-        h*.50,
-        Math.min(w,h)*.24,
-        0,
-        Math.PI*2
+        w*.5,h*.5,
+        Math.min(w,h)*.23,
+        0,Math.PI*2
     );
-
     ctx.stroke();
 
-
-    drawTarget(
-        w*.50,
-        h*.50
-    );
-
+    target(w*.5,h*.5);
 }
-
-
-/* =========================================================
- FOOD THIRDS
-========================================================= */
 
 function drawFoodThirds(){
 
     drawThirds();
 
-
-    var w =
-    overlay.clientWidth;
-
-    var h =
-    overlay.clientHeight;
-
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
     ctx.save();
 
-    ctx.strokeStyle =
-    "#2cff67";
-
-    ctx.lineWidth =
-    3;
-
+    ctx.strokeStyle="#2cff67";
+    ctx.lineWidth=3;
 
     ctx.beginPath();
-
     ctx.arc(
-        w*.36,
-        h*.62,
+        w*.36,h*.62,
         Math.min(w,h)*.15,
-        0,
-        Math.PI*2
+        0,Math.PI*2
     );
-
     ctx.stroke();
 
-
     ctx.restore();
-
 }
-
-
-/* =========================================================
- FOOD DIAGONAL
-========================================================= */
 
 function drawFoodDiagonal(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
-
-
-    setupGuide();
-
-
-    ctx.lineWidth =
-    3;
-
+    setup();
 
     ctx.beginPath();
-
-    ctx.moveTo(
-        w*.10,
-        h*.82
-    );
-
-    ctx.lineTo(
-        w*.90,
-        h*.18
-    );
-
+    ctx.moveTo(w*.1,h*.82);
+    ctx.lineTo(w*.9,h*.18);
     ctx.stroke();
 
-
-    var points = [
-
-        [w*.25,h*.70],
-        [w*.50,h*.50],
-        [w*.75,h*.30]
-
+    var p=[
+        [.25,.70],
+        [.50,.50],
+        [.75,.30]
     ];
 
+    p.forEach(function(a){
 
-    points.forEach(
-        function(p){
+        ctx.beginPath();
+        ctx.arc(
+            w*a[0],
+            h*a[1],
+            Math.min(w,h)*.085,
+            0,Math.PI*2
+        );
+        ctx.stroke();
+    });
+}
 
-            ctx.beginPath();
-
-            ctx.arc(
-                p[0],
-                p[1],
-                Math.min(w,h)*.09,
-                0,
-                Math.PI*2
-            );
-
-            ctx.stroke();
-
-        }
-    );
-
+function drawFoodTop(){
+    drawFoodCenter();
 }
 
 
 /* =========================================================
- FOOD TOP
+   留白
 ========================================================= */
 
-function drawFoodTop(){
+function drawNegative(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
+    setup();
 
-
-    setupGuide();
-
-
-    ctx.strokeStyle =
-    "#2cff67";
-
-    ctx.lineWidth =
-    3;
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-        w*.50,
-        h*.50,
-        Math.min(w,h)*.23,
-        0,
-        Math.PI*2
-    );
-
-    ctx.stroke();
-
-
-    ctx.setLineDash(
-        [6,6]
-    );
-
+    ctx.setLineDash([7,7]);
 
     ctx.strokeRect(
-        w*.15,
+        w*.08,
         h*.18,
-        w*.70,
-        h*.64
+        w*.35,
+        h*.55
     );
-
 
     ctx.setLineDash([]);
 
+    target(w*.30,h*.48);
 }
 
 
 /* =========================================================
- FILL FRAME
+   滿版
 ========================================================= */
 
 function drawFill(){
 
-    var w =
-    overlay.clientWidth;
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
-    var h =
-    overlay.clientHeight;
+    setup();
 
-
-    setupGuide();
-
-
-    ctx.strokeStyle =
-    "#2cff67";
-
-    ctx.lineWidth =
-    4;
-
+    ctx.strokeStyle="#2cff67";
+    ctx.lineWidth=4;
 
     ctx.strokeRect(
         w*.06,
@@ -2406,294 +1272,227 @@ function drawFill(){
         w*.88,
         h*.88
     );
-
-
-    ctx.font =
-    "bold 15px -apple-system,Arial";
-
-    ctx.textAlign =
-    "center";
-
-    ctx.fillText(
-        "靠近主體填滿畫面",
-        w/2,
-        h*.12
-    );
-
 }
 
 
 /* =========================================================
- TARGET
+   寵物
 ========================================================= */
 
-function drawTarget(x,y){
+function drawPetThirds(){
+    drawPortraitThirds();
+}
+
+function drawPetCenter(){
+    drawPortraitCenter();
+}
+
+function drawPetLook(){
+    drawLookSpace();
+}
+
+function drawPetFull(){
+    drawFullBody();
+}
+
+function drawPetAction(){
+    drawLookSpace();
+}
+
+
+/* =========================================================
+   商品
+========================================================= */
+
+function drawProductCenter(){
+
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
+
+    setup();
+
+    ctx.strokeStyle="#2cff67";
+    ctx.lineWidth=3;
+
+    ctx.strokeRect(
+        w*.28,
+        h*.24,
+        w*.44,
+        h*.52
+    );
+
+    target(w*.5,h*.5);
+}
+
+function drawProductThirds(){
+
+    drawThirds();
+
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
 
     ctx.save();
 
+    ctx.strokeStyle="#2cff67";
+    ctx.lineWidth=3;
 
-    ctx.strokeStyle =
-    "#2cff67";
+    ctx.strokeRect(
+        w*.18,
+        h*.34,
+        w*.34,
+        h*.40
+    );
 
-    ctx.fillStyle =
-    "#2cff67";
+    ctx.restore();
+}
 
-    ctx.lineWidth =
-    3;
+function drawProduct45(){
 
+    var w=overlay.clientWidth;
+    var h=overlay.clientHeight;
+
+    setup();
+
+    ctx.strokeStyle="#2cff67";
+    ctx.lineWidth=3;
 
     ctx.beginPath();
 
-    ctx.arc(
-        x,
-        y,
-        12,
-        0,
-        Math.PI*2
-    );
+    ctx.moveTo(w*.30,h*.35);
+    ctx.lineTo(w*.60,h*.28);
+    ctx.lineTo(w*.72,h*.42);
+    ctx.lineTo(w*.70,h*.70);
+    ctx.lineTo(w*.40,h*.75);
+    ctx.lineTo(w*.28,h*.60);
+    ctx.closePath();
 
     ctx.stroke();
 
-
-    ctx.beginPath();
-
-    ctx.arc(
-        x,
-        y,
-        4,
-        0,
-        Math.PI*2
-    );
-
-    ctx.fill();
-
-
-    ctx.restore();
-
+    target(w*.5,h*.5);
 }
 
 
 /* =========================================================
- ARROW
-========================================================= */
-
-function drawArrowHead(
-    x,
-    y,
-    direction
-){
-
-    ctx.save();
-
-
-    ctx.fillStyle =
-    "#2cff67";
-
-
-    ctx.beginPath();
-
-
-    if(direction==="right"){
-
-        ctx.moveTo(
-            x,
-            y
-        );
-
-        ctx.lineTo(
-            x-13,
-            y-8
-        );
-
-        ctx.lineTo(
-            x-13,
-            y+8
-        );
-
-    }
-
-
-    ctx.closePath();
-
-    ctx.fill();
-
-
-    ctx.restore();
-
-}
-
-
-/* =========================================================
- DRAW SELECTED COMPOSITION
+   DRAW ROUTER
 ========================================================= */
 
 function drawComposition(){
 
     clearOverlay();
 
-
     switch(currentComposition){
 
-
         case "thirds":
-
-            drawThirds();
-            break;
-
+            drawThirds(); break;
 
         case "golden":
-
-            drawGolden();
-            break;
-
+            drawGolden(); break;
 
         case "leading":
-
-            drawLeading();
-            break;
-
+            drawLeading(); break;
 
         case "center":
-
-            drawCenter();
-            break;
-
+            drawCenter(); break;
 
         case "frame":
-
-            drawFrame();
-            break;
-
+            drawFrame(); break;
 
         case "perspective":
-
-            drawPerspective();
-            break;
-
+            drawPerspective(); break;
 
         case "symmetry":
-
-            drawSymmetry();
-            break;
-
+            drawSymmetry(); break;
 
         case "diagonal":
+            drawDiagonal(); break;
 
-            drawDiagonal();
-            break;
+        case "portraitThirds":
+            drawPortraitThirds(); break;
 
+        case "portraitCenter":
+            drawPortraitCenter(); break;
 
-        case "thirdsPortrait":
-
-            drawPortraitThirds();
-            break;
-
-
-        case "centerPortrait":
-
-            drawCenterPortrait();
-            break;
-
-
-        case "headroom":
-
-            drawHeadroom();
-            break;
-
+        case "lookSpace":
+            drawLookSpace(); break;
 
         case "fullbody":
+            drawFullBody(); break;
 
-            drawFullBody();
-            break;
-
-
-        case "environmentPortrait":
-
-            drawEnvironmentPortrait();
-            break;
-
+        case "environment":
+            drawEnvironment(); break;
 
         case "reflection":
-
-            drawReflection();
-            break;
-
+            drawReflection(); break;
 
         case "foodCenter":
-
-            drawFoodCenter();
-            break;
-
+            drawFoodCenter(); break;
 
         case "foodThirds":
-
-            drawFoodThirds();
-            break;
-
+            drawFoodThirds(); break;
 
         case "foodDiagonal":
-
-            drawFoodDiagonal();
-            break;
-
+            drawFoodDiagonal(); break;
 
         case "foodTop":
-
-            drawFoodTop();
-            break;
-
+            drawFoodTop(); break;
 
         case "fill":
+            drawFill(); break;
 
-            drawFill();
-            break;
+        case "macroThirds":
+            drawFoodThirds(); break;
 
+        case "macroCenter":
+            drawFoodCenter(); break;
+
+        case "negative":
+            drawNegative(); break;
+
+        case "petThirds":
+            drawPetThirds(); break;
+
+        case "petCenter":
+            drawPetCenter(); break;
+
+        case "petLook":
+            drawPetLook(); break;
+
+        case "petFull":
+            drawPetFull(); break;
+
+        case "petAction":
+            drawPetAction(); break;
+
+        case "productCenter":
+            drawProductCenter(); break;
+
+        case "productThirds":
+            drawProductThirds(); break;
+
+        case "product45":
+            drawProduct45(); break;
     }
-
 }
 
 
 /* =========================================================
- RESIZE
+   Resize
 ========================================================= */
 
 function resizeOverlay(){
 
-    var rect =
-    overlay.getBoundingClientRect();
+    var rect=overlay.getBoundingClientRect();
+    var dpr=window.devicePixelRatio||1;
 
-
-    var dpr =
-    window.devicePixelRatio ||
-    1;
-
-
-    overlay.width =
-    Math.round(
-        rect.width*dpr
-    );
-
-
-    overlay.height =
-    Math.round(
-        rect.height*dpr
-    );
-
+    overlay.width=Math.round(rect.width*dpr);
+    overlay.height=Math.round(rect.height*dpr);
 
     ctx.setTransform(
-        dpr,
-        0,
-        0,
-        dpr,
-        0,
-        0
+        dpr,0,0,dpr,0,0
     );
 
-
     drawComposition();
-
 }
-
 
 window.addEventListener(
     "resize",
@@ -2702,123 +1501,64 @@ window.addEventListener(
 
 
 /* =========================================================
- ZOOM
+   Zoom
 ========================================================= */
 
 zoom.addEventListener(
-    "input",
-    async function(){
+"input",
+async function(){
 
-        var value =
-        Number(
-            this.value
+    var value=Number(this.value);
+
+    zoomText.innerText=
+    value.toFixed(1)+"×";
+
+    if(!stream)return;
+
+    var tracks=
+    stream.getVideoTracks();
+
+    if(!tracks.length)return;
+
+    var track=tracks[0];
+
+    if(!track.getCapabilities)return;
+
+    var caps=
+    track.getCapabilities();
+
+    if(!caps.zoom)return;
+
+    try{
+
+        var z=Math.max(
+            caps.zoom.min,
+            Math.min(
+                caps.zoom.max,
+                value
+            )
         );
 
+        await track.applyConstraints({
+            advanced:[{zoom:z}]
+        });
 
-        zoomText.innerText =
-        value.toFixed(1)+
-        "×";
-
-
-        if(!stream){
-            return;
-        }
-
-
-        var tracks =
-        stream.getVideoTracks();
-
-
-        if(
-            tracks.length===0
-        ){
-            return;
-        }
-
-
-        var track =
-        tracks[0];
-
-
-        if(
-            !track.getCapabilities
-        ){
-            return;
-        }
-
-
-        var capabilities =
-        track.getCapabilities();
-
-
-        if(
-            !capabilities.zoom
-        ){
-            return;
-        }
-
-
-        try{
-
-            var actualZoom =
-            Math.max(
-                capabilities.zoom.min,
-                Math.min(
-                    capabilities.zoom.max,
-                    value
-                )
-            );
-
-
-            await track.applyConstraints({
-
-                advanced:[
-                    {
-                        zoom:
-                        actualZoom
-                    }
-                ]
-
-            });
-
-        }
-
-        catch(error){
-
-            console.log(
-                "Zoom unsupported",
-                error
-            );
-
-        }
-
+    }catch(e){
+        console.log("Zoom:",e);
     }
-);
+});
 
 
 /* =========================================================
- INIT
+   INIT
 ========================================================= */
 
 function init(){
 
-    buildCompositionButtons();
-
-
-    selectComposition(
-        modeDatabase[
-            currentMode
-        ].default
-    );
-
-
     resizeOverlay();
 
-
     startCamera();
-
 }
-
 
 init();
 
