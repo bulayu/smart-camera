@@ -9,7 +9,7 @@ initial-scale=1,
 maximum-scale=1,
 user-scalable=no">
 
-<title>AI 構圖助手 V5.8.7</title>
+<title>AI 構圖助手 V5.8.8</title>
 
 <style>
 
@@ -225,7 +225,7 @@ button{
     </div>
 
     <div id="version">
-        V5.8.7
+        V5.8.8
     </div>
 
     <div id="debug">
@@ -278,7 +278,7 @@ button{
     </div>
 
     <div id="status">
-        V5.8.7｜近景道路種子＋邊緣追蹤版
+        V5.8.8｜道路底部入口鎖定版
     </div>
 
 </div>
@@ -288,9 +288,9 @@ button{
 
 /* =========================================================
 
- AI 構圖助手 V5.8.7
+ AI 構圖助手 V5.8.8
 
- 近景道路種子 + 邊緣追蹤版
+ 道路底部入口鎖定版
 
 
  V5.8.6 問題：
@@ -302,7 +302,7 @@ button{
  都可能直接成為道路候選。
 
 
- V5.8.7：
+ V5.8.8：
 
  ① Sobel 邊緣
 
@@ -652,7 +652,7 @@ function resetAnalysis(){
 
 
     descEl.innerText =
-    "從近景尋找道路左右邊界";
+    "先鎖定道路底部入口，再向上追蹤";
 
 
     messageEl.innerText =
@@ -709,7 +709,7 @@ function runAI(){
 
 
     messageEl.innerText =
-    "🔍 尋找近景道路種子...";
+    "🔍 鎖定道路底部左右入口...";
 
 
     var results = [];
@@ -917,7 +917,13 @@ function finishAnalysis(results){
         best.leftLine,
 
         rightLine:
-        best.rightLine
+        best.rightLine,
+
+        leftSeed:
+        best.leftSeed,
+
+        rightSeed:
+        best.rightSeed
 
     };
 
@@ -978,11 +984,11 @@ function finishAnalysis(results){
 
 
     descEl.innerText =
-    "白點＝追蹤證據｜黃線＝道路邊界";
+    "藍點＝底部入口｜白點＝追蹤證據｜黃線＝驗證邊界";
 
 
     messageEl.innerText =
-    "🔎 檢查白點是否沿著真正步道";
+    "🔎 檢查藍點是否落在道路底部左右入口";
 
 
     debugEl.innerText =
@@ -1321,7 +1327,7 @@ function projectXAtY(
 /* =========================================================
  FIND BOTTOM SEEDS
 
- 最重要的 V5.8.7 改動。
+ 最重要的 V5.8.8 改動。
 
  道路線不能從樹冠開始。
 
@@ -1350,7 +1356,7 @@ function findSeeds(
 
     var startY =
     Math.floor(
-        AH*.65
+        AH*.70
     );
 
 
@@ -2834,6 +2840,311 @@ function validateRoadGeometry(
 }
 
 
+
+/* =========================================================
+ V5.8.8 ROAD PAIR LOCK
+
+ 1. 左右邊界不再各自選最高分後直接配對
+ 2. 建立多組 L/R trace 後一起驗證
+ 3. 檢查底部入口、道路寬度、逐層收斂
+ 4. 禁止 X 型交叉後再張開
+ 5. 通過驗證後才允許產生黃線與 VP
+========================================================= */
+
+function xOnLine(line,y){
+    return line.a*y + line.b;
+}
+
+function validateRoadPair(leftTrace,rightTrace){
+
+    if(!leftTrace || !rightTrace){
+        return null;
+    }
+
+    var L = leftTrace.fit;
+    var R = rightTrace.fit;
+
+    var ys = [
+        AH*.90,
+        AH*.78,
+        AH*.66,
+        AH*.54
+    ];
+
+    var widths = [];
+
+    for(var i=0;i<ys.length;i++){
+
+        var lx = xOnLine(L,ys[i]);
+        var rx = xOnLine(R,ys[i]);
+        var width = rx-lx;
+
+        if(!isFinite(lx) || !isFinite(rx) || width<=0){
+            return null;
+        }
+
+        widths.push(width);
+    }
+
+    var nearLeft  = xOnLine(L,AH*.92);
+    var nearRight = xOnLine(R,AH*.92);
+    var nearWidth = nearRight-nearLeft;
+
+    if(
+        nearLeft < -AW*.08 ||
+        nearRight > AW*1.08
+    ){
+        return null;
+    }
+
+    if(
+        nearWidth < AW*.20 ||
+        nearWidth > AW*1.05
+    ){
+        return null;
+    }
+
+    if(
+        nearLeft > AW*.47 ||
+        nearRight < AW*.53
+    ){
+        return null;
+    }
+
+    /*
+    由近到遠必須大致變窄。
+    允許 6% 誤差，但禁止重新張開。
+    */
+    for(var j=1;j<widths.length;j++){
+
+        if(widths[j] > widths[j-1]*1.06){
+            return null;
+        }
+
+        if(widths[j] < AW*.035){
+            return null;
+        }
+    }
+
+    var vp = fittedIntersection(L,R);
+
+    if(!vp){
+        return null;
+    }
+
+    if(
+        vp.x < AW*.10 ||
+        vp.x > AW*.90 ||
+        vp.y < AH*.18 ||
+        vp.y > AH*.67
+    ){
+        return null;
+    }
+
+    /*
+    VP 要接近道路中軸，避免樹枝斜線把交點拉走。
+    */
+    var yCheck = AH*.58;
+
+    var centerX =
+        (
+            xOnLine(L,yCheck)+
+            xOnLine(R,yCheck)
+        )/2;
+
+    var centerError =
+        Math.abs(vp.x-centerX);
+
+    if(centerError > AW*.20){
+        return null;
+    }
+
+    var shrink =
+        1-clamp(
+            widths[3]/Math.max(widths[0],1),
+            0,
+            1
+        );
+
+    var symmetry =
+        1-clamp(
+            centerError/(AW*.20),
+            0,
+            1
+        );
+
+    return{
+        vp:vp,
+        nearWidth:nearWidth,
+        widths:widths,
+        shrink:shrink,
+        symmetry:symmetry
+    };
+}
+
+
+function collectTraceCandidates(
+    seeds,
+    side,
+    magnitude,
+    edgeAngle,
+    threshold
+){
+
+    var list = [];
+
+    for(var i=0;i<seeds.length;i++){
+
+        var points =
+        traceSeed(
+            seeds[i],
+            side,
+            magnitude,
+            edgeAngle,
+            threshold
+        );
+
+        if(points.length<5){
+            continue;
+        }
+
+        var fit = robustFit(points);
+
+        if(!fit){
+            continue;
+        }
+
+        if(
+            side==="left" &&
+            fit.a>=-.025
+        ){
+            continue;
+        }
+
+        if(
+            side==="right" &&
+            fit.a<=.025
+        ){
+            continue;
+        }
+
+        var quality =
+            traceQuality(fit,points)*.85+
+            seeds[i].score*.15;
+
+        list.push({
+            seed:seeds[i],
+            points:fit.points,
+            fit:fit,
+            quality:quality
+        });
+    }
+
+    list.sort(function(a,b){
+        return b.quality-a.quality;
+    });
+
+    return list.slice(0,6);
+}
+
+
+function findBestRoadPair(
+    leftSeeds,
+    rightSeeds,
+    magnitude,
+    edgeAngle,
+    threshold
+){
+
+    var leftList =
+    collectTraceCandidates(
+        leftSeeds,
+        "left",
+        magnitude,
+        edgeAngle,
+        threshold
+    );
+
+    var rightList =
+    collectTraceCandidates(
+        rightSeeds,
+        "right",
+        magnitude,
+        edgeAngle,
+        threshold
+    );
+
+    if(
+        leftList.length===0 ||
+        rightList.length===0
+    ){
+        return null;
+    }
+
+    var best = null;
+
+    for(var i=0;i<leftList.length;i++){
+
+        for(var j=0;j<rightList.length;j++){
+
+            var L = leftList[i];
+            var R = rightList[j];
+
+            if(L.seed.x>=R.seed.x){
+                continue;
+            }
+
+            var seedWidth =
+                R.seed.x-L.seed.x;
+
+            if(
+                seedWidth<AW*.18 ||
+                seedWidth>AW*.95
+            ){
+                continue;
+            }
+
+            var pair =
+                validateRoadPair(L,R);
+
+            if(!pair){
+                continue;
+            }
+
+            var fitError =
+                (L.fit.error+R.fit.error)/2;
+
+            var fitScore =
+                1-clamp(fitError/7,0,1);
+
+            var traceScore =
+                (L.quality+R.quality)/2;
+
+            var pairScore =
+                traceScore*.46+
+                fitScore*.18+
+                pair.shrink*.20+
+                pair.symmetry*.16;
+
+            if(
+                !best ||
+                pairScore>best.score
+            ){
+                best = {
+                    left:L,
+                    right:R,
+                    geometry:pair,
+                    vp:pair.vp,
+                    score:pairScore
+                };
+            }
+        }
+    }
+
+    return best;
+}
+
+
 /* =========================================================
  MAIN ANALYSIS
 ========================================================= */
@@ -2844,28 +3155,22 @@ function analyzeRoad(){
         return null;
     }
 
-
-    var edges =
-    buildEdges();
-
+    var edges = buildEdges();
 
     if(!edges){
         return null;
     }
 
-
     /*
     STEP 1
-    只在底部找種子。
+    只在畫面底部尋找左右道路入口。
     */
-
     var seeds =
     findSeeds(
         edges.magnitude,
         edges.angle,
         edges.threshold
     );
-
 
     if(
         seeds.left.length===0 ||
@@ -2874,160 +3179,69 @@ function analyzeRoad(){
         return null;
     }
 
-
     /*
     STEP 2
-    從底部向上追蹤。
+    V5.8.8：L/R 候選必須成對驗證。
     */
-
-    var leftTrace =
-    findBestTrace(
+    var roadPair =
+    findBestRoadPair(
         seeds.left,
-        "left",
-        edges.magnitude,
-        edges.angle,
-        edges.threshold
-    );
-
-
-    var rightTrace =
-    findBestTrace(
         seeds.right,
-        "right",
         edges.magnitude,
         edges.angle,
         edges.threshold
     );
 
-
-    if(
-        !leftTrace ||
-        !rightTrace
-    ){
+    if(!roadPair){
         return null;
     }
 
-
-    /*
-    STEP 3
-    擬合線交點。
-    */
-
-    var vp =
-    fittedIntersection(
-        leftTrace.fit,
-        rightTrace.fit
-    );
-
-
-    if(!vp){
-        return null;
-    }
-
-
-    /*
-    STEP 4
-    道路幾何驗證。
-    */
-
-    var geometry =
-    validateRoadGeometry(
-        leftTrace.fit,
-        rightTrace.fit,
-        vp
-    );
-
-
-    if(!geometry){
-        return null;
-    }
-
-
-    /*
-    CONFIDENCE
-
-    注意：
-    還是辨識信心，
-    不是構圖分數。
-    */
+    var leftTrace  = roadPair.left;
+    var rightTrace = roadPair.right;
+    var vp         = roadPair.vp;
+    var geometry   = roadPair.geometry;
 
     var traceScore =
-    (
-        leftTrace.quality+
-        rightTrace.quality
-    )/2;
-
+        (leftTrace.quality+rightTrace.quality)/2;
 
     var fitError =
-    (
-        leftTrace.fit.error+
-        rightTrace.fit.error
-    )/2;
-
+        (leftTrace.fit.error+rightTrace.fit.error)/2;
 
     var fitScore =
-    1-
-    clamp(
-        fitError/7,
-        0,
-        1
-    );
-
+        1-clamp(
+            fitError/7,
+            0,
+            1
+        );
 
     var confidence =
-
-    .15
-
-    +
-
-    traceScore*.38
-
-    +
-
-    fitScore*.20
-
-    +
-
-    geometry.narrowing*.15
-
-    +
-
-    geometry.widthScore*.12;
-
+        .12+
+        traceScore*.38+
+        fitScore*.18+
+        geometry.shrink*.18+
+        geometry.symmetry*.14;
 
     confidence =
     clamp(
         confidence,
         .25,
-        .88
+        .90
     );
 
-
     return{
+        vx:vp.x/AW,
+        vy:vp.y/AH,
+        confidence:confidence,
 
-        vx:
-        vp.x/AW,
+        leftPoints:leftTrace.points,
+        rightPoints:rightTrace.points,
 
-        vy:
-        vp.y/AH,
+        leftLine:leftTrace.fit,
+        rightLine:rightTrace.fit,
 
-        confidence:
-        confidence,
-
-        leftPoints:
-        leftTrace.points,
-
-        rightPoints:
-        rightTrace.points,
-
-        leftLine:
-        leftTrace.fit,
-
-        rightLine:
-        rightTrace.fit
-
+        leftSeed:leftTrace.seed,
+        rightSeed:rightTrace.seed
     };
-
 }
 
 
@@ -3355,6 +3569,56 @@ function drawVP(){
 }
 
 
+
+/* =========================================================
+ DRAW BOTTOM ENTRY SEEDS
+
+ 藍點 = V5.8.8 最終採用的道路底部左右入口
+========================================================= */
+
+function drawSeed(seed,label){
+
+    if(!seed){
+        return;
+    }
+
+    var w = overlay.clientWidth;
+    var h = overlay.clientHeight;
+
+    var x = seed.x/AW*w;
+    var y = seed.y/AH*h;
+
+    ctx.save();
+
+    ctx.fillStyle = "#00a8ff";
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.arc(
+        x,
+        y,
+        7,
+        0,
+        Math.PI*2
+    );
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#00a8ff";
+    ctx.font =
+        "bold 14px -apple-system,Arial";
+
+    ctx.fillText(
+        label+" Seed",
+        x+10,
+        y-10
+    );
+
+    ctx.restore();
+}
+
+
 /* =========================================================
  DRAW DEBUG
 ========================================================= */
@@ -3378,6 +3642,20 @@ function drawDebug(){
 
     drawFittedLine(
         debugResult.rightLine,
+        "R"
+    );
+
+
+    /*
+    V5.8.8：藍點先標出真正採用的道路底部入口。
+    */
+    drawSeed(
+        debugResult.leftSeed,
+        "L"
+    );
+
+    drawSeed(
+        debugResult.rightSeed,
         "R"
     );
 
