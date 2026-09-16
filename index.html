@@ -2,12 +2,17 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 
-<title>AI 構圖助手 V5.8.5</title>
+<meta name="viewport"
+content="width=device-width,
+initial-scale=1,
+maximum-scale=1,
+user-scalable=no">
+
+<title>AI 構圖助手 V5.8.6</title>
 
 <style>
+
 *{
     box-sizing:border-box;
     -webkit-tap-highlight-color:transparent;
@@ -20,7 +25,12 @@ html,body{
     overflow:hidden;
     background:#000;
     color:#fff;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+    font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Arial,
+    sans-serif;
 }
 
 #cameraArea{
@@ -111,6 +121,16 @@ html,body{
     z-index:20;
 }
 
+#debug{
+    position:absolute;
+    right:8px;
+    bottom:5px;
+    font-size:11px;
+    color:#ffd400;
+    opacity:.90;
+    z-index:20;
+}
+
 #controls{
     height:28%;
     padding:13px;
@@ -163,6 +183,7 @@ button{
     font-size:12px;
     opacity:.45;
 }
+
 </style>
 </head>
 
@@ -170,15 +191,18 @@ button{
 
 <div id="cameraArea">
 
-    <video id="video" autoplay playsinline muted></video>
+    <video
+    id="video"
+    autoplay
+    playsinline
+    muted></video>
 
     <canvas id="overlay"></canvas>
 
     <canvas
-        id="analysisCanvas"
-        width="240"
-        height="180">
-    </canvas>
+    id="analysisCanvas"
+    width="240"
+    height="180"></canvas>
 
     <div id="info">
 
@@ -191,7 +215,7 @@ button{
         </div>
 
         <div id="desc">
-            對準道路、步道、鐵軌或走廊
+            對準道路、步道、走廊或鐵軌
         </div>
 
     </div>
@@ -201,7 +225,11 @@ button{
     </div>
 
     <div id="version">
-        V5.8.5
+        V5.8.6
+    </div>
+
+    <div id="debug">
+        L:--｜R:--
     </div>
 
 </div>
@@ -212,23 +240,23 @@ button{
     <div id="cameraButtons">
 
         <button
-            class="cameraBtn"
-            onclick="changeCamera('user')">
-            🤳 前鏡頭
+        class="cameraBtn"
+        onclick="changeCamera('user')">
+        🤳 前鏡頭
         </button>
 
         <button
-            class="cameraBtn"
-            onclick="changeCamera('environment')">
-            📷 後鏡頭
+        class="cameraBtn"
+        onclick="changeCamera('environment')">
+        📷 後鏡頭
         </button>
 
     </div>
 
     <button
-        id="aiButton"
-        onclick="runAI()">
-        ✨ AI 自動分析
+    id="aiButton"
+    onclick="runAI()">
+    ✨ AI 自動分析
     </button>
 
     <div id="zoomRow">
@@ -236,21 +264,21 @@ button{
         <span>倍率</span>
 
         <input
-            id="zoom"
-            type="range"
-            min="1"
-            max="3"
-            step=".1"
-            value="1">
+        id="zoom"
+        type="range"
+        min="1"
+        max="3"
+        step=".1"
+        value="1">
 
         <span id="zoomText">
-            1.0×
+        1.0×
         </span>
 
     </div>
 
     <div id="status">
-        V5.8.5｜道路走廊驗證版
+        V5.8.6｜道路邊界鎖定／除錯版
     </div>
 
 </div>
@@ -259,27 +287,47 @@ button{
 <script>
 
 /* =========================================================
-   AI 構圖助手 V5.8.5
-   道路走廊驗證版
 
-   V5.8.5 核心：
+ AI 構圖助手 V5.8.6
 
-   1. Sobel 邊緣
-   2. 區域方向線
-   3. 全局 VP 搜尋
-   4. 左右共同支持
-   5. 中近景深證據
-   6. 地平線軟約束
-   7. NEW：道路走廊驗證
-   8. NEW：遠窄 → 中寬 → 近更寬
-   9. NEW：左右兩側必須共同形成 V 型
-   10. 多幀中位數穩定
+ 道路邊界鎖定 / 除錯版
+
+
+ 這一版核心改變：
+
+ V5.8.5：
+
+ 候選 VP
+ ↓
+ 看下面像不像道路
+
+
+ V5.8.6：
+
+ 先找畫面下方斜向長邊
+ ↓
+ 分成 LEFT / RIGHT
+ ↓
+ 建立左右道路線群
+ ↓
+ 左右線群交點
+ ↓
+ VP
+
+
+ DEBUG：
+
+ 黃色實線 = 選中的道路邊界
+
+ 黃色虛線 = 邊界延長
+
+ 綠色 = VP
 
 ========================================================= */
 
 
 /* =========================================================
-   DOM
+ DOM
 ========================================================= */
 
 var video =
@@ -318,29 +366,41 @@ document.getElementById("zoom");
 var zoomText =
 document.getElementById("zoomText");
 
+var debugEl =
+document.getElementById("debug");
+
 
 /* =========================================================
-   STATE
+ STATE
 ========================================================= */
 
 var stream = null;
-var facing = "environment";
-var detectedPoint = null;
-var analyzing = false;
-var confidence = 0;
+
+var facing =
+"environment";
+
+var analyzing =
+false;
+
+var detectedPoint =
+null;
+
+var debugResult =
+null;
 
 
 /* =========================================================
-   CONSTANTS
+ ANALYSIS SIZE
 ========================================================= */
 
 var AW = 240;
 var AH = 180;
-var CELL = 10;
+
+var CELL = 8;
 
 
 /* =========================================================
-   UTIL
+ UTIL
 ========================================================= */
 
 function clamp(v,min,max){
@@ -355,7 +415,10 @@ function clamp(v,min,max){
 
 function median(arr){
 
-    if(!arr || arr.length===0){
+    if(
+        !arr ||
+        arr.length===0
+    ){
         return 0;
     }
 
@@ -367,7 +430,9 @@ function median(arr){
     );
 
     var m =
-    Math.floor(a.length/2);
+    Math.floor(
+        a.length/2
+    );
 
     if(a.length%2){
         return a[m];
@@ -398,30 +463,8 @@ function angleDifference(a,b){
 }
 
 
-function lineDistance(
-    px,
-    py,
-    line
-){
-
-    var dx =
-    Math.cos(line.angle);
-
-    var dy =
-    Math.sin(line.angle);
-
-    return Math.abs(
-        (px-line.x)*(-dy)
-        +
-        (py-line.y)*dx
-    );
-
-}
-
-
 /* =========================================================
-   CAMERA
-   保留 V5.8.4.1 相機診斷
+ CAMERA
 ========================================================= */
 
 async function startCamera(){
@@ -505,7 +548,7 @@ async function startCamera(){
         );
 
 
-        var errorName =
+        var name =
         error && error.name
         ?
         error.name
@@ -513,21 +556,12 @@ async function startCamera(){
         "UnknownError";
 
 
-        var errorMessage =
-        error && error.message
-        ?
-        error.message
-        :
-        "";
-
-
         compositionEl.innerText =
         "相機無法開啟";
 
 
         if(
-            errorName ===
-            "NotAllowedError"
+            name==="NotAllowedError"
         ){
 
             descEl.innerText =
@@ -537,10 +571,9 @@ async function startCamera(){
             "❌ NotAllowedError｜請允許網站使用相機";
 
         }
-        else
-        if(
-            errorName ===
-            "NotFoundError"
+
+        else if(
+            name==="NotFoundError"
         ){
 
             descEl.innerText =
@@ -550,59 +583,26 @@ async function startCamera(){
             "❌ NotFoundError｜找不到鏡頭";
 
         }
-        else
-        if(
-            errorName ===
-            "NotReadableError"
+
+        else if(
+            name==="NotReadableError"
         ){
 
             descEl.innerText =
             "相機可能被其他程式占用";
 
             messageEl.innerText =
-            "❌ NotReadableError｜請關閉其他相機程式";
+            "❌ NotReadableError｜相機無法讀取";
 
         }
-        else
-        if(
-            errorName ===
-            "OverconstrainedError"
-        ){
 
-            descEl.innerText =
-            "相機規格限制無法套用";
-
-            messageEl.innerText =
-            "❌ OverconstrainedError｜鏡頭限制不相容";
-
-        }
-        else
-        if(
-            errorName ===
-            "SecurityError"
-        ){
-
-            descEl.innerText =
-            "瀏覽器安全限制";
-
-            messageEl.innerText =
-            "❌ SecurityError｜請確認使用 HTTPS";
-
-        }
         else{
 
             descEl.innerText =
-            errorName +
-            (
-                errorMessage
-                ?
-                "｜"+errorMessage
-                :
-                ""
-            );
+            name;
 
             messageEl.innerText =
-            "❌ 相機錯誤："+errorName;
+            "❌ 相機錯誤："+name;
 
         }
 
@@ -613,7 +613,8 @@ async function startCamera(){
 
 async function changeCamera(mode){
 
-    facing = mode;
+    facing =
+    mode;
 
     await startCamera();
 
@@ -621,34 +622,45 @@ async function changeCamera(mode){
 
 
 /* =========================================================
-   RESET
+ RESET
 ========================================================= */
 
 function resetAnalysis(){
 
-    detectedPoint = null;
+    analyzing =
+    false;
 
-    analyzing = false;
+    detectedPoint =
+    null;
 
-    confidence = 0;
+    debugResult =
+    null;
+
 
     scoreEl.innerHTML =
     '-- <small>%</small>';
 
+
     compositionEl.innerText =
     "等待分析";
 
+
     descEl.innerText =
-    "尋找真正的景深收斂點";
+    "先尋找左右道路邊界";
+
 
     messageEl.innerText =
     "✨ 固定鏡頭後，按 AI 自動分析";
+
+
+    debugEl.innerText =
+    "L:--｜R:--";
 
 }
 
 
 /* =========================================================
-   RUN AI
+ RUN
 ========================================================= */
 
 function runAI(){
@@ -668,21 +680,30 @@ function runAI(){
     }
 
 
-    analyzing = true;
+    analyzing =
+    true;
 
-    detectedPoint = null;
+    detectedPoint =
+    null;
+
+    debugResult =
+    null;
+
 
     scoreEl.innerHTML =
     '-- <small>%</small>';
 
+
     compositionEl.innerText =
-    "AI 分析中";
+    "分析道路邊界";
+
 
     descEl.innerText =
-    "正在確認道路走廊與景深收斂";
+    "正在尋找左右收斂線";
+
 
     messageEl.innerText =
-    "🔍 尋找真正消失點...";
+    "🔍 鎖定道路左右邊界...";
 
 
     var results = [];
@@ -694,11 +715,11 @@ function runAI(){
     setInterval(
         function(){
 
-            var result =
-            analyzeDepthVanishingPoint();
+            var r =
+            analyzeRoad();
 
-            if(result){
-                results.push(result);
+            if(r){
+                results.push(r);
             }
 
             frame++;
@@ -708,28 +729,33 @@ function runAI(){
 
                 clearInterval(timer);
 
-                analyzing = false;
+                analyzing =
+                false;
 
-                finishAnalysis(results);
+                finishAnalysis(
+                    results
+                );
 
             }
 
         },
-        165
+        170
     );
 
 }
 
 
 /* =========================================================
-   MULTI FRAME
+ FINISH MULTI FRAME
 ========================================================= */
 
 function finishAnalysis(results){
 
     if(results.length<3){
 
-        failAnalysis();
+        failAnalysis(
+            "左右道路邊界不足"
+        );
 
         return;
 
@@ -756,6 +782,10 @@ function finishAnalysis(results){
     );
 
 
+    /*
+    去除明顯離群幀
+    */
+
     var distances =
     results.map(
         function(r){
@@ -775,8 +805,8 @@ function finishAnalysis(results){
 
     var limit =
     Math.max(
-        .035,
-        md*2.15
+        .04,
+        md*2.2
     );
 
 
@@ -798,7 +828,9 @@ function finishAnalysis(results){
 
     if(filtered.length<3){
 
-        failAnalysis();
+        failAnalysis(
+            "道路交點不穩定"
+        );
 
         return;
 
@@ -825,25 +857,72 @@ function finishAnalysis(results){
     );
 
 
-    var conf =
-    median(
-        filtered.map(
-            function(r){
-                return r.confidence;
-            }
-        )
-    );
+    /*
+    找離最終 VP 最近的一幀，
+    用它畫 debug 邊界。
+    */
+
+    var bestFrame =
+    filtered[0];
+
+    var bestDistance =
+    999;
 
 
-    var corridor =
-    median(
-        filtered.map(
-            function(r){
-                return r.corridor || 0;
-            }
-        )
-    );
+    for(
+        var i=0;
+        i<filtered.length;
+        i++
+    ){
 
+        var d =
+        Math.hypot(
+            filtered[i].vx-mx,
+            filtered[i].vy-my
+        );
+
+
+        if(d<bestDistance){
+
+            bestDistance =
+            d;
+
+            bestFrame =
+            filtered[i];
+
+        }
+
+    }
+
+
+    detectedPoint = {
+
+        vx:mx,
+        vy:my
+
+    };
+
+
+    debugResult = {
+
+        left:
+        bestFrame.left,
+
+        right:
+        bestFrame.right,
+
+        leftCount:
+        bestFrame.leftCount,
+
+        rightCount:
+        bestFrame.rightCount
+
+    };
+
+
+    /*
+    幀穩定度
+    */
 
     var spread =
     median(
@@ -862,32 +941,38 @@ function finishAnalysis(results){
 
     var stability =
     clamp(
-        1-spread/.10,
+        1-spread/.12,
         0,
         1
     );
 
 
-    conf =
-    conf*.76
-    +
-    stability*.24;
+    var baseConfidence =
+    median(
+        filtered.map(
+            function(r){
+                return r.confidence;
+            }
+        )
+    );
 
 
-    detectedPoint = {
+    /*
+    這一版故意不讓信心太高。
 
-        vx:mx,
-        vy:my
+    因為現在主要目的是
+    驗證道路邊界抓得對不對。
+    */
 
-    };
-
-
-    confidence =
+    var confidence =
     Math.round(
         clamp(
-            conf*100,
+            (
+                baseConfidence*.72+
+                stability*.28
+            )*100,
             0,
-            99
+            92
         )
     );
 
@@ -898,2033 +983,67 @@ function finishAnalysis(results){
 
 
     compositionEl.innerText =
-    "◎ 單點透視";
+    "◎ 道路單點透視";
 
 
-    if(corridor>.60){
-
-        descEl.innerText =
-        "AI 找到道路走廊主要收斂點";
-
-    }
-    else{
-
-        descEl.innerText =
-        "AI 找到景深主要收斂點";
-
-    }
+    descEl.innerText =
+    "黃色線＝AI 判定的道路邊界";
 
 
     messageEl.innerText =
-    "🎯 檢查綠色 AI 消失點位置";
+    "🔎 請檢查黃色左右邊界是否抓對";
+
+
+    debugEl.innerText =
+    "L:"+
+    bestFrame.leftCount+
+    "｜R:"+
+    bestFrame.rightCount;
 
 }
 
 
 /* =========================================================
-   FAIL
+ FAIL
 ========================================================= */
 
-function failAnalysis(){
+function failAnalysis(reason){
 
-    detectedPoint = null;
+    detectedPoint =
+    null;
 
-    confidence = 0;
+    debugResult =
+    null;
+
 
     scoreEl.innerHTML =
     '-- <small>%</small>';
 
+
     compositionEl.innerText =
-    "無法確認消失點";
+    "道路邊界不足";
+
 
     descEl.innerText =
-    "目前沒有穩定的道路景深收斂";
+    reason ||
+    "無法形成左右道路線群";
+
 
     messageEl.innerText =
-    "📱 稍微調整畫面，再按 AI 自動分析";
+    "📱 調整畫面後重新分析";
+
+
+    debugEl.innerText =
+    "L:0｜R:0";
 
 }
 
 
 /* =========================================================
-   ORIENTATION SUPPORT
+ SOBEL
 ========================================================= */
 
-function orientationSupport(
-    x,
-    y,
-    angle,
-    magnitude,
-    edgeAngle,
-    threshold
-){
-
-    var dx =
-    Math.cos(angle);
-
-    var dy =
-    Math.sin(angle);
-
-    var hit = 0;
-    var total = 0;
-
-
-    for(
-        var s=-28;
-        s<=28;
-        s+=7
-    ){
-
-        if(Math.abs(s)<2){
-            continue;
-        }
-
-
-        var px =
-        Math.round(
-            x+dx*s
-        );
-
-        var py =
-        Math.round(
-            y+dy*s
-        );
-
-
-        if(
-            px<2 ||
-            px>=AW-2 ||
-            py<2 ||
-            py>=AH-2
-        ){
-            continue;
-        }
-
-
-        total++;
-
-
-        var found = false;
-
-
-        for(
-            var oy=-1;
-            oy<=1 && !found;
-            oy++
-        ){
-
-            for(
-                var ox=-1;
-                ox<=1;
-                ox++
-            ){
-
-                var id =
-                (py+oy)*AW+
-                (px+ox);
-
-
-                if(
-                    magnitude[id]
-                    <
-                    threshold*.58
-                ){
-                    continue;
-                }
-
-
-                var diff =
-                angleDifference(
-                    edgeAngle[id],
-                    angle
-                );
-
-
-                if(diff<.24){
-
-                    found = true;
-
-                    break;
-
-                }
-
-            }
-
-        }
-
-
-        if(found){
-            hit++;
-        }
-
-    }
-
-
-    if(total===0){
-        return 0;
-    }
-
-
-    return hit/total;
-
-}
-
-
-/* =========================================================
-   EXTRACT LINES
-========================================================= */
-
-function extractLines(
-    magnitude,
-    edgeAngle,
-    threshold
-){
-
-    var lines = [];
-
-
-    for(
-        var cy=0;
-        cy<AH;
-        cy+=CELL
-    ){
-
-        for(
-            var cx=0;
-            cx<AW;
-            cx+=CELL
-        ){
-
-            var local = [];
-
-
-            for(
-                var y=cy;
-                y<Math.min(cy+CELL,AH);
-                y++
-            ){
-
-                for(
-                    var x=cx;
-                    x<Math.min(cx+CELL,AW);
-                    x++
-                ){
-
-                    var id =
-                    y*AW+x;
-
-
-                    if(
-                        magnitude[id]
-                        <
-                        threshold
-                    ){
-                        continue;
-                    }
-
-
-                    var a =
-                    edgeAngle[id];
-
-
-                    /*
-                    水平線對 VP 幫助低
-                    */
-
-                    if(
-                        Math.abs(a)<.10
-                    ){
-                        continue;
-                    }
-
-
-                    /*
-                    垂直線容易是樹幹、柱子
-                    */
-
-                    if(
-                        Math.abs(a)>1.46
-                    ){
-                        continue;
-                    }
-
-
-                    local.push({
-
-                        x:x,
-                        y:y,
-                        angle:a,
-                        mag:magnitude[id]
-
-                    });
-
-                }
-
-            }
-
-
-            if(local.length===0){
-                continue;
-            }
-
-
-            local.sort(
-                function(a,b){
-                    return b.mag-a.mag;
-                }
-            );
-
-
-            var selected = [];
-
-
-            for(
-                var k=0;
-                k<local.length;
-                k++
-            ){
-
-                var item =
-                local[k];
-
-                var different = true;
-
-
-                for(
-                    var q=0;
-                    q<selected.length;
-                    q++
-                ){
-
-                    if(
-                        angleDifference(
-                            item.angle,
-                            selected[q].angle
-                        )
-                        <
-                        .18
-                    ){
-
-                        different = false;
-
-                        break;
-
-                    }
-
-                }
-
-
-                if(!different){
-                    continue;
-                }
-
-
-                var support =
-                orientationSupport(
-                    item.x,
-                    item.y,
-                    item.angle,
-                    magnitude,
-                    edgeAngle,
-                    threshold
-                );
-
-
-                if(support<.16){
-                    continue;
-                }
-
-
-                item.support =
-                support;
-
-
-                selected.push(item);
-
-
-                if(selected.length>=2){
-                    break;
-                }
-
-            }
-
-
-            for(
-                var n=0;
-                n<selected.length;
-                n++
-            ){
-
-                var L =
-                selected[n];
-
-
-                var strength =
-                clamp(
-                    L.mag/
-                    (threshold*2.2),
-                    .45,
-                    1.15
-                );
-
-
-                var continuity =
-                .55+
-                L.support*.65;
-
-
-                var depthSource =
-                .72+
-                (L.y/AH)*.38;
-
-
-                /*
-                下半部略加權
-                */
-
-                if(
-                    L.y/AH>.55
-                ){
-
-                    depthSource *=
-                    1.06;
-
-                }
-
-
-                L.weight =
-                strength*
-                continuity*
-                depthSource;
-
-
-                L.regionX =
-                Math.floor(
-                    L.x/(AW/6)
-                );
-
-
-                L.regionY =
-                Math.floor(
-                    L.y/(AH/5)
-                );
-
-
-                lines.push(L);
-
-            }
-
-        }
-
-    }
-
-
-    return lines;
-
-}
-
-
-/* =========================================================
-   V5.8.5
-   ROAD CORRIDOR VALIDATION
-
-   真正道路 / 步道透視：
-
-            VP
-           /  \
-          /    \
-         /      \
-        /        \
-
-   從 VP 往下：
-
-   遠處：窄
-   中段：較寬
-   近處：更寬
-
-========================================================= */
-
-function corridorValidation(
-    vx,
-    vy,
-    accepted
-){
-
-    /*
-    三個垂直景深層：
-
-    far    VP下方 10~32%
-    middle 32~58%
-    near   58~100%
-    */
-
-    var bands = {
-
-        far:{
-            left:[],
-            right:[]
-        },
-
-        middle:{
-            left:[],
-            right:[]
-        },
-
-        near:{
-            left:[],
-            right:[]
-        }
-
-    };
-
-
-    var availableHeight =
-    Math.max(
-        1,
-        AH-vy
-    );
-
-
-    for(
-        var i=0;
-        i<accepted.length;
-        i++
-    ){
-
-        var item =
-        accepted[i];
-
-        var L =
-        item.line;
-
-
-        /*
-        只看 VP 下方
-        */
-
-        if(
-            L.y<=vy+
-            availableHeight*.08
-        ){
-            continue;
-        }
-
-
-        /*
-        這條線仍必須大致指向 VP
-        */
-
-        var dist =
-        lineDistance(
-            vx,
-            vy,
-            L
-        );
-
-
-        if(
-            dist>AW*.060
-        ){
-            continue;
-        }
-
-
-        var rel =
-        (L.y-vy)/
-        availableHeight;
-
-
-        var band;
-
-
-        if(rel<.32){
-
-            band =
-            bands.far;
-
-        }
-        else
-        if(rel<.58){
-
-            band =
-            bands.middle;
-
-        }
-        else{
-
-            band =
-            bands.near;
-
-        }
-
-
-        /*
-        左側線
-        */
-
-        if(
-            L.x <
-            vx-AW*.025
-        ){
-
-            band.left.push({
-
-                line:L,
-                vote:item.vote,
-                distance:
-                vx-L.x
-
-            });
-
-        }
-
-
-        /*
-        右側線
-        */
-
-        if(
-            L.x >
-            vx+AW*.025
-        ){
-
-            band.right.push({
-
-                line:L,
-                vote:item.vote,
-                distance:
-                L.x-vx
-
-            });
-
-        }
-
-    }
-
-
-    /*
-    每一層估算左右張開程度
-    */
-
-    function bandInfo(band){
-
-        if(
-            band.left.length===0 ||
-            band.right.length===0
-        ){
-
-            return null;
-
-        }
-
-
-        /*
-        使用中位數而不是最外側，
-        避免一根樹枝把走廊拉很寬。
-        */
-
-        var leftDistances =
-        band.left.map(
-            function(o){
-                return o.distance;
-            }
-        );
-
-
-        var rightDistances =
-        band.right.map(
-            function(o){
-                return o.distance;
-            }
-        );
-
-
-        var leftD =
-        median(leftDistances);
-
-
-        var rightD =
-        median(rightDistances);
-
-
-        var width =
-        leftD+
-        rightD;
-
-
-        var leftVote = 0;
-        var rightVote = 0;
-
-
-        for(
-            var i=0;
-            i<band.left.length;
-            i++
-        ){
-
-            leftVote +=
-            band.left[i].vote;
-
-        }
-
-
-        for(
-            var j=0;
-            j<band.right.length;
-            j++
-        ){
-
-            rightVote +=
-            band.right[j].vote;
-
-        }
-
-
-        var balance =
-        Math.min(
-            leftVote,
-            rightVote
-        )
-        /
-        Math.max(
-            leftVote,
-            rightVote,
-            .0001
-        );
-
-
-        return{
-
-            width:width,
-
-            leftD:leftD,
-
-            rightD:rightD,
-
-            balance:balance,
-
-            leftCount:
-            band.left.length,
-
-            rightCount:
-            band.right.length
-
-        };
-
-    }
-
-
-    var far =
-    bandInfo(
-        bands.far
-    );
-
-
-    var middle =
-    bandInfo(
-        bands.middle
-    );
-
-
-    var near =
-    bandInfo(
-        bands.near
-    );
-
-
-    /*
-    有幾層同時存在左右邊
-    */
-
-    var validBands = 0;
-
-    if(far){
-        validBands++;
-    }
-
-    if(middle){
-        validBands++;
-    }
-
-    if(near){
-        validBands++;
-    }
-
-
-    /*
-    完全不像走廊
-    */
-
-    if(validBands<2){
-
-        return{
-
-            score:.30,
-
-            validBands:
-            validBands,
-
-            expansion:.30,
-
-            bilateral:.30
-
-        };
-
-    }
-
-
-    /*
-    =====================================================
-    遠窄 → 中寬 → 近寬
-
-    不要求完美單調，
-    因為實景可能有：
-    樹
-    車
-    路牌
-    草叢
-    =====================================================
-    */
-
-    var expansion =
-    .50;
-
-
-    if(
-        far &&
-        middle &&
-        near
-    ){
-
-        var grow1 =
-        middle.width/
-        Math.max(
-            far.width,
-            1
-        );
-
-
-        var grow2 =
-        near.width/
-        Math.max(
-            middle.width,
-            1
-        );
-
-
-        var totalGrow =
-        near.width/
-        Math.max(
-            far.width,
-            1
-        );
-
-
-        var s1 =
-        clamp(
-            (grow1-.85)/.75,
-            0,
-            1
-        );
-
-
-        var s2 =
-        clamp(
-            (grow2-.85)/.75,
-            0,
-            1
-        );
-
-
-        var s3 =
-        clamp(
-            (totalGrow-1.15)/1.40,
-            0,
-            1
-        );
-
-
-        expansion =
-        .20+
-        s1*.25+
-        s2*.25+
-        s3*.30;
-
-    }
-    else
-    if(
-        middle &&
-        near
-    ){
-
-        var growMN =
-        near.width/
-        Math.max(
-            middle.width,
-            1
-        );
-
-
-        expansion =
-        clamp(
-            .35+
-            (growMN-1)*.60,
-            .25,
-            .85
-        );
-
-    }
-    else
-    if(
-        far &&
-        middle
-    ){
-
-        var growFM =
-        middle.width/
-        Math.max(
-            far.width,
-            1
-        );
-
-
-        expansion =
-        clamp(
-            .32+
-            (growFM-1)*.55,
-            .25,
-            .78
-        );
-
-    }
-
-
-    /*
-    =====================================================
-    左右平衡
-
-    真正道路不一定完全置中，
-    所以只要求左右都有，
-    不要求完全對稱。
-    =====================================================
-    */
-
-    var balances = [];
-
-
-    if(far){
-        balances.push(
-            far.balance
-        );
-    }
-
-
-    if(middle){
-        balances.push(
-            middle.balance
-        );
-    }
-
-
-    if(near){
-        balances.push(
-            near.balance
-        );
-    }
-
-
-    var bilateral =
-    median(balances);
-
-
-    bilateral =
-    clamp(
-        bilateral,
-        .20,
-        1
-    );
-
-
-    /*
-    =====================================================
-    近景寬度
-
-    真道路 / 走廊到了畫面下方，
-    通常應該有一定張開程度。
-
-    避免只是一小撮樹枝。
-    =====================================================
-    */
-
-    var widthScore =
-    .45;
-
-
-    if(near){
-
-        widthScore =
-        clamp(
-            near.width/
-            (AW*.48),
-            .25,
-            1
-        );
-
-    }
-    else
-    if(middle){
-
-        widthScore =
-        clamp(
-            middle.width/
-            (AW*.32),
-            .25,
-            .82
-        );
-
-    }
-
-
-    /*
-    層數完整度
-    */
-
-    var bandScore =
-    validBands/3;
-
-
-    /*
-    最終道路走廊信心
-    */
-
-    var score =
-
-    expansion*.42
-
-    +
-
-    bilateral*.22
-
-    +
-
-    widthScore*.20
-
-    +
-
-    bandScore*.16;
-
-
-    score =
-    clamp(
-        score,
-        .20,
-        1
-    );
-
-
-    return{
-
-        score:score,
-
-        validBands:
-        validBands,
-
-        expansion:
-        expansion,
-
-        bilateral:
-        bilateral,
-
-        widthScore:
-        widthScore
-
-    };
-
-}
-
-
-/* =========================================================
-   CANDIDATE VP SCORE
-========================================================= */
-
-function scoreCandidateVP(
-    vx,
-    vy,
-    lines
-){
-
-    var regionBest = {};
-
-
-    for(
-        var i=0;
-        i<lines.length;
-        i++
-    ){
-
-        var L =
-        lines[i];
-
-
-        /*
-        VP 上方太遠的線不要
-        */
-
-        var below =
-        L.y-vy;
-
-
-        if(
-            below <
-            -AH*.03
-        ){
-            continue;
-        }
-
-
-        var dist =
-        lineDistance(
-            vx,
-            vy,
-            L
-        );
-
-
-        if(
-            dist>
-            AW*.065
-        ){
-            continue;
-        }
-
-
-        var toVP =
-        Math.atan2(
-            vy-L.y,
-            vx-L.x
-        );
-
-
-        while(
-            toVP>Math.PI/2
-        ){
-            toVP-=Math.PI;
-        }
-
-
-        while(
-            toVP<-Math.PI/2
-        ){
-            toVP+=Math.PI;
-        }
-
-
-        var ad =
-        angleDifference(
-            toVP,
-            L.angle
-        );
-
-
-        if(ad>.27){
-            continue;
-        }
-
-
-        var distanceScore =
-        1-
-        clamp(
-            dist/(AW*.065),
-            0,
-            1
-        );
-
-
-        distanceScore *=
-        distanceScore;
-
-
-        var angleScore =
-        1-
-        clamp(
-            ad/.27,
-            0,
-            1
-        );
-
-
-        var radial =
-        Math.hypot(
-            L.x-vx,
-            L.y-vy
-        );
-
-
-        var radialScore =
-        clamp(
-            radial/(AW*.34),
-            .25,
-            1
-        );
-
-
-        var vote =
-        L.weight
-        *
-        (
-            .35+
-            distanceScore*.65
-        )
-        *
-        (
-            .45+
-            angleScore*.55
-        )
-        *
-        radialScore;
-
-
-        var key =
-        L.regionX+
-        "_"+
-        L.regionY;
-
-
-        if(
-            !regionBest[key] ||
-            vote>
-            regionBest[key].vote
-        ){
-
-            regionBest[key] = {
-
-                line:L,
-                vote:vote
-
-            };
-
-        }
-
-    }
-
-
-    var accepted = [];
-
-
-    for(
-        var key in regionBest
-    ){
-
-        accepted.push(
-            regionBest[key]
-        );
-
-    }
-
-
-    if(
-        accepted.length<4
-    ){
-
-        return null;
-
-    }
-
-
-    var total = 0;
-
-    var leftWeight = 0;
-    var rightWeight = 0;
-
-    var nearWeight = 0;
-    var middleWeight = 0;
-    var farWeight = 0;
-
-    var minX = 9999;
-    var maxX = -9999;
-
-    var lowerMinX = 9999;
-    var lowerMaxX = -9999;
-
-    var upperMinX = 9999;
-    var upperMaxX = -9999;
-
-
-    for(
-        var a=0;
-        a<accepted.length;
-        a++
-    ){
-
-        var item =
-        accepted[a];
-
-        var L =
-        item.line;
-
-        var vote =
-        item.vote;
-
-
-        total += vote;
-
-
-        minX =
-        Math.min(
-            minX,
-            L.x
-        );
-
-
-        maxX =
-        Math.max(
-            maxX,
-            L.x
-        );
-
-
-        if(
-            L.x<
-            vx-AW*.025
-        ){
-
-            leftWeight +=
-            vote;
-
-        }
-        else
-        if(
-            L.x>
-            vx+AW*.025
-        ){
-
-            rightWeight +=
-            vote;
-
-        }
-
-
-        var relativeY =
-        (L.y-vy)/
-        Math.max(
-            1,
-            AH-vy
-        );
-
-
-        if(
-            relativeY>.58
-        ){
-
-            nearWeight +=
-            vote;
-
-
-            lowerMinX =
-            Math.min(
-                lowerMinX,
-                L.x
-            );
-
-
-            lowerMaxX =
-            Math.max(
-                lowerMaxX,
-                L.x
-            );
-
-        }
-        else
-        if(
-            relativeY>.25
-        ){
-
-            middleWeight +=
-            vote;
-
-        }
-        else{
-
-            farWeight +=
-            vote;
-
-
-            upperMinX =
-            Math.min(
-                upperMinX,
-                L.x
-            );
-
-
-            upperMaxX =
-            Math.max(
-                upperMaxX,
-                L.x
-            );
-
-        }
-
-    }
-
-
-    /*
-    左右都要有
-    */
-
-    if(
-        leftWeight<=0 ||
-        rightWeight<=0
-    ){
-
-        return null;
-
-    }
-
-
-    /*
-    中近段不能太少
-    */
-
-    if(
-        nearWeight+
-        middleWeight
-        <
-        total*.30
-    ){
-
-        return null;
-
-    }
-
-
-    var balance =
-    Math.min(
-        leftWeight,
-        rightWeight
-    )
-    /
-    Math.max(
-        leftWeight,
-        rightWeight
-    );
-
-
-    var horizontalSpan =
-    maxX-minX;
-
-
-    var spanScore =
-    clamp(
-        horizontalSpan/
-        (AW*.62),
-        .15,
-        1
-    );
-
-
-    var bandCount = 0;
-
-
-    if(farWeight>0){
-        bandCount++;
-    }
-
-    if(middleWeight>0){
-        bandCount++;
-    }
-
-    if(nearWeight>0){
-        bandCount++;
-    }
-
-
-    var verticalScore =
-    bandCount/3;
-
-
-    /*
-    基本近寬遠窄
-    */
-
-    var narrowingScore =
-    .62;
-
-
-    if(
-        lowerMaxX>
-        lowerMinX
-        &&
-        upperMaxX>
-        upperMinX
-    ){
-
-        var lowerWidth =
-        lowerMaxX-
-        lowerMinX;
-
-
-        var upperWidth =
-        upperMaxX-
-        upperMinX;
-
-
-        if(
-            lowerWidth>
-            AW*.12
-        ){
-
-            var ratio =
-            upperWidth/
-            lowerWidth;
-
-
-            narrowingScore =
-            clamp(
-                1-ratio*.75,
-                .25,
-                1
-            );
-
-        }
-
-    }
-    else
-    if(
-        nearWeight>0 &&
-        middleWeight>0
-    ){
-
-        narrowingScore =
-        .78;
-
-    }
-
-
-    /*
-    景深證據
-    */
-
-    var depthEvidence =
-    (
-        nearWeight*1.26
-        +
-        middleWeight*1.02
-        +
-        farWeight*.36
-    )
-    /
-    Math.max(
-        total,
-        .0001
-    );
-
-
-    depthEvidence =
-    clamp(
-        depthEvidence,
-        .32,
-        1.16
-    );
-
-
-    /*
-    X 邊緣降權
-    */
-
-    var nx =
-    vx/AW;
-
-
-    var edgePenalty = 1;
-
-
-    if(
-        nx<.13 ||
-        nx>.87
-    ){
-
-        edgePenalty =
-        .72;
-
-    }
-    else
-    if(
-        nx<.20 ||
-        nx>.80
-    ){
-
-        edgePenalty =
-        .88;
-
-    }
-
-
-    /*
-    =====================================================
-    地平線約束
-
-    V5.8.5 比 V5.8.4.1 稍微放鬆，
-    因為現在道路走廊本身會驗證真假。
-
-    不希望單純靠 Y 高度決定答案。
-    =====================================================
-    */
-
-    var ny =
-    vy/AH;
-
-
-    var horizonPenalty =
-    1;
-
-
-    if(ny<.18){
-
-        horizonPenalty =
-        .48;
-
-    }
-    else
-    if(ny<.26){
-
-        horizonPenalty =
-        .67;
-
-    }
-    else
-    if(ny<.33){
-
-        horizonPenalty =
-        .84;
-
-    }
-
-
-    var lowPenalty = 1;
-
-
-    if(ny>.74){
-
-        lowPenalty =
-        .58;
-
-    }
-    else
-    if(ny>.67){
-
-        lowPenalty =
-        .80;
-
-    }
-
-
-    /*
-    =====================================================
-    V5.8.5
-    真正道路走廊驗證
-    =====================================================
-    */
-
-    var corridor =
-    corridorValidation(
-        vx,
-        vy,
-        accepted
-    );
-
-
-    /*
-    corridor.score：
-
-    1.0 = 非常像道路 V 型
-    0.2 = 很不像
-
-    不直接乘 score，
-    否則弱道路可能被判死。
-
-    使用 0.42 ~ 1.18 的倍率。
-    */
-
-    var corridorFactor =
-    .42+
-    corridor.score*.76;
-
-
-    /*
-    如果有完整三層：
-    遠 / 中 / 近
-    再小幅獎勵。
-    */
-
-    if(
-        corridor.validBands===3
-        &&
-        corridor.expansion>.58
-    ){
-
-        corridorFactor *=
-        1.08;
-
-    }
-
-
-    /*
-    如果只有兩層，
-    不判死，但不能拿滿分。
-    */
-
-    if(
-        corridor.validBands<2
-    ){
-
-        corridorFactor *=
-        .72;
-
-    }
-
-
-    var bilateral =
-    Math.sqrt(
-        leftWeight*
-        rightWeight
-    );
-
-
-    var score =
-    bilateral
-    *
-    (
-        .40+
-        balance*.60
-    )
-    *
-    (
-        .42+
-        spanScore*.58
-    )
-    *
-    (
-        .48+
-        verticalScore*.52
-    )
-    *
-    (
-        .50+
-        narrowingScore*.50
-    )
-    *
-    depthEvidence
-    *
-    edgePenalty
-    *
-    horizonPenalty
-    *
-    lowPenalty
-    *
-    corridorFactor;
-
-
-    return{
-
-        score:score,
-
-        accepted:
-        accepted,
-
-        balance:
-        balance,
-
-        spanScore:
-        spanScore,
-
-        verticalScore:
-        verticalScore,
-
-        narrowingScore:
-        narrowingScore,
-
-        depthEvidence:
-        depthEvidence,
-
-        corridorScore:
-        corridor.score,
-
-        corridor:
-        corridor
-
-    };
-
-}
-
-
-/* =========================================================
-   LINE INTERSECTION
-========================================================= */
-
-function lineIntersection(A,B){
-
-    var dx1 =
-    Math.cos(A.angle);
-
-    var dy1 =
-    Math.sin(A.angle);
-
-    var dx2 =
-    Math.cos(B.angle);
-
-    var dy2 =
-    Math.sin(B.angle);
-
-
-    var denominator =
-    dx1*dy2-
-    dy1*dx2;
-
-
-    if(
-        Math.abs(denominator)
-        <
-        .00001
-    ){
-
-        return null;
-
-    }
-
-
-    var rx =
-    B.x-A.x;
-
-    var ry =
-    B.y-A.y;
-
-
-    var t =
-    (
-        rx*dy2-
-        ry*dx2
-    )
-    /
-    denominator;
-
-
-    return{
-
-        x:
-        A.x+
-        t*dx1,
-
-        y:
-        A.y+
-        t*dy1
-
-    };
-
-}
-
-
-/* =========================================================
-   REFINE VP
-========================================================= */
-
-function refineVP(
-    vx,
-    vy,
-    accepted
-){
-
-    var left = [];
-    var right = [];
-
-
-    for(
-        var i=0;
-        i<accepted.length;
-        i++
-    ){
-
-        var L =
-        accepted[i].line;
-
-
-        if(
-            lineDistance(
-                vx,
-                vy,
-                L
-            )
-            >
-            AW*.055
-        ){
-            continue;
-        }
-
-
-        if(
-            L.x<
-            vx-AW*.02
-        ){
-
-            left.push(L);
-
-        }
-        else
-        if(
-            L.x>
-            vx+AW*.02
-        ){
-
-            right.push(L);
-
-        }
-
-    }
-
-
-    var points = [];
-
-
-    for(
-        var a=0;
-        a<left.length;
-        a++
-    ){
-
-        for(
-            var b=0;
-            b<right.length;
-            b++
-        ){
-
-            var ad =
-            angleDifference(
-                left[a].angle,
-                right[b].angle
-            );
-
-
-            if(ad<.16){
-                continue;
-            }
-
-
-            var p =
-            lineIntersection(
-                left[a],
-                right[b]
-            );
-
-
-            if(!p){
-                continue;
-            }
-
-
-            if(
-                Math.abs(
-                    p.x-vx
-                )
-                >
-                AW*.10
-                ||
-                Math.abs(
-                    p.y-vy
-                )
-                >
-                AH*.10
-            ){
-
-                continue;
-
-            }
-
-
-            points.push(p);
-
-        }
-
-    }
-
-
-    if(points.length<2){
-
-        return{
-            x:vx,
-            y:vy
-        };
-
-    }
-
-
-    var mx =
-    median(
-        points.map(
-            function(p){
-                return p.x;
-            }
-        )
-    );
-
-
-    var my =
-    median(
-        points.map(
-            function(p){
-                return p.y;
-            }
-        )
-    );
-
-
-    var dx =
-    mx-vx;
-
-    var dy =
-    my-vy;
-
-
-    var d =
-    Math.hypot(
-        dx,
-        dy
-    );
-
-
-    var maxStep =
-    AW*.045;
-
-
-    if(d>maxStep){
-
-        var s =
-        maxStep/d;
-
-        dx*=s;
-        dy*=s;
-
-    }
-
-
-    return{
-
-        x:vx+dx,
-        y:vy+dy
-
-    };
-
-}
-
-
-/* =========================================================
-   MAIN ANALYSIS
-========================================================= */
-
-function analyzeDepthVanishingPoint(){
-
-    if(video.readyState<2){
-        return null;
-    }
-
+function buildEdges(){
 
     ax.drawImage(
         video,
@@ -2954,46 +1073,39 @@ function analyzeDepthVanishingPoint(){
     );
 
 
-    /*
-    GRAYSCALE
-    */
-
     for(
         var i=0;
         i<AW*AH;
         i++
     ){
 
-        var p=i*4;
+        var p =
+        i*4;
 
 
         gray[i] =
-        data[p]*.299
-        +
-        data[p+1]*.587
-        +
+        data[p]*.299+
+        data[p+1]*.587+
         data[p+2]*.114;
 
     }
 
 
     /*
-    SOBEL
+    先做非常小的 3 點平滑。
+
+    目的是降低：
+    葉子
+    草
+    磁磚小紋理
+
+    但不能模糊道路邊界。
     */
 
-    var magnitude =
+    var smooth =
     new Float32Array(
         AW*AH
     );
-
-
-    var edgeAngle =
-    new Float32Array(
-        AW*AH
-    );
-
-
-    var values = [];
 
 
     for(
@@ -3012,40 +1124,85 @@ function analyzeDepthVanishingPoint(){
             y*AW+x;
 
 
+            smooth[id] =
+            (
+                gray[id]*4+
+                gray[id-1]+
+                gray[id+1]+
+                gray[id-AW]+
+                gray[id+AW]
+            )/8;
+
+        }
+
+    }
+
+
+    var magnitude =
+    new Float32Array(
+        AW*AH
+    );
+
+
+    var angle =
+    new Float32Array(
+        AW*AH
+    );
+
+
+    var values = [];
+
+
+    for(
+        var yy=2;
+        yy<AH-2;
+        yy++
+    ){
+
+        for(
+            var xx=2;
+            xx<AW-2;
+            xx++
+        ){
+
+            var id2 =
+            yy*AW+xx;
+
+
             var gx =
 
-            -gray[id-AW-1]
+            -smooth[id2-AW-1]
             +
-            gray[id-AW+1]
+            smooth[id2-AW+1]
 
             -
 
-            2*gray[id-1]
+            2*smooth[id2-1]
             +
-            2*gray[id+1]
+            2*smooth[id2+1]
 
             -
 
-            gray[id+AW-1]
+            smooth[id2+AW-1]
             +
-            gray[id+AW+1];
+            smooth[id2+AW+1];
 
 
             var gy =
 
-            -gray[id-AW-1]
+            -smooth[id2-AW-1]
             -
-            2*gray[id-AW]
+            2*smooth[id2-AW]
             -
-            gray[id-AW+1]
+            smooth[id2-AW+1]
 
             +
 
-            gray[id+AW-1]
+            smooth[id2+AW-1]
             +
-            2*gray[id+AW]
+            2*smooth[id2+AW]
             +
-            gray[id+AW+1];
+            smooth[id2+AW+1];
 
 
             var mag =
@@ -3055,9 +1212,15 @@ function analyzeDepthVanishingPoint(){
             );
 
 
-            magnitude[id] =
+            magnitude[id2] =
             mag;
 
+
+            /*
+            Sobel 是法線方向。
+
+            +90° 轉成實際邊緣方向。
+            */
 
             var a =
             Math.atan2(
@@ -3082,7 +1245,7 @@ function analyzeDepthVanishingPoint(){
             }
 
 
-            edgeAngle[id] =
+            angle[id2] =
             a;
 
 
@@ -3093,11 +1256,6 @@ function analyzeDepthVanishingPoint(){
     }
 
 
-    if(values.length===0){
-        return null;
-    }
-
-
     values.sort(
         function(a,b){
             return a-b;
@@ -3105,375 +1263,44 @@ function analyzeDepthVanishingPoint(){
     );
 
 
+    if(values.length===0){
+        return null;
+    }
+
+
+    /*
+    稍微提高門檻。
+
+    5.8.6 不希望把大量葉片
+    都當道路線。
+    */
+
     var threshold =
     values[
         Math.floor(
-            values.length*.895
+            values.length*.91
         )
     ];
 
 
     if(
         !threshold ||
-        threshold<16
+        threshold<13
     ){
-
-        return null;
-
-    }
-
-
-    /*
-    LINE EXTRACTION
-    */
-
-    var lines =
-    extractLines(
-        magnitude,
-        edgeAngle,
-        threshold
-    );
-
-
-    if(lines.length<8){
         return null;
     }
-
-
-    /*
-    =====================================================
-    VP 粗搜尋
-
-    V5.8.5 不再把搜尋高度限制太死。
-
-    讓：
-    線收斂
-    +
-    道路走廊
-
-    共同決定 VP。
-    =====================================================
-    */
-
-    var best = null;
-
-
-    for(
-        var gy=AH*.14;
-        gy<=AH*.74;
-        gy+=8
-    ){
-
-        for(
-            var gx=AW*.07;
-            gx<=AW*.93;
-            gx+=8
-        ){
-
-            var result =
-            scoreCandidateVP(
-                gx,
-                gy,
-                lines
-            );
-
-
-            if(!result){
-                continue;
-            }
-
-
-            if(
-                !best ||
-                result.score>
-                best.score
-            ){
-
-                best = {
-
-                    x:gx,
-                    y:gy,
-
-                    score:
-                    result.score,
-
-                    result:
-                    result
-
-                };
-
-            }
-
-        }
-
-    }
-
-
-    if(!best){
-        return null;
-    }
-
-
-    /*
-    =====================================================
-    細搜尋
-    =====================================================
-    */
-
-    var fineBest =
-    best;
-
-
-    for(
-        var fy=
-        best.y-12;
-        fy<=best.y+12;
-        fy+=2
-    ){
-
-        if(
-            fy<AH*.10 ||
-            fy>AH*.77
-        ){
-            continue;
-        }
-
-
-        for(
-            var fx=
-            best.x-12;
-            fx<=best.x+12;
-            fx+=2
-        ){
-
-            if(
-                fx<AW*.04 ||
-                fx>AW*.96
-            ){
-                continue;
-            }
-
-
-            var fine =
-            scoreCandidateVP(
-                fx,
-                fy,
-                lines
-            );
-
-
-            if(!fine){
-                continue;
-            }
-
-
-            if(
-                fine.score>
-                fineBest.score
-            ){
-
-                fineBest = {
-
-                    x:fx,
-                    y:fy,
-
-                    score:
-                    fine.score,
-
-                    result:
-                    fine
-
-                };
-
-            }
-
-        }
-
-    }
-
-
-    /*
-    =====================================================
-    INTERSECTION REFINE
-    =====================================================
-    */
-
-    var refined =
-    refineVP(
-        fineBest.x,
-        fineBest.y,
-        fineBest.result.accepted
-    );
-
-
-    var vx =
-    clamp(
-        refined.x,
-        AW*.04,
-        AW*.96
-    );
-
-
-    var vy =
-    clamp(
-        refined.y,
-        AH*.09,
-        AH*.78
-    );
-
-
-    /*
-    精修後重新驗證
-    */
-
-    var finalCheck =
-    scoreCandidateVP(
-        vx,
-        vy,
-        lines
-    );
-
-
-    if(!finalCheck){
-
-        vx =
-        fineBest.x;
-
-        vy =
-        fineBest.y;
-
-        finalCheck =
-        fineBest.result;
-
-    }
-    else{
-
-        /*
-        如果精修後的道路走廊分數
-        明顯比 fineBest 更差，
-        不接受精修。
-
-        避免交點精修把 VP
-        又拉回樹冠。
-        */
-
-        if(
-            finalCheck.corridorScore
-            <
-            fineBest.result.corridorScore-.12
-        ){
-
-            vx =
-            fineBest.x;
-
-            vy =
-            fineBest.y;
-
-            finalCheck =
-            fineBest.result;
-
-        }
-
-    }
-
-
-    /*
-    =====================================================
-    CONFIDENCE
-
-    注意：
-    仍是「辨識信心」
-    不是照片美感分數。
-    =====================================================
-    */
-
-    var balance =
-    finalCheck.balance;
-
-
-    var span =
-    finalCheck.spanScore;
-
-
-    var vertical =
-    finalCheck.verticalScore;
-
-
-    var narrowing =
-    finalCheck.narrowingScore;
-
-
-    var depth =
-    clamp(
-        finalCheck.depthEvidence,
-        0,
-        1
-    );
-
-
-    var corridor =
-    clamp(
-        finalCheck.corridorScore,
-        0,
-        1
-    );
-
-
-    /*
-    V5.8.5：
-    corridor 正式進 confidence。
-    */
-
-    var conf =
-
-    .12
-
-    +
-
-    balance*.18
-
-    +
-
-    span*.14
-
-    +
-
-    vertical*.12
-
-    +
-
-    narrowing*.13
-
-    +
-
-    depth*.12
-
-    +
-
-    corridor*.19;
-
-
-    conf =
-    clamp(
-        conf,
-        .20,
-        .97
-    );
 
 
     return{
 
-        vx:
-        vx/AW,
+        magnitude:
+        magnitude,
 
-        vy:
-        vy/AH,
+        angle:
+        angle,
 
-        confidence:
-        conf,
-
-        corridor:
-        corridor
+        threshold:
+        threshold
 
     };
 
@@ -3481,10 +1308,1412 @@ function analyzeDepthVanishingPoint(){
 
 
 /* =========================================================
-   DRAW POINT
+ LINE CONTINUITY
+
+ 沿著候選方向前後走，
+ 看這條線是不是真的延續。
+
+ 道路邊界：
+ 通常延續較長。
+
+ 葉子：
+ 通常很快中斷。
 ========================================================= */
 
-function drawDetectedPoint(){
+function lineContinuity(
+    x,
+    y,
+    a,
+    magnitude,
+    edgeAngle,
+    threshold
+){
+
+    var dx =
+    Math.cos(a);
+
+    var dy =
+    Math.sin(a);
+
+
+    var hit = 0;
+    var total = 0;
+
+
+    /*
+    比 5.8.5 看得更遠
+    */
+
+    for(
+        var s=-42;
+        s<=42;
+        s+=6
+    ){
+
+        if(
+            Math.abs(s)<4
+        ){
+            continue;
+        }
+
+
+        var px =
+        Math.round(
+            x+dx*s
+        );
+
+
+        var py =
+        Math.round(
+            y+dy*s
+        );
+
+
+        if(
+            px<2 ||
+            px>=AW-2 ||
+            py<2 ||
+            py>=AH-2
+        ){
+            continue;
+        }
+
+
+        total++;
+
+
+        var found =
+        false;
+
+
+        /*
+        5x5 小範圍找同方向邊
+        */
+
+        for(
+            var oy=-2;
+            oy<=2 && !found;
+            oy++
+        ){
+
+            for(
+                var ox=-2;
+                ox<=2;
+                ox++
+            ){
+
+                var id =
+                (py+oy)*AW+
+                (px+ox);
+
+
+                if(
+                    magnitude[id]
+                    <
+                    threshold*.55
+                ){
+                    continue;
+                }
+
+
+                if(
+                    angleDifference(
+                        edgeAngle[id],
+                        a
+                    )
+                    <
+                    .22
+                ){
+
+                    found =
+                    true;
+
+                    break;
+
+                }
+
+            }
+
+        }
+
+
+        if(found){
+            hit++;
+        }
+
+    }
+
+
+    if(total===0){
+        return 0;
+    }
+
+
+    return hit/total;
+
+}
+
+
+/* =========================================================
+ EXTRACT ROAD CANDIDATES
+
+ 這次只把「有可能成為道路邊界」
+ 的線抽出來。
+
+ 重點：
+ 來源要偏中下半部。
+========================================================= */
+
+function extractRoadCandidates(
+    magnitude,
+    edgeAngle,
+    threshold
+){
+
+    var candidates = [];
+
+
+    /*
+    不從畫面最上面開始。
+
+    道路線的來源應該主要存在
+    中下區域。
+    */
+
+    var startY =
+    Math.floor(
+        AH*.38
+    );
+
+
+    for(
+        var cy=startY;
+        cy<AH;
+        cy+=CELL
+    ){
+
+        for(
+            var cx=0;
+            cx<AW;
+            cx+=CELL
+        ){
+
+            var best = null;
+
+
+            for(
+                var y=cy;
+                y<
+                Math.min(
+                    cy+CELL,
+                    AH
+                );
+                y++
+            ){
+
+                for(
+                    var x=cx;
+                    x<
+                    Math.min(
+                        cx+CELL,
+                        AW
+                    );
+                    x++
+                ){
+
+                    var id =
+                    y*AW+x;
+
+
+                    var mag =
+                    magnitude[id];
+
+
+                    if(
+                        mag<threshold
+                    ){
+                        continue;
+                    }
+
+
+                    var a =
+                    edgeAngle[id];
+
+
+                    var absA =
+                    Math.abs(a);
+
+
+                    /*
+                    太水平：
+                    地磚橫線、陰影。
+
+                    太垂直：
+                    樹幹、柱子。
+                    */
+
+                    if(
+                        absA<.16 ||
+                        absA>1.38
+                    ){
+                        continue;
+                    }
+
+
+                    if(
+                        !best ||
+                        mag>best.mag
+                    ){
+
+                        best = {
+
+                            x:x,
+                            y:y,
+                            angle:a,
+                            mag:mag
+
+                        };
+
+                    }
+
+                }
+
+            }
+
+
+            if(!best){
+                continue;
+            }
+
+
+            var continuity =
+            lineContinuity(
+                best.x,
+                best.y,
+                best.angle,
+                magnitude,
+                edgeAngle,
+                threshold
+            );
+
+
+            /*
+            太碎不要
+            */
+
+            if(
+                continuity<.20
+            ){
+                continue;
+            }
+
+
+            best.continuity =
+            continuity;
+
+
+            /*
+            來源越低，
+            越像近景道路證據。
+            */
+
+            var depth =
+            clamp(
+                (
+                    best.y-
+                    AH*.32
+                )
+                /
+                (
+                    AH*.68
+                ),
+                0,
+                1
+            );
+
+
+            /*
+            強度不允許無限放大。
+            */
+
+            var strength =
+            clamp(
+                best.mag/
+                (threshold*2.3),
+                .45,
+                1.10
+            );
+
+
+            best.weight =
+            (
+                .45+
+                continuity*.75
+            )
+            *
+            (
+                .72+
+                depth*.42
+            )
+            *
+            strength;
+
+
+            candidates.push(
+                best
+            );
+
+        }
+
+    }
+
+
+    return candidates;
+
+}
+
+
+/* =========================================================
+ CLASSIFY LEFT / RIGHT
+
+ Canvas 座標：
+
+ x →
+ y ↓
+
+
+ 左道路邊界：
+
+ 從近處往遠處看，
+ 通常往「右上」走。
+
+
+ 右道路邊界：
+
+ 從近處往遠處看，
+ 通常往「左上」走。
+
+
+ 由於 angle 正負會受方向表示方式影響，
+ 不直接只看 angle 正負。
+
+ 改用候選線延伸到上方某高度後，
+ 看它往中心哪一側移動。
+========================================================= */
+
+function projectXAtY(
+    line,
+    targetY
+){
+
+    var dx =
+    Math.cos(
+        line.angle
+    );
+
+    var dy =
+    Math.sin(
+        line.angle
+    );
+
+
+    if(
+        Math.abs(dy)<.05
+    ){
+        return null;
+    }
+
+
+    var t =
+    (
+        targetY-line.y
+    )
+    /
+    dy;
+
+
+    return(
+        line.x+
+        dx*t
+    );
+
+}
+
+
+/* =========================================================
+ BUILD SIDE GROUPS
+========================================================= */
+
+function buildRoadGroups(
+    candidates
+){
+
+    var left = [];
+    var right = [];
+
+
+    var center =
+    AW*.50;
+
+
+    /*
+    投影到約畫面 35% 高度。
+
+    真道路邊界應該往遠方中心收。
+    */
+
+    var targetY =
+    AH*.35;
+
+
+    for(
+        var i=0;
+        i<candidates.length;
+        i++
+    ){
+
+        var L =
+        candidates[i];
+
+
+        var projectedX =
+        projectXAtY(
+            L,
+            targetY
+        );
+
+
+        if(
+            projectedX===null ||
+            !isFinite(projectedX)
+        ){
+            continue;
+        }
+
+
+        /*
+        左側來源
+        */
+
+        if(
+            L.x<
+            center-AW*.035
+        ){
+
+            /*
+            往上延伸後，
+            必須比原位置更靠右。
+
+            也就是向畫面中心收斂。
+            */
+
+            if(
+                projectedX>
+                L.x+AW*.018
+            ){
+
+                /*
+                不接受非常誇張的橫跨。
+                */
+
+                if(
+                    projectedX<
+                    AW*1.05
+                ){
+
+                    L.projectedX =
+                    projectedX;
+
+                    left.push(L);
+
+                }
+
+            }
+
+        }
+
+
+        /*
+        右側來源
+        */
+
+        else if(
+            L.x>
+            center+AW*.035
+        ){
+
+            /*
+            往上後應往左收斂
+            */
+
+            if(
+                projectedX<
+                L.x-AW*.018
+            ){
+
+                if(
+                    projectedX>
+                    -AW*.05
+                ){
+
+                    L.projectedX =
+                    projectedX;
+
+                    right.push(L);
+
+                }
+
+            }
+
+        }
+
+    }
+
+
+    return{
+
+        left:left,
+        right:right
+
+    };
+
+}
+
+
+/* =========================================================
+ LINE INTERSECTION
+========================================================= */
+
+function lineIntersection(A,B){
+
+    var dx1 =
+    Math.cos(A.angle);
+
+    var dy1 =
+    Math.sin(A.angle);
+
+
+    var dx2 =
+    Math.cos(B.angle);
+
+    var dy2 =
+    Math.sin(B.angle);
+
+
+    var denominator =
+    dx1*dy2-
+    dy1*dx2;
+
+
+    if(
+        Math.abs(
+            denominator
+        )
+        <
+        .00001
+    ){
+        return null;
+    }
+
+
+    var rx =
+    B.x-A.x;
+
+    var ry =
+    B.y-A.y;
+
+
+    var t =
+    (
+        rx*dy2-
+        ry*dx2
+    )
+    /
+    denominator;
+
+
+    return{
+
+        x:
+        A.x+t*dx1,
+
+        y:
+        A.y+t*dy1
+
+    };
+
+}
+
+
+/* =========================================================
+ FIND VP FROM LEFT / RIGHT GROUPS
+
+ 不選「最強的一對」。
+
+ 對多組左右線交點投票，
+ 再找交點群的中位數。
+
+ 這樣單根樹枝比較難霸榜。
+========================================================= */
+
+function findRoadVP(
+    left,
+    right
+){
+
+    var intersections = [];
+
+
+    for(
+        var i=0;
+        i<left.length;
+        i++
+    ){
+
+        for(
+            var j=0;
+            j<right.length;
+            j++
+        ){
+
+            var A =
+            left[i];
+
+            var B =
+            right[j];
+
+
+            /*
+            兩線方向太接近平行
+            不算。
+            */
+
+            var ad =
+            angleDifference(
+                A.angle,
+                B.angle
+            );
+
+
+            if(ad<.16){
+                continue;
+            }
+
+
+            var p =
+            lineIntersection(
+                A,
+                B
+            );
+
+
+            if(!p){
+                continue;
+            }
+
+
+            /*
+            VP 必須大致位於畫面遠方。
+
+            這只是寬鬆範圍，
+            不是硬鎖道路盡頭。
+            */
+
+            if(
+                p.x<
+                -AW*.05 ||
+                p.x>
+                AW*1.05
+            ){
+                continue;
+            }
+
+
+            if(
+                p.y<
+                AH*.10 ||
+                p.y>
+                AH*.70
+            ){
+                continue;
+            }
+
+
+            /*
+            交點應位於兩條來源線上方。
+            */
+
+            if(
+                p.y>
+                Math.min(
+                    A.y,
+                    B.y
+                )
+                -
+                AH*.03
+            ){
+                continue;
+            }
+
+
+            /*
+            左右來源跨度。
+
+            兩條線如果本來就靠很近，
+            很可能只是中央磁磚紋理。
+            */
+
+            var sourceSpan =
+            B.x-A.x;
+
+
+            if(
+                sourceSpan<
+                AW*.12
+            ){
+                continue;
+            }
+
+
+            /*
+            近景來源稍微加權。
+            */
+
+            var sourceDepth =
+            (
+                A.y+
+                B.y
+            )
+            /
+            (AH*2);
+
+
+            var weight =
+            Math.sqrt(
+                A.weight*
+                B.weight
+            )
+            *
+            (
+                .70+
+                sourceDepth*.45
+            );
+
+
+            intersections.push({
+
+                x:p.x,
+                y:p.y,
+
+                weight:weight,
+
+                left:A,
+                right:B
+
+            });
+
+        }
+
+    }
+
+
+    if(
+        intersections.length<3
+    ){
+        return null;
+    }
+
+
+    /*
+    第一輪中位數
+    */
+
+    var mx =
+    median(
+        intersections.map(
+            function(p){
+                return p.x;
+            }
+        )
+    );
+
+
+    var my =
+    median(
+        intersections.map(
+            function(p){
+                return p.y;
+            }
+        )
+    );
+
+
+    /*
+    去掉離群交點
+    */
+
+    var distances =
+    intersections.map(
+        function(p){
+
+            return Math.hypot(
+                p.x-mx,
+                p.y-my
+            );
+
+        }
+    );
+
+
+    var md =
+    median(distances);
+
+
+    var limit =
+    Math.max(
+        AW*.065,
+        md*1.8
+    );
+
+
+    var good =
+    intersections.filter(
+        function(p){
+
+            return(
+                Math.hypot(
+                    p.x-mx,
+                    p.y-my
+                )
+                <=limit
+            );
+
+        }
+    );
+
+
+    if(
+        good.length<2
+    ){
+        return null;
+    }
+
+
+    /*
+    第二輪中位數
+    */
+
+    mx =
+    median(
+        good.map(
+            function(p){
+                return p.x;
+            }
+        )
+    );
+
+
+    my =
+    median(
+        good.map(
+            function(p){
+                return p.y;
+            }
+        )
+    );
+
+
+    /*
+    找出最支持最終交點的
+    左右線。
+
+    這兩條會顯示成黃色 debug 線。
+    */
+
+    var bestPair =
+    null;
+
+    var bestScore =
+    -1;
+
+
+    for(
+        var k=0;
+        k<good.length;
+        k++
+    ){
+
+        var P =
+        good[k];
+
+
+        var distance =
+        Math.hypot(
+            P.x-mx,
+            P.y-my
+        );
+
+
+        var closeness =
+        1-
+        clamp(
+            distance/
+            (AW*.12),
+            0,
+            1
+        );
+
+
+        var score =
+        P.weight*
+        (
+            .35+
+            closeness*.65
+        );
+
+
+        /*
+        更偏好來源在中下部的線
+        */
+
+        var sourceY =
+        (
+            P.left.y+
+            P.right.y
+        )/2;
+
+
+        score *=
+        (
+            .75+
+            (sourceY/AH)*.35
+        );
+
+
+        if(
+            score>
+            bestScore
+        ){
+
+            bestScore =
+            score;
+
+            bestPair =
+            P;
+
+        }
+
+    }
+
+
+    if(!bestPair){
+        return null;
+    }
+
+
+    /*
+    交點集中度
+    */
+
+    var spread =
+    median(
+        good.map(
+            function(p){
+
+                return Math.hypot(
+                    p.x-mx,
+                    p.y-my
+                );
+
+            }
+        )
+    );
+
+
+    var cluster =
+    clamp(
+        1-spread/(AW*.16),
+        0,
+        1
+    );
+
+
+    /*
+    支持比例
+    */
+
+    var support =
+    clamp(
+        good.length/12,
+        0,
+        1
+    );
+
+
+    /*
+    左右線延續程度
+    */
+
+    var continuity =
+    clamp(
+        (
+            bestPair.left.continuity+
+            bestPair.right.continuity
+        )/2,
+        0,
+        1
+    );
+
+
+    /*
+    近景跨度
+    */
+
+    var span =
+    bestPair.right.x-
+    bestPair.left.x;
+
+
+    var spanScore =
+    clamp(
+        span/(AW*.55),
+        .15,
+        1
+    );
+
+
+    var confidence =
+
+    .18
+
+    +
+
+    cluster*.28
+
+    +
+
+    support*.18
+
+    +
+
+    continuity*.20
+
+    +
+
+    spanScore*.16;
+
+
+    confidence =
+    clamp(
+        confidence,
+        .25,
+        .90
+    );
+
+
+    return{
+
+        x:mx,
+        y:my,
+
+        left:
+        bestPair.left,
+
+        right:
+        bestPair.right,
+
+        confidence:
+        confidence,
+
+        intersectionCount:
+        good.length
+
+    };
+
+}
+
+
+/* =========================================================
+ MAIN ROAD ANALYSIS
+========================================================= */
+
+function analyzeRoad(){
+
+    if(video.readyState<2){
+        return null;
+    }
+
+
+    var edges =
+    buildEdges();
+
+
+    if(!edges){
+        return null;
+    }
+
+
+    var candidates =
+    extractRoadCandidates(
+        edges.magnitude,
+        edges.angle,
+        edges.threshold
+    );
+
+
+    if(
+        candidates.length<6
+    ){
+        return null;
+    }
+
+
+    var groups =
+    buildRoadGroups(
+        candidates
+    );
+
+
+    /*
+    至少左右各兩條候選。
+    */
+
+    if(
+        groups.left.length<2 ||
+        groups.right.length<2
+    ){
+        return null;
+    }
+
+
+    var vp =
+    findRoadVP(
+        groups.left,
+        groups.right
+    );
+
+
+    if(!vp){
+        return null;
+    }
+
+
+    return{
+
+        vx:
+        vp.x/AW,
+
+        vy:
+        vp.y/AH,
+
+        confidence:
+        vp.confidence,
+
+        left:
+        vp.left,
+
+        right:
+        vp.right,
+
+        leftCount:
+        groups.left.length,
+
+        rightCount:
+        groups.right.length,
+
+        intersections:
+        vp.intersectionCount
+
+    };
+
+}
+
+
+/* =========================================================
+ DRAW DEBUG ROAD LINE
+========================================================= */
+
+function drawRoadLine(
+    line,
+    vp,
+    side
+){
+
+    if(!line){
+        return;
+    }
+
+
+    var w =
+    overlay.clientWidth;
+
+    var h =
+    overlay.clientHeight;
+
+
+    /*
+    Analysis coordinate → screen coordinate
+    */
+
+    var sx =
+    line.x/AW*w;
+
+    var sy =
+    line.y/AH*h;
+
+
+    var vx =
+    vp.vx*w;
+
+    var vy =
+    vp.vy*h;
+
+
+    /*
+    先算線往畫面底部的交點
+    */
+
+    var dx =
+    Math.cos(
+        line.angle
+    );
+
+    var dy =
+    Math.sin(
+        line.angle
+    );
+
+
+    var bottomY =
+    AH*.98;
+
+
+    var bottomX =
+    line.x;
+
+
+    if(
+        Math.abs(dy)>.03
+    ){
+
+        var t =
+        (
+            bottomY-line.y
+        )/dy;
+
+
+        bottomX =
+        line.x+
+        dx*t;
+
+    }
+
+
+    bottomX =
+    clamp(
+        bottomX,
+        -AW*.20,
+        AW*1.20
+    );
+
+
+    var bx =
+    bottomX/AW*w;
+
+    var by =
+    bottomY/AH*h;
+
+
+    ctx.save();
+
+
+    /*
+    黃色實線：
+    從候選道路來源往近處延伸。
+    */
+
+    ctx.strokeStyle =
+    "#ffd400";
+
+    ctx.lineWidth =
+    4;
+
+    ctx.setLineDash([]);
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        sx,
+        sy
+    );
+
+    ctx.lineTo(
+        bx,
+        by
+    );
+
+    ctx.stroke();
+
+
+    /*
+    黃色虛線：
+    往 VP 延伸。
+    */
+
+    ctx.lineWidth =
+    2.5;
+
+    ctx.setLineDash(
+        [8,7]
+    );
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        sx,
+        sy
+    );
+
+    ctx.lineTo(
+        vx,
+        vy
+    );
+
+    ctx.stroke();
+
+
+    /*
+    L / R 標籤
+    */
+
+    ctx.setLineDash([]);
+
+    ctx.fillStyle =
+    "#ffd400";
+
+    ctx.font =
+    "bold 14px -apple-system,Arial";
+
+
+    ctx.fillText(
+        side,
+        sx+8,
+        sy-8
+    );
+
+
+    ctx.restore();
+
+}
+
+
+/* =========================================================
+ DRAW VP
+========================================================= */
+
+function drawVP(){
 
     if(!detectedPoint){
         return;
@@ -3521,7 +2750,7 @@ function drawDetectedPoint(){
 
 
     /*
-    外圈
+    圓
     */
 
     ctx.beginPath();
@@ -3621,9 +2850,6 @@ function drawDetectedPoint(){
     ctx.textAlign =
     "center";
 
-    ctx.fillStyle =
-    "#2cff67";
-
 
     ctx.fillText(
         "● AI 消失點",
@@ -3638,7 +2864,42 @@ function drawDetectedPoint(){
 
 
 /* =========================================================
-   RESIZE
+ DRAW DEBUG
+========================================================= */
+
+function drawDebug(){
+
+    if(
+        !debugResult ||
+        !detectedPoint
+    ){
+        return;
+    }
+
+
+    /*
+    先畫黃色道路線，
+    再畫綠色 VP。
+    */
+
+    drawRoadLine(
+        debugResult.left,
+        detectedPoint,
+        "L"
+    );
+
+
+    drawRoadLine(
+        debugResult.right,
+        detectedPoint,
+        "R"
+    );
+
+}
+
+
+/* =========================================================
+ RESIZE
 ========================================================= */
 
 function resizeOverlay(){
@@ -3677,7 +2938,7 @@ function resizeOverlay(){
 
 
 /* =========================================================
-   DRAW LOOP
+ LOOP
 ========================================================= */
 
 function loop(){
@@ -3690,7 +2951,9 @@ function loop(){
     );
 
 
-    drawDetectedPoint();
+    drawDebug();
+
+    drawVP();
 
 
     requestAnimationFrame(
@@ -3701,7 +2964,7 @@ function loop(){
 
 
 /* =========================================================
-   ZOOM
+ ZOOM
 ========================================================= */
 
 zoom.addEventListener(
@@ -3719,6 +2982,18 @@ zoom.addEventListener(
         "×";
 
 
+        /*
+        Zoom 改變後，
+        舊分析結果失效。
+        */
+
+        detectedPoint =
+        null;
+
+        debugResult =
+        null;
+
+
         if(!stream){
             return;
         }
@@ -3728,7 +3003,9 @@ zoom.addEventListener(
         stream.getVideoTracks();
 
 
-        if(tracks.length===0){
+        if(
+            tracks.length===0
+        ){
             return;
         }
 
@@ -3791,7 +3068,7 @@ zoom.addEventListener(
 
 
 /* =========================================================
-   ERROR
+ ERROR
 ========================================================= */
 
 window.onerror =
@@ -3838,7 +3115,7 @@ window.addEventListener(
 
 
 /* =========================================================
-   EVENTS
+ EVENTS
 ========================================================= */
 
 window.addEventListener(
@@ -3861,7 +3138,7 @@ window.addEventListener(
 
 
 /* =========================================================
-   START
+ START
 ========================================================= */
 
 startCamera();
