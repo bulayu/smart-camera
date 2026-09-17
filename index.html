@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.3.1</title>
+<title>構圖導航 V6.3.2</title>
 
 <style>
 
@@ -39,9 +39,7 @@ body{
     flex-direction:column;
 }
 
-/* =========================================================
-   CAMERA
-========================================================= */
+/* ================= CAMERA ================= */
 
 #cameraArea{
     position:relative;
@@ -69,24 +67,16 @@ body{
     z-index:5;
 }
 
-/* =========================================================
-   V6.3.1 MINI INFO BAR
-========================================================= */
+/* ================= MINI INFO ================= */
 
 #miniInfo{
     position:absolute;
-
-    top:max(
-        8px,
-        env(safe-area-inset-top)
-    );
-
+    top:max(8px,env(safe-area-inset-top));
     left:50%;
     transform:translateX(-50%);
 
     width:calc(100% - 28px);
     max-width:520px;
-
     height:42px;
 
     padding:0 14px;
@@ -103,21 +93,16 @@ body{
     -webkit-backdrop-filter:blur(7px);
 
     z-index:10;
-
     pointer-events:none;
 }
 
 #miniLeft{
     min-width:0;
-
     display:flex;
     align-items:center;
-
     gap:7px;
-
     font-size:13px;
     font-weight:800;
-
     white-space:nowrap;
 }
 
@@ -132,18 +117,13 @@ body{
 
 #miniStatus{
     flex:0 0 auto;
-
     margin-left:10px;
-
     font-size:11px;
     font-weight:800;
-
     color:#ffd400;
 }
 
-/* =========================================================
-   BOTTOM NAVIGATION MESSAGE
-========================================================= */
+/* ================= MESSAGE ================= */
 
 #message{
     position:absolute;
@@ -181,20 +161,14 @@ body{
 
 #version{
     position:absolute;
-
     left:7px;
     bottom:3px;
-
     font-size:10px;
-
     opacity:.55;
-
     z-index:20;
 }
 
-/* =========================================================
-   CONTROLS
-========================================================= */
+/* ================= CONTROLS ================= */
 
 #controls{
     flex:0 0 auto;
@@ -210,9 +184,7 @@ body{
 #compositionRow{
     display:flex;
     gap:7px;
-
     overflow-x:auto;
-
     scrollbar-width:none;
 }
 
@@ -229,25 +201,14 @@ body{
     display:none;
 }
 
-/* =========================================================
-   MODE BUTTON
-========================================================= */
-
 .modeBtn{
     flex:0 0 auto;
-
     min-width:67px;
-
     padding:8px;
-
     border:0;
-
     border-radius:17px;
-
     background:#242424;
-
     color:#fff;
-
     font-size:12px;
     font-weight:700;
 }
@@ -264,15 +225,9 @@ body{
 
 .modeIcon{
     display:block;
-
     font-size:19px;
-
     margin-bottom:2px;
 }
-
-/* =========================================================
-   COMPOSITION BUTTON
-========================================================= */
 
 .compBtn{
     flex:0 0 auto;
@@ -295,10 +250,6 @@ body{
     color:#ffd400;
 }
 
-/* =========================================================
-   MAIN BUTTON
-========================================================= */
-
 #mainButton{
     width:100%;
 
@@ -318,14 +269,9 @@ body{
     margin-bottom:8px;
 }
 
-/* =========================================================
-   CAMERA CONTROL
-========================================================= */
-
 #bottomRow{
     display:flex;
     align-items:center;
-
     gap:7px;
 }
 
@@ -347,32 +293,25 @@ body{
 
 #zoomArea{
     flex:1;
-
     display:flex;
     align-items:center;
-
     gap:5px;
 }
 
 #zoom{
     flex:1;
-
     min-width:50px;
 }
 
 #zoomText{
     min-width:32px;
-
     font-size:11px;
 }
 
 #status{
     margin-top:6px;
-
     text-align:center;
-
     font-size:10px;
-
     opacity:.42;
 }
 
@@ -380,7 +319,6 @@ body{
 </head>
 
 <body>
-
 
 <div id="cameraArea">
 
@@ -391,13 +329,7 @@ body{
     muted>
     </video>
 
-
     <canvas id="overlay"></canvas>
-
-
-    <!-- =====================================================
-         V6.3.1 MINI INFO
-    ====================================================== -->
 
     <div id="miniInfo">
 
@@ -407,9 +339,7 @@ body{
                 ✨ 自動
             </span>
 
-            <span>
-                ｜
-            </span>
+            <span>｜</span>
 
             <span id="miniComposition">
                 準備
@@ -417,21 +347,18 @@ body{
 
         </div>
 
-
         <div id="miniStatus">
-            V6.3.1
+            V6.3.2
         </div>
 
     </div>
-
 
     <div id="message">
         📷 對準想拍攝的畫面
     </div>
 
-
     <div id="version">
-        V6.3.1
+        V6.3.2
     </div>
 
 </div>
@@ -439,164 +366,117 @@ body{
 
 <div id="controls">
 
-
-    <!-- =====================================================
-         MODE
-    ====================================================== -->
-
     <div id="modeRow">
 
         <button
         class="modeBtn autoBtn active"
         data-mode="auto"
         onclick="selectMode('auto',this)">
-
             <span class="modeIcon">✨</span>
             自動
-
         </button>
-
 
         <button
         class="modeBtn"
         data-mode="landscape"
         onclick="selectMode('landscape',this)">
-
             <span class="modeIcon">🏞️</span>
             風景
-
         </button>
-
 
         <button
         class="modeBtn"
         data-mode="street"
         onclick="selectMode('street',this)">
-
             <span class="modeIcon">🏙️</span>
             街景
-
         </button>
-
 
         <button
         class="modeBtn"
         data-mode="portrait"
         onclick="selectMode('portrait',this)">
-
             <span class="modeIcon">👤</span>
             人像
-
         </button>
-
 
         <button
         class="modeBtn"
         data-mode="night"
         onclick="selectMode('night',this)">
-
             <span class="modeIcon">🌙</span>
             夜景
-
         </button>
-
 
         <button
         class="modeBtn"
         data-mode="indoor"
         onclick="selectMode('indoor',this)">
-
             <span class="modeIcon">🏠</span>
             室內
-
         </button>
-
 
         <button
         class="modeBtn"
         data-mode="food"
         onclick="selectMode('food',this)">
-
             <span class="modeIcon">🍜</span>
             美食
-
         </button>
-
 
         <button
         class="modeBtn"
         data-mode="macro"
         onclick="selectMode('macro',this)">
-
             <span class="modeIcon">🌸</span>
             近拍
-
         </button>
-
 
         <button
         class="modeBtn"
         data-mode="pet"
         onclick="selectMode('pet',this)">
-
             <span class="modeIcon">🐶</span>
             寵物
-
         </button>
-
 
         <button
         class="modeBtn"
         data-mode="product"
         onclick="selectMode('product',this)">
-
             <span class="modeIcon">📦</span>
             商品
-
         </button>
 
     </div>
 
-
     <div id="compositionRow"></div>
-
 
     <button
     id="mainButton"
     onclick="runComposition()">
-
         ✨ 自動構圖
-
     </button>
 
-
     <div id="bottomRow">
-
 
         <button
         class="cameraBtn"
         onclick="changeCamera('user')">
-
             🤳 前鏡
-
         </button>
-
 
         <button
         class="cameraBtn"
         onclick="changeCamera('environment')">
-
             📷 後鏡
-
         </button>
-
 
         <div id="zoomArea">
 
             <span style="font-size:11px">
                 倍率
             </span>
-
 
             <input
             id="zoom"
@@ -606,7 +486,6 @@ body{
             step=".1"
             value="1">
 
-
             <span id="zoomText">
                 1.0×
             </span>
@@ -615,35 +494,29 @@ body{
 
     </div>
 
-
     <div id="status">
-        V6.3.1｜極簡介面＋穩定倒數版
+        V6.3.2｜左右目標鎖定版
     </div>
 
 </div>
 
 
-
 <script type="module">
-
 
 /* =========================================================
 
-   構圖導航 V6.3.1
+   構圖導航 V6.3.2
 
-   基於 V6.3
+   V6.3.2 主要修改：
 
-   V6.3.1：
-
-   ★ 移除大型左上資訊框
-   ★ 改成頂端迷你資訊列
-   ★ 8 Frame 判定改成時間判定
-   ★ 進入目標後需穩定 1 秒
-   ★ 底部直接顯示穩定倒數
-   ★ 移出目標會重新計時
-   ★ 完成後增加解除容忍範圍
-   ★ 保留左右三分智慧選位
-   ★ 保留 Face Detector
+   ★ 第一次抓到人物時決定左 / 右三分
+   ★ 決定後整次導航鎖定
+   ★ 轉頭不再讓綠色目標跳邊
+   ★ 人臉黃色框仍持續追蹤
+   ★ 綠圈只代表固定構圖目標
+   ★ 重新按「開始構圖導航」才重新選邊
+   ★ 切換模式 / 相機也會重新選邊
+   ★ 保留 V6.3.1 一秒穩定倒數
    ★ 保留短暫漏抓緩衝
 
 ========================================================= */
@@ -665,47 +538,37 @@ from
    DOM
 ========================================================= */
 
-const video =
+const video=
 document.getElementById("video");
 
-
-const overlay =
+const overlay=
 document.getElementById("overlay");
 
-
-const ctx =
+const ctx=
 overlay.getContext("2d");
 
-
-const messageEl =
+const messageEl=
 document.getElementById("message");
 
-
-const miniMode =
+const miniMode=
 document.getElementById("miniMode");
 
-
-const miniComposition =
+const miniComposition=
 document.getElementById("miniComposition");
 
-
-const miniStatus =
+const miniStatus=
 document.getElementById("miniStatus");
 
-
-const compositionRow =
+const compositionRow=
 document.getElementById("compositionRow");
 
-
-const mainButton =
+const mainButton=
 document.getElementById("mainButton");
 
-
-const zoom =
+const zoom=
 document.getElementById("zoom");
 
-
-const zoomText =
+const zoomText=
 document.getElementById("zoomText");
 
 
@@ -723,7 +586,7 @@ let currentComposition=null;
 
 
 /* =========================================================
-   FACE DETECTOR
+   FACE
 ========================================================= */
 
 let faceDetector=null;
@@ -738,72 +601,56 @@ let lastVideoTime=-1;
 
 
 /* =========================================================
-   FACE TRACKING
+   TRACKING
 ========================================================= */
 
 let trackedFace=null;
 
 let missingFrames=0;
 
-
-/*
-   V6.3.1
-
-   連續漏抓 12 個分析 frame
-   才真正判定人物消失。
-*/
-
 const MAX_MISSING_FRAMES=12;
-
-
-/*
-   位置平滑
-
-   越高越穩，
-   但反應會比較慢。
-*/
 
 const SMOOTHING=0.72;
 
 
 /* =========================================================
-   TARGET
+   V6.3.2 TARGET LOCK
 ========================================================= */
 
-let targetSide=null;
+/*
+   lockedTargetSide：
 
-let targetLockFrames=0;
+   null  = 還沒決定
+   left  = 這次導航固定左三分
+   right = 這次導航固定右三分
 
-const TARGET_LOCK_MIN=20;
+   一旦決定後，
+   drawPortraitNavigation()
+   不允許重新計算。
+*/
+
+let lockedTargetSide=null;
+
+
+/*
+   記錄第一次決定目標時
+   使用的判斷理由。
+
+   只做除錯與顯示用途。
+*/
+
+let targetReason="";
 
 
 /* =========================================================
-   STABILITY TIMER
-
-   V6.3.1 核心
-
+   STABILITY
 ========================================================= */
 
 let stableStartTime=null;
 
 let completed=false;
 
-
-/*
-   必須在目標內維持多久
-
-   1000ms = 1 秒
-*/
-
 const REQUIRED_STABLE_MS=1000;
-
-
-/*
-   已經完成後，
-   允許手機小幅晃動。
-
-   超過這個倍率才解除完成。
-*/
 
 const COMPLETE_RELEASE_MULTIPLIER=1.55;
 
@@ -813,7 +660,6 @@ const COMPLETE_RELEASE_MULTIPLIER=1.55;
 ========================================================= */
 
 const database={
-
 
 landscape:{
 
@@ -1314,6 +1160,8 @@ async function changeCamera(mode){
 
     facing=mode;
 
+    portraitNavigation=false;
+
     resetTracking();
 
     await startCamera();
@@ -1322,7 +1170,7 @@ async function changeCamera(mode){
 
 
 /* =========================================================
-   RESET TRACKING
+   RESET
 ========================================================= */
 
 function resetTracking(){
@@ -1335,9 +1183,9 @@ function resetTracking(){
 
     completed=false;
 
-    targetSide=null;
+    lockedTargetSide=null;
 
-    targetLockFrames=0;
+    targetReason="";
 
     lastVideoTime=-1;
 
@@ -1345,7 +1193,7 @@ function resetTracking(){
 
 
 /* =========================================================
-   FACE DETECTOR INIT
+   FACE DETECTOR
 ========================================================= */
 
 async function initFaceDetector(){
@@ -1434,7 +1282,7 @@ async function initFaceDetector(){
 
 
 /* =========================================================
-   SELECT MODE
+   MODE
 ========================================================= */
 
 function selectMode(
@@ -1454,9 +1302,11 @@ function selectMode(
         ".modeBtn"
     )
     .forEach(
+
         b=>b.classList.remove(
             "active"
         )
+
     );
 
 
@@ -1488,7 +1338,7 @@ function selectMode(
 
 
         miniStatus.innerText=
-        "V6.3.1";
+        "V6.3.2";
 
 
         mainButton.innerText=
@@ -1560,7 +1410,7 @@ function selectMode(
 
 
 /* =========================================================
-   BUILD COMPOSITION BUTTONS
+   COMPOSITION BUTTONS
 ========================================================= */
 
 function buildCompositionButtons(){
@@ -1681,7 +1531,7 @@ function selectComposition(id){
 
 
 /* =========================================================
-   RUN COMPOSITION
+   MAIN
 ========================================================= */
 
 async function runComposition(){
@@ -1700,6 +1550,13 @@ async function runComposition(){
         }
 
 
+        /*
+           每次重新按開始：
+
+           解除上一次左右鎖定，
+           下一張臉重新決定。
+        */
+
         resetTracking();
 
 
@@ -1711,15 +1568,15 @@ async function runComposition(){
 
 
         miniComposition.innerText=
-        "智慧三分";
+        "選擇位置中";
 
 
         miniStatus.innerText=
-        "● 尋找人物";
+        "● 分析中";
 
 
         messageEl.innerText=
-        "🔍 正在尋找人物...";
+        "👤 保持人物在畫面中";
 
 
         requestAnimationFrame(
@@ -1738,7 +1595,7 @@ async function runComposition(){
     ){
 
         messageEl.innerText=
-        "👉 V6.3.1 請先測試人像模式";
+        "👉 V6.3.2 請先測試人像模式";
 
 
         return;
@@ -1856,6 +1713,23 @@ function portraitLoop(){
             );
 
 
+            /*
+               V6.3.2：
+
+               第一次成功取得人物後
+               才決定一次構圖位置。
+            */
+
+            if(
+                !lockedTargetSide &&
+                trackedFace
+            ){
+
+                lockTargetSide();
+
+            }
+
+
             drawPortraitNavigation();
 
         }
@@ -1889,7 +1763,7 @@ function portraitLoop(){
 
 
 /* =========================================================
-   CHOOSE MAIN FACE
+   MAIN FACE
 ========================================================= */
 
 function chooseMainFace(
@@ -1940,7 +1814,7 @@ function chooseMainFace(
 
 
 /* =========================================================
-   UPDATE TRACKED FACE
+   TRACK FACE
 ========================================================= */
 
 function updateTrackedFace(
@@ -1958,8 +1832,11 @@ function updateTrackedFace(
 
     const p1=
     videoPointToScreen(
+
         box.originX,
+
         box.originY
+
     );
 
 
@@ -2006,7 +1883,6 @@ function updateTrackedFace(
         trackedFace=
         newFace;
 
-
         return;
 
     }
@@ -2039,6 +1915,12 @@ function updateTrackedFace(
     newFace.h*
     (1-SMOOTHING);
 
+
+    /*
+       朝向仍持續更新，
+       但 V6.3.2 不再使用它
+       重新切換目標。
+    */
 
     trackedFace.direction=
     newFace.direction;
@@ -2143,14 +2025,22 @@ function estimateFaceDirection(
 
 
 /* =========================================================
-   CHOOSE TARGET SIDE
+   V6.3.2 LOCK TARGET
+
+   這個函式只會在
+   lockedTargetSide === null
+   時執行。
+
 ========================================================= */
 
-function chooseTargetSide(){
+function lockTargetSide(){
 
-    if(!trackedFace){
+    if(
+        lockedTargetSide ||
+        !trackedFace
+    ){
 
-        return "left";
+        return;
 
     }
 
@@ -2159,48 +2049,56 @@ function chooseTargetSide(){
     overlay.clientWidth;
 
 
-    let wanted=
-    targetSide;
-
-
     /*
-       人物朝右：
-       人放左邊，
-       右邊留視線空間。
+       1. 有明確臉部方向時：
+
+       人朝右：
+       人放左三分，
+       右邊留空間。
+
+       人朝左：
+       人放右三分，
+       左邊留空間。
     */
+
 
     if(
         trackedFace.direction===
         "right"
     ){
 
-        wanted=
+        lockedTargetSide=
         "left";
+
+
+        targetReason=
+        "face-right";
 
     }
 
-
-    /*
-       人物朝左：
-       人放右邊，
-       左邊留視線空間。
-    */
 
     else if(
         trackedFace.direction===
         "left"
     ){
 
-        wanted=
+        lockedTargetSide=
         "right";
+
+
+        targetReason=
+        "face-left";
 
     }
 
 
     /*
-       接近正面：
+       2. 正面人物：
 
-       選離人物最近的三分點。
+       選擇距離目前人物
+       最近的三分位置。
+
+       這樣手機不用大幅移動。
     */
 
     else{
@@ -2227,76 +2125,72 @@ function chooseTargetSide(){
         );
 
 
-        wanted=
-        leftDistance<=rightDistance
-        ?
-        "left"
-        :
-        "right";
+        if(
+            leftDistance<=
+            rightDistance
+        ){
+
+            lockedTargetSide=
+            "left";
+
+
+            targetReason=
+            "nearest-left";
+
+        }
+
+        else{
+
+            lockedTargetSide=
+            "right";
+
+
+            targetReason=
+            "nearest-right";
+
+        }
 
     }
 
 
-    if(!targetSide){
+    /*
+       一旦到這裡：
 
-        targetSide=
-        wanted;
+       lockedTargetSide
+       就不會再改。
 
-
-        targetLockFrames=
-        TARGET_LOCK_MIN;
-
-
-        return targetSide;
-
-    }
+       除非：
+       重新按開始、
+       切換模式、
+       切換相機。
+    */
 
 
-    if(
-        targetLockFrames>0
-    ){
-
-        targetLockFrames--;
+    stableStartTime=
+    null;
 
 
-        return targetSide;
-
-    }
-
-
-    if(
-        wanted!==
-        targetSide
-    ){
-
-        targetSide=
-        wanted;
+    completed=
+    false;
 
 
-        targetLockFrames=
-        TARGET_LOCK_MIN;
+    miniComposition.innerText=
+    lockedTargetSide===
+    "left"
+    ?
+    "左三分"
+    :
+    "右三分";
 
 
-        stableStartTime=
-        null;
-
-
-        completed=
-        false;
-
-    }
-
-
-    return targetSide;
+    miniStatus.innerText=
+    "● 已鎖定";
 
 }
 
 
 /* =========================================================
    VIDEO → SCREEN
-
-   video 使用 object-fit:cover
-
 ========================================================= */
 
 function videoPointToScreen(
@@ -2386,8 +2280,13 @@ function videoPointToScreen(
 
 function drawPortraitNavigation(){
 
-    if(!trackedFace){
+    if(
+        !trackedFace ||
+        !lockedTargetSide
+    ){
+
         return;
+
     }
 
 
@@ -2402,8 +2301,17 @@ function drawPortraitNavigation(){
     overlay.clientHeight;
 
 
+    /*
+       V6.3.2：
+
+       這裡不再呼叫
+       chooseTargetSide()。
+
+       直接使用鎖定值。
+    */
+
     const side=
-    chooseTargetSide();
+    lockedTargetSide;
 
 
     const targetX=
@@ -2421,7 +2329,6 @@ function drawPortraitNavigation(){
     /* =====================================================
        THIRDS GRID
     ===================================================== */
-
 
     ctx.save();
 
@@ -2496,7 +2403,6 @@ function drawPortraitNavigation(){
        DISTANCE
     ===================================================== */
 
-
     const dx=
     targetX-
     trackedFace.x;
@@ -2531,9 +2437,8 @@ function drawPortraitNavigation(){
 
 
     /* =====================================================
-       V6.3.1 TIME STABILITY
+       STABILITY TIMER
     ===================================================== */
-
 
     const now=
     performance.now();
@@ -2565,7 +2470,8 @@ function drawPortraitNavigation(){
             REQUIRED_STABLE_MS
         ){
 
-            completed=true;
+            completed=
+            true;
 
         }
 
@@ -2573,31 +2479,16 @@ function drawPortraitNavigation(){
 
     else{
 
-        /*
-           還沒完成：
-
-           只要離開目標，
-           穩定時間重新計算。
-        */
-
         if(!completed){
 
             stableStartTime=
             null;
 
-            stableElapsed=0;
+            stableElapsed=
+            0;
 
         }
 
-
-        /*
-           已完成：
-
-           小幅晃動不解除。
-
-           超過放大容忍範圍
-           才解除完成。
-        */
 
         if(
             completed &&
@@ -2612,11 +2503,16 @@ function drawPortraitNavigation(){
             )
         ){
 
-            completed=false;
+            completed=
+            false;
 
-            stableStartTime=null;
 
-            stableElapsed=0;
+            stableStartTime=
+            null;
+
+
+            stableElapsed=
+            0;
 
         }
 
@@ -2624,9 +2520,8 @@ function drawPortraitNavigation(){
 
 
     /* =====================================================
-       TARGET
+       GREEN TARGET
     ===================================================== */
-
 
     ctx.save();
 
@@ -2700,7 +2595,6 @@ function drawPortraitNavigation(){
        FACE BOX
     ===================================================== */
 
-
     const boxX=
     trackedFace.x-
     trackedFace.w/2;
@@ -2713,6 +2607,15 @@ function drawPortraitNavigation(){
 
     ctx.save();
 
+
+    /*
+       黃色 = 人物目前位置
+
+       綠色 = 已經完成
+
+       這樣使用者比較容易分辨
+       「人物」和「目標」。
+    */
 
     ctx.strokeStyle=
     completed
@@ -2743,9 +2646,8 @@ function drawPortraitNavigation(){
 
 
     /* =====================================================
-       CONNECTION LINE
+       CONNECTION
     ===================================================== */
-
 
     if(
         !completed &&
@@ -2801,7 +2703,6 @@ function drawPortraitNavigation(){
        TARGET LABEL
     ===================================================== */
 
-
     ctx.save();
 
 
@@ -2839,7 +2740,6 @@ function drawPortraitNavigation(){
        MINI BAR
     ===================================================== */
 
-
     miniMode.innerText=
     "👤 人像";
 
@@ -2853,9 +2753,8 @@ function drawPortraitNavigation(){
 
 
     /* =====================================================
-       COMPLETED
+       COMPLETE
     ===================================================== */
-
 
     if(completed){
 
@@ -2873,17 +2772,10 @@ function drawPortraitNavigation(){
 
 
     /* =====================================================
-       INSIDE TARGET → COUNTDOWN
+       COUNTDOWN
     ===================================================== */
 
-
     if(inside){
-
-        /*
-           顯示 0.1 ～ 0.9 秒
-
-           避免第一幀顯示 0.0
-        */
 
         const seconds=
         Math.min(
@@ -2918,9 +2810,8 @@ function drawPortraitNavigation(){
 
 
     /* =====================================================
-       MOVEMENT NAVIGATION
+       NAVIGATION
     ===================================================== */
-
 
     miniStatus.innerText=
     "● 追蹤中";
@@ -3012,12 +2903,11 @@ function handleMissingFace(){
     /*
        短暫漏抓：
 
-       保留人物位置。
+       保留：
+       - 人物位置
+       - 左右目標鎖定
 
-       但如果正在倒數，
-       暫停 / 重設穩定時間，
-       避免沒有真的看到人物
-       卻完成構圖。
+       絕對不重新選邊。
     */
 
     if(
@@ -3054,15 +2944,28 @@ function handleMissingFace(){
     }
 
 
-    trackedFace=null;
+    /*
+       人臉真的消失：
 
-    stableStartTime=null;
+       V6.3.2 仍然保留
+       lockedTargetSide。
 
-    completed=false;
+       因為這一次構圖目標
+       已經決定，不應因漏抓
+       就換到另一側。
+    */
 
-    targetSide=null;
 
-    targetLockFrames=0;
+    trackedFace=
+    null;
+
+
+    stableStartTime=
+    null;
+
+
+    completed=
+    false;
 
 
     drawPortraitNoFace();
@@ -3073,6 +2976,17 @@ function handleMissingFace(){
 
 
     miniComposition.innerText=
+    lockedTargetSide
+    ?
+    (
+        lockedTargetSide===
+        "left"
+        ?
+        "左三分"
+        :
+        "右三分"
+    )
+    :
     "尋找人物";
 
 
@@ -3081,7 +2995,7 @@ function handleMissingFace(){
 
 
     messageEl.innerText=
-    "👤 找不到臉｜請讓人物面向鏡頭";
+    "👤 找不到臉｜目標位置保持鎖定";
 
 }
 
@@ -3119,46 +3033,117 @@ function drawPortraitNoFace(){
     );
 
 
-    ctx.beginPath();
+    /*
+       已經鎖定：
+
+       只顯示鎖定的那一側。
+
+       還沒鎖定：
+
+       左右都顯示。
+    */
 
 
-    ctx.arc(
+    if(
+        lockedTargetSide===
+        "left"
+    ){
 
-        w/3,
-
-        h/3,
-
-        25,
-
-        0,
-
-        Math.PI*2
-
-    );
+        ctx.beginPath();
 
 
-    ctx.stroke();
+        ctx.arc(
+
+            w/3,
+
+            h/3,
+
+            25,
+
+            0,
+
+            Math.PI*2
+
+        );
 
 
-    ctx.beginPath();
+        ctx.stroke();
+
+    }
 
 
-    ctx.arc(
+    else if(
+        lockedTargetSide===
+        "right"
+    ){
 
-        w*2/3,
-
-        h/3,
-
-        25,
-
-        0,
-
-        Math.PI*2
-
-    );
+        ctx.beginPath();
 
 
-    ctx.stroke();
+        ctx.arc(
+
+            w*2/3,
+
+            h/3,
+
+            25,
+
+            0,
+
+            Math.PI*2
+
+        );
+
+
+        ctx.stroke();
+
+    }
+
+
+    else{
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+
+            w/3,
+
+            h/3,
+
+            25,
+
+            0,
+
+            Math.PI*2
+
+        );
+
+
+        ctx.stroke();
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+
+            w*2/3,
+
+            h/3,
+
+            25,
+
+            0,
+
+            Math.PI*2
+
+        );
+
+
+        ctx.stroke();
+
+    }
 
 
     ctx.restore();
@@ -3784,7 +3769,7 @@ function drawFrame(){
 
 
 /* =========================================================
-   PORTRAIT TEMPLATE
+   PORTRAIT TEMPLATES
 ========================================================= */
 
 function drawPortraitThirds(){
@@ -3956,21 +3941,18 @@ function drawComposition(){
         case "foodThirds":
 
             drawThirds();
-
             break;
 
 
         case "golden":
 
             drawGolden();
-
             break;
 
 
         case "leading":
 
             drawLeading();
-
             break;
 
 
@@ -3980,28 +3962,24 @@ function drawComposition(){
         case "productCenter":
 
             drawCenter();
-
             break;
 
 
         case "frame":
 
             drawFrame();
-
             break;
 
 
         case "perspective":
 
             drawPerspective();
-
             break;
 
 
         case "symmetry":
 
             drawSymmetry();
-
             break;
 
 
@@ -4010,7 +3988,6 @@ function drawComposition(){
         case "product45":
 
             drawDiagonal();
-
             break;
 
 
@@ -4019,14 +3996,12 @@ function drawComposition(){
         case "lookSpace":
 
             drawPortraitThirds();
-
             break;
 
 
         case "portraitCenter":
 
             drawPortraitCenter();
-
             break;
 
 
@@ -4036,14 +4011,12 @@ function drawComposition(){
         case "petLook":
 
             drawFullBody();
-
             break;
 
 
         case "reflection":
 
             drawCenter();
-
             break;
 
 
@@ -4051,21 +4024,18 @@ function drawComposition(){
         case "foodTop":
 
             drawCircle();
-
             break;
 
 
         case "fill":
 
             drawFill();
-
             break;
 
 
         case "negative":
 
             drawThirds();
-
             break;
 
     }
@@ -4253,7 +4223,6 @@ runComposition;
 resizeOverlay();
 
 startCamera();
-
 
 </script>
 
