@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.4.2</title>
+<title>構圖導航 V6.4.2.1</title>
 
 <style>
 
@@ -348,7 +348,7 @@ body{
         </div>
 
         <div id="miniStatus">
-            V6.4.2
+            V6.4.2.1
         </div>
 
     </div>
@@ -358,7 +358,7 @@ body{
     </div>
 
     <div id="version">
-        V6.4.2
+        V6.4.2.1
     </div>
 
 </div>
@@ -495,7 +495,7 @@ body{
     </div>
 
     <div id="status">
-        V6.4.2｜遠距人物追蹤版
+        V6.4.2.1｜遠距追蹤修正版
     </div>
 
 </div>
@@ -505,7 +505,7 @@ body{
 
 /* =========================================================
 
-   構圖導航 V6.4.2
+   構圖導航 V6.4.2.1
 
    V6.4 主要修改：
 
@@ -598,6 +598,8 @@ let currentComposition=null;
 
 let faceDetector=null;
 let personDetector=null;
+let visionFileset=null;
+let personDetectorLoading=false;
 
 let detectorReady=false;
 
@@ -617,9 +619,8 @@ let trackedFace=null;
 let missingFrames=0;
 
 const MAX_MISSING_FRAMES=60;
-let trackingSource="face";
 
-/* V6.4.2：近距離用臉；臉太小時由人物偵測接手 */
+/* V6.4.2.1：短暫漏抓約 2 秒仍保留最後臉框，避免黃框閃爍 */
 
 const SMOOTHING=0.72;
 
@@ -1200,8 +1201,6 @@ function resetTracking(){
 
     lastVideoTime=-1;
 
-    trackingSource="face";
-
 }
 
 
@@ -1233,6 +1232,8 @@ async function initFaceDetector(){
         );
 
 
+        visionFileset=vision;
+
         faceDetector=
         await FaceDetector
         .createFromOptions(
@@ -1260,23 +1261,10 @@ async function initFaceDetector(){
         );
 
 
-        personDetector=
-        await ObjectDetector.createFromOptions(
-            vision,
-            {
-                baseOptions:{
-                    modelAssetPath:
-                    "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite"
-                },
-                runningMode:"VIDEO",
-                scoreThreshold:0.35,
-                maxResults:3
-            }
-        );
-
-
         detectorReady=true;
 
+        // 人物模型背景載入，不阻塞相機與原本的人臉導航
+        initPersonDetectorInBackground();
 
         miniStatus.innerText=
         "● 已就緒";
@@ -1308,6 +1296,30 @@ async function initFaceDetector(){
 
 }
 
+
+/* =========================================================
+   V6.4.2.1 PERSON DETECTOR (BACKGROUND)
+========================================================= */
+
+async function initPersonDetectorInBackground(){
+    if(personDetector || personDetectorLoading || !visionFileset) return;
+    personDetectorLoading=true;
+    try{
+        personDetector=await ObjectDetector.createFromOptions(visionFileset,{
+            baseOptions:{
+                modelAssetPath:"https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite"
+            },
+            runningMode:"VIDEO",
+            scoreThreshold:0.35,
+            maxResults:3
+        });
+    }catch(error){
+        console.warn("Person detector unavailable; face tracking continues",error);
+        personDetector=null;
+    }finally{
+        personDetectorLoading=false;
+    }
+}
 
 /* =========================================================
    MODE
@@ -1726,56 +1738,100 @@ function portraitLoop(){
 
     try{
 
-        const now=performance.now();
-        const result=faceDetector.detectForVideo(video, now);
+        const result=
+        faceDetector.detectForVideo(
 
-        if(result && result.detections && result.detections.length>0){
+            video,
+
+            performance.now()
+
+        );
+
+
+        if(
+            result &&
+            result.detections &&
+            result.detections.length>0
+        ){
 
             missingFrames=0;
-            trackingSource="face";
 
-            const detection=chooseMainFace(result.detections);
-            updateTrackedFace(detection);
 
-            if(!lockedTargetSide && trackedFace){
+            const detection=
+            chooseMainFace(
+                result.detections
+            );
+
+
+            updateTrackedFace(
+                detection
+            );
+
+
+            /*
+               V6.3.2：
+
+               第一次成功取得人物後
+               才決定一次構圖位置。
+            */
+
+            if(
+                !lockedTargetSide &&
+                trackedFace
+            ){
+
                 if(currentComposition==="portraitCenter"){
+
                     lockedTargetSide="center";
                     targetReason="portrait-center";
                     stableStartTime=null;
                     completed=false;
-                    miniComposition.innerText="中央人像";
-                    miniStatus.innerText="● 已鎖定";
-                }else{
-                    lockTargetSide();
+
+                    miniComposition.innerText=
+                    "中央人像";
+
+                    miniStatus.innerText=
+                    "● 已鎖定";
+
                 }
+
+                else{
+
+                    lockTargetSide();
+
+                }
+
             }
+
 
             drawPortraitNavigation();
 
-        }else{
+        }
 
-            /* V6.4.2：臉抓不到時，立即嘗試人物偵測。
-               只取 person 類別中最大的主體，並以人物上半部估算頭部位置。 */
+        else{
+
+            // 遠距離臉抓不到時，人物偵測接手；模型尚未就緒則沿用 V6.4.1 防閃。
             let person=null;
             if(personDetector){
-                const objectResult=personDetector.detectForVideo(video, now);
-                person=chooseMainPerson(objectResult && objectResult.detections ? objectResult.detections : []);
+                try{
+                    const personResult=personDetector.detectForVideo(video,performance.now());
+                    person=chooseMainPerson(personResult && personResult.detections ? personResult.detections : []);
+                }catch(personError){
+                    console.warn("Person detection error",personError);
+                }
             }
 
             if(person){
                 missingFrames=0;
-                trackingSource="person";
                 updateTrackedFromPerson(person);
 
                 if(!lockedTargetSide && trackedFace){
                     if(currentComposition==="portraitCenter"){
                         lockedTargetSide="center";
                         targetReason="portrait-center-person";
-                        miniComposition.innerText="中央人像";
                     }else{
-                        /* 遠距只看到人物時沒有可靠臉朝向，先鎖最近三分線 */
                         const w=overlay.clientWidth;
-                        lockedTargetSide=Math.abs(trackedFace.x-w/3) <= Math.abs(trackedFace.x-w*2/3) ? "left" : "right";
+                        lockedTargetSide=Math.abs(trackedFace.x-w/3)<=Math.abs(trackedFace.x-w*2/3)?"left":"right";
                         targetReason="person-nearest-third";
                     }
                     stableStartTime=null;
@@ -1787,7 +1843,10 @@ function portraitLoop(){
             }else{
                 handleMissingFace();
             }
+
         }
+
+    }
 
     catch(error){
 
@@ -1861,19 +1920,16 @@ function chooseMainFace(
 
 
 /* =========================================================
-   V6.4.2 PERSON FALLBACK
+   V6.4.2.1 PERSON FALLBACK
 ========================================================= */
 
 function chooseMainPerson(detections){
-    let best=null;
-    let bestArea=0;
+    let best=null, bestArea=0;
     detections.forEach(d=>{
         const cat=d.categories && d.categories[0];
-        const name=(cat && (cat.categoryName || cat.displayName) || "").toLowerCase();
-        if(name!=="person") return;
-        const b=d.boundingBox;
-        if(!b) return;
-        const area=b.width*b.height;
+        const name=((cat && (cat.categoryName || cat.displayName)) || "").toLowerCase();
+        if(name!=="person" || !d.boundingBox) return;
+        const area=d.boundingBox.width*d.boundingBox.height;
         if(area>bestArea){ bestArea=area; best=d; }
     });
     return best;
@@ -1882,19 +1938,14 @@ function chooseMainPerson(detections){
 function updateTrackedFromPerson(detection){
     const b=detection.boundingBox;
     if(!b) return;
-
-    /* EfficientDet 給的是整個人物框。構圖導航仍需要「頭部錨點」，
-       所以用人物框上方約 18% 的位置估算頭部中心。 */
-    const headX=b.originX+b.width*0.50;
-    const headY=b.originY+b.height*0.18;
-    const headW=Math.max(24,b.width*0.24);
-    const headH=Math.max(24,b.height*0.18);
-    const p1=videoPointToScreen(headX-headW/2,headY-headH/2);
-    const p2=videoPointToScreen(headX+headW/2,headY+headH/2);
-    const nf={
-        x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2,
-        w:Math.abs(p2.x-p1.x), h:Math.abs(p2.y-p1.y), direction:"front"
-    };
+    // 由人物框上方估算頭部中心，讓原本三分/中央導航邏輯可以直接沿用。
+    const hx=b.originX+b.width*0.50;
+    const hy=b.originY+b.height*0.18;
+    const hw=Math.max(24,b.width*0.24);
+    const hh=Math.max(24,b.height*0.18);
+    const p1=videoPointToScreen(hx-hw/2,hy-hh/2);
+    const p2=videoPointToScreen(hx+hw/2,hy+hh/2);
+    const nf={x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2,w:Math.abs(p2.x-p1.x),h:Math.abs(p2.y-p1.y),direction:"front"};
     if(!trackedFace){ trackedFace=nf; return; }
     const a=0.58;
     trackedFace.x=trackedFace.x*a+nf.x*(1-a);
@@ -1902,7 +1953,6 @@ function updateTrackedFromPerson(detection){
     trackedFace.w=trackedFace.w*a+nf.w*(1-a);
     trackedFace.h=trackedFace.h*a+nf.h*(1-a);
 }
-
 
 /* =========================================================
    TRACK FACE
@@ -3147,7 +3197,7 @@ function handleMissingFace(){
 
 
     messageEl.innerText=
-    "👤 暫時找不到人物｜保持人物在畫面中";
+    "👤 暫時找不到臉｜保持人物在畫面中";
 
 }
 
