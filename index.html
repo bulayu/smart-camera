@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.4</title>
+<title>構圖導航 V6.4.1</title>
 
 <style>
 
@@ -348,7 +348,7 @@ body{
         </div>
 
         <div id="miniStatus">
-            V6.3.2
+            V6.4.1
         </div>
 
     </div>
@@ -358,7 +358,7 @@ body{
     </div>
 
     <div id="version">
-        V6.3.2
+        V6.4.1
     </div>
 
 </div>
@@ -495,7 +495,7 @@ body{
     </div>
 
     <div id="status">
-        V6.4｜中央人像導航版
+        V6.4.1｜人臉追蹤防閃版
     </div>
 
 </div>
@@ -505,7 +505,7 @@ body{
 
 /* =========================================================
 
-   構圖導航 V6.4
+   構圖導航 V6.4.1
 
    V6.4 主要修改：
 
@@ -614,7 +614,9 @@ let trackedFace=null;
 
 let missingFrames=0;
 
-const MAX_MISSING_FRAMES=12;
+const MAX_MISSING_FRAMES=60;
+
+/* V6.4.1：短暫漏抓約 2 秒仍保留最後臉框，避免黃框閃爍 */
 
 const SMOOTHING=0.72;
 
@@ -1246,7 +1248,7 @@ async function initFaceDetector(){
                 "VIDEO",
 
                 minDetectionConfidence:
-                0.55
+                0.45
 
             }
 
@@ -2889,21 +2891,7 @@ function drawPortraitNavigation(){
 
     if(inside){
 
-        const seconds=
-        Math.min(
-
-            .9,
-
-            Math.max(
-
-                .1,
-
-                stableElapsed/
-                1000
-
-            )
-
-        );
+        const stableStep = Math.min(8, Math.max(1, Math.floor((stableElapsed / REQUIRED_STABLE_MS) * 8) + 1));
 
 
         miniStatus.innerText=
@@ -2911,9 +2899,7 @@ function drawPortraitNavigation(){
 
 
         messageEl.innerText=
-        "● 保持位置 "+
-        seconds.toFixed(1)+
-        " 秒";
+        "● 正在穩定位置 "+ stableStep + "/8";
 
 
         return;
@@ -3040,7 +3026,7 @@ function handleMissingFace(){
 
 
         miniStatus.innerText=
-        "● 持續追蹤";
+        "● 追蹤保持";
 
 
         if(completed){
@@ -3112,7 +3098,7 @@ function handleMissingFace(){
 
 
     messageEl.innerText=
-    "👤 找不到臉｜目標位置保持鎖定";
+    "👤 暫時找不到臉｜保持人物在畫面中";
 
 }
 
