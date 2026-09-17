@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.3.2</title>
+<title>構圖導航 V6.4</title>
 
 <style>
 
@@ -495,7 +495,7 @@ body{
     </div>
 
     <div id="status">
-        V6.3.2｜左右目標鎖定版
+        V6.4｜中央人像導航版
     </div>
 
 </div>
@@ -505,10 +505,16 @@ body{
 
 /* =========================================================
 
-   構圖導航 V6.3.2
+   構圖導航 V6.4
 
-   V6.3.2 主要修改：
+   V6.4 主要修改：
 
+   ★ 新增「中央人像」真正即時導航
+   ★ 中央人像固定中央目標，不做左右選邊
+   ★ 中央軸＋眼睛高度參考線
+   ★ 黃框持續追蹤人物，綠圈固定建議位置
+   ★ 到位後沿用一秒穩定倒數
+   ★ 三分人像完整保留 V6.3.2 左右鎖定
    ★ 第一次抓到人物時決定左 / 右三分
    ★ 決定後整次導航鎖定
    ★ 轉頭不再讓綠色目標跳邊
@@ -1338,7 +1344,7 @@ function selectMode(
 
 
         miniStatus.innerText=
-        "V6.3.2";
+        "V6.4";
 
 
         mainButton.innerText=
@@ -1560,14 +1566,29 @@ async function runComposition(){
         resetTracking();
 
 
-        currentComposition=
-        "portraitThirds";
+        /*
+           V6.4：
+           保留使用者目前選擇的人像構圖。
+           三分人像 = 左右目標鎖定導航
+           中央人像 = 中央目標導航
+        */
+
+        if(
+            currentComposition!=="portraitThirds" &&
+            currentComposition!=="portraitCenter"
+        ){
+            currentComposition="portraitThirds";
+        }
 
 
         portraitNavigation=true;
 
 
         miniComposition.innerText=
+        currentComposition==="portraitCenter"
+        ?
+        "中央定位中"
+        :
         "選擇位置中";
 
 
@@ -1725,7 +1746,26 @@ function portraitLoop(){
                 trackedFace
             ){
 
-                lockTargetSide();
+                if(currentComposition==="portraitCenter"){
+
+                    lockedTargetSide="center";
+                    targetReason="portrait-center";
+                    stableStartTime=null;
+                    completed=false;
+
+                    miniComposition.innerText=
+                    "中央人像";
+
+                    miniStatus.innerText=
+                    "● 已鎖定";
+
+                }
+
+                else{
+
+                    lockTargetSide();
+
+                }
 
             }
 
@@ -2314,20 +2354,47 @@ function drawPortraitNavigation(){
     lockedTargetSide;
 
 
+    /*
+       V6.4 TARGET
+
+       三分人像：
+       維持 V6.3.2 左 / 右三分鎖定。
+
+       中央人像：
+       水平固定中央；
+       垂直仍放在約上三分位置，
+       讓人物臉部不會落到畫面正中央過低。
+    */
+
+    const isCenterPortrait=
+    currentComposition==="portraitCenter" ||
+    side==="center";
+
+
     const targetX=
-    side==="left"
+    isCenterPortrait
     ?
-    w/3
+    w/2
     :
-    w*2/3;
+    (
+        side==="left"
+        ?
+        w/3
+        :
+        w*2/3
+    );
 
 
     const targetY=
+    isCenterPortrait
+    ?
+    h*.34
+    :
     h/3;
 
 
     /* =====================================================
-       THIRDS GRID
+       GUIDE GRID
     ===================================================== */
 
     ctx.save();
@@ -2349,48 +2416,81 @@ function drawPortraitNavigation(){
     ctx.beginPath();
 
 
-    ctx.moveTo(
-        w/3,
-        0
-    );
+    if(isCenterPortrait){
 
-    ctx.lineTo(
-        w/3,
-        h
-    );
+        /* 中央人像：中央軸＋眼睛高度參考線 */
 
+        ctx.moveTo(
+            w/2,
+            0
+        );
 
-    ctx.moveTo(
-        w*2/3,
-        0
-    );
-
-    ctx.lineTo(
-        w*2/3,
-        h
-    );
+        ctx.lineTo(
+            w/2,
+            h
+        );
 
 
-    ctx.moveTo(
-        0,
-        h/3
-    );
+        ctx.moveTo(
+            0,
+            targetY
+        );
 
-    ctx.lineTo(
-        w,
-        h/3
-    );
+        ctx.lineTo(
+            w,
+            targetY
+        );
+
+    }
+
+    else{
+
+        /* 三分人像：保留完整三分格 */
+
+        ctx.moveTo(
+            w/3,
+            0
+        );
+
+        ctx.lineTo(
+            w/3,
+            h
+        );
 
 
-    ctx.moveTo(
-        0,
-        h*2/3
-    );
+        ctx.moveTo(
+            w*2/3,
+            0
+        );
 
-    ctx.lineTo(
-        w,
-        h*2/3
-    );
+        ctx.lineTo(
+            w*2/3,
+            h
+        );
+
+
+        ctx.moveTo(
+            0,
+            h/3
+        );
+
+        ctx.lineTo(
+            w,
+            h/3
+        );
+
+
+        ctx.moveTo(
+            0,
+            h*2/3
+        );
+
+        ctx.lineTo(
+            w,
+            h*2/3
+        );
+
+    }
 
 
     ctx.stroke();
@@ -2720,11 +2820,17 @@ function drawPortraitNavigation(){
 
     ctx.fillText(
 
-        side==="left"
+        isCenterPortrait
         ?
-        "左三分"
+        "中央"
         :
-        "右三分",
+        (
+            side==="left"
+            ?
+            "左三分"
+            :
+            "右三分"
+        ),
 
         targetX,
 
@@ -2745,11 +2851,17 @@ function drawPortraitNavigation(){
 
 
     miniComposition.innerText=
-    side==="left"
+    isCenterPortrait
     ?
-    "左三分"
+    "中央人像"
     :
-    "右三分";
+    (
+        side==="left"
+        ?
+        "左三分"
+        :
+        "右三分"
+    );
 
 
     /* =====================================================
@@ -2979,12 +3091,17 @@ function handleMissingFace(){
     lockedTargetSide
     ?
     (
-        lockedTargetSide===
-        "left"
+        lockedTargetSide==="center"
         ?
-        "左三分"
+        "中央人像"
         :
-        "右三分"
+        (
+            lockedTargetSide==="left"
+            ?
+            "左三分"
+            :
+            "右三分"
+        )
     )
     :
     "尋找人物";
@@ -3057,6 +3174,34 @@ function drawPortraitNoFace(){
             w/3,
 
             h/3,
+
+            25,
+
+            0,
+
+            Math.PI*2
+
+        );
+
+
+        ctx.stroke();
+
+    }
+
+
+    else if(
+        lockedTargetSide===
+        "center"
+    ){
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+
+            w/2,
+
+            h*.34,
 
             25,
 
