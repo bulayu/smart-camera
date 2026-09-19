@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.6.2.1｜多人環境人像導航版</title>
+<title>構圖導航 V6.7.1｜多人環境人像導航版</title>
 
 <style>
 
@@ -316,7 +316,7 @@ body{
 }
 
 
-/* ===== V6.6.2 極簡多人環境 UI ===== */
+/* ===== V6.7 極簡多人環境 UI ===== */
 body.environment-minimal #miniStatus{
   font-size:13px;
 }
@@ -337,6 +337,35 @@ body.environment-minimal .submodes{
 body.environment-minimal .submode{
   padding:8px 12px;
   font-size:14px;
+}
+
+
+/* ===== V6.7 極簡相機 UI ===== */
+#v67QuickBar{
+  display:flex; gap:8px; align-items:center; justify-content:center;
+  padding:8px 10px; background:#050505; position:relative; z-index:20;
+}
+.v67QuickBtn{
+  border:1px solid #3b3b3b; background:#202020; color:#fff;
+  border-radius:999px; padding:9px 14px; font-size:14px; font-weight:700;
+}
+#v67ModeDrawer{
+  display:none; position:absolute; left:10px; right:10px; bottom:72px;
+  z-index:60; background:rgba(10,10,10,.96); border:1px solid #333;
+  border-radius:20px; padding:12px; box-shadow:0 8px 28px rgba(0,0,0,.45);
+}
+body.v67-drawer-open #v67ModeDrawer{display:block;}
+body.v67-minimal .modes,
+body.v67-minimal .submodes,
+body.v67-minimal .cameraControls,
+body.v67-minimal .zoomRow{display:none !important;}
+body.v67-minimal #runBtn{display:none !important;}
+@media (orientation: landscape){
+  body.v67-minimal #message{
+    max-width:58%; padding:9px 15px; font-size:16px;
+  }
+  body.v67-minimal #v67QuickBar{padding:5px 8px;}
+  body.v67-minimal .v67QuickBtn{padding:7px 12px;font-size:13px;}
 }
 
 </style>
@@ -519,7 +548,7 @@ body.environment-minimal .submode{
     </div>
 
     <div id="status">
-        V6.6.2｜極簡多人環境版
+        V6.7｜極簡橫向整合版
     </div>
 
 </div>
@@ -529,7 +558,7 @@ body.environment-minimal .submode{
 
 /* =========================================================
 
-   構圖導航 V6.6.2
+   構圖導航 V6.7
 
    V6.4 主要修改：
 
@@ -640,9 +669,20 @@ let lastVideoTime=-1;
 
 let trackedFace=null;
 let trackedPerson=null;
-/* V6.6.2：環境人像多人群組追蹤 */
+/* V6.7：環境人像多人群組追蹤 */
 let trackedEnvironmentGroup=null;
 let environmentPersonCount=0;
+/* V6.7：多人場景人數鎖定 */
+let environmentLockedCount=0;
+let environmentCountCandidate=0;
+let environmentCountSince=0;
+const ENV_COUNT_LOCK_MS=900;
+const ENV_COUNT_DROP_GRACE_MS=1600;
+let environmentLastFullCountAt=0;
+
+/* V6.7：方向狀態 */
+let v67Landscape=window.innerWidth>window.innerHeight;
+
 
 let lastPersonSeenAt=0;
 let lastPersonDetectionBox=null;
@@ -1223,6 +1263,10 @@ function resetTracking(){
     trackedPerson=null;
     trackedEnvironmentGroup=null;
     environmentPersonCount=0;
+    environmentLockedCount=0;
+    environmentCountCandidate=0;
+    environmentCountSince=0;
+    environmentLastFullCountAt=0;
     lastPersonSeenAt=0;
     lastPersonDetectionBox=null;
 
@@ -1689,7 +1733,7 @@ async function runComposition(){
     ){
 
         messageEl.innerText=
-        "👉 V6.6.2 請先測試人像模式";
+        "👉 V6.7 請先測試人像模式";
 
 
         return;
@@ -2254,7 +2298,118 @@ function handleMissingPerson(){
    - 人物約佔畫面 22%～62%，保留環境資訊
 ========================================================= */
 
-/* V6.6.2：保留畫面中的主要人物，並將多人合併成一個群組框。 */
+/* V6.7：保留畫面中的主要人物，並將多人合併成一個群組框。 */
+
+function v67IsLandscape(){
+    return overlay.clientWidth>overlay.clientHeight;
+}
+
+function updateEnvironmentCountLock(count){
+    const now=performance.now();
+    if(count<=0) return;
+
+    if(count!==environmentCountCandidate){
+        environmentCountCandidate=count;
+        environmentCountSince=now;
+    }
+
+    if(!environmentLockedCount && now-environmentCountSince>=ENV_COUNT_LOCK_MS){
+        environmentLockedCount=count;
+        environmentLastFullCountAt=now;
+        return;
+    }
+
+    // 若穩定看到更多人，允許往上修正鎖定人數；不因瞬間漏抓往下降。
+    if(environmentLockedCount && count>environmentLockedCount &&
+       now-environmentCountSince>=ENV_COUNT_LOCK_MS){
+        environmentLockedCount=count;
+        environmentLastFullCountAt=now;
+    }
+
+    if(environmentLockedCount && count>=environmentLockedCount){
+        environmentLastFullCountAt=now;
+    }
+}
+
+function environmentCountComplete(){
+    if(!environmentLockedCount) return false;
+    return environmentPersonCount>=environmentLockedCount;
+}
+
+function installV67UI(){
+    document.body.classList.add("v67-minimal");
+
+    const modeBtn=document.getElementById("v67ModeBtn");
+    const closeBtn=document.getElementById("v67CloseDrawer");
+    const startBtn=document.getElementById("v67StartBtn");
+    const cameraBtn=document.getElementById("v67CameraBtn");
+    const zoomBtn=document.getElementById("v67ZoomBtn");
+    const host=document.getElementById("v67ModeHost");
+
+    if(modeBtn) modeBtn.onclick=()=>document.body.classList.toggle("v67-drawer-open");
+    if(closeBtn) closeBtn.onclick=()=>document.body.classList.remove("v67-drawer-open");
+
+    // 抽屜內直接沿用既有模式按鈕，避免改壞原本模式切換事件。
+    if(host){
+        const modes=document.querySelector(".modes");
+        const subs=document.querySelector(".submodes");
+        if(modes) host.appendChild(modes);
+        if(subs) host.appendChild(subs);
+        if(modes) modes.style.display="flex";
+        if(subs) subs.style.display="flex";
+    }
+
+    if(startBtn){
+        startBtn.onclick=()=>{
+            document.body.classList.remove("v67-drawer-open");
+            const old=document.getElementById("runBtn");
+            if(old) old.click();
+            else if(typeof runComposition==="function") runComposition();
+        };
+    }
+
+    if(cameraBtn){
+        cameraBtn.onclick=()=>{
+            // 優先沿用原本前/後鏡按鈕，避免重寫相機初始化。
+            const rear=[...document.querySelectorAll("button")].find(b=>/後鏡/.test(b.innerText));
+            const front=[...document.querySelectorAll("button")].find(b=>/前鏡/.test(b.innerText));
+            if(typeof facingMode!=="undefined" && facingMode==="environment" && front) front.click();
+            else if(rear) rear.click();
+        };
+    }
+
+    if(zoomBtn){
+        zoomBtn.onclick=()=>{
+            const slider=[...document.querySelectorAll('input[type="range"]')].find(x=>Number(x.max)>=2);
+            if(!slider) return;
+            const cur=parseFloat(slider.value||1);
+            const next=cur<1.5?2:(cur<2.5?3:1);
+            slider.value=Math.min(Number(slider.max||3),next);
+            slider.dispatchEvent(new Event("input",{bubbles:true}));
+            slider.dispatchEvent(new Event("change",{bubbles:true}));
+            zoomBtn.innerText=(parseFloat(slider.value)||1).toFixed(0)+"×";
+        };
+    }
+
+    const refreshOrientation=()=>{
+        const now=v67IsLandscape();
+        if(now!==v67Landscape){
+            v67Landscape=now;
+            stableStartTime=null;
+            completed=false;
+            resizeOverlay();
+        }
+    };
+    window.addEventListener("resize",refreshOrientation);
+    window.addEventListener("orientationchange",()=>setTimeout(refreshOrientation,180));
+}
+
+if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",installV67UI);
+}else{
+    installV67UI();
+}
+
 function chooseEnvironmentPeople(detections){
     const w=Math.max(1,video.videoWidth || 1);
     const h=Math.max(1,video.videoHeight || 1);
@@ -2305,6 +2460,7 @@ function updateTrackedEnvironmentGroup(detections){
     };
 
     environmentPersonCount=valid;
+    updateEnvironmentCountLock(valid);
 
     if(!trackedEnvironmentGroup){
         trackedEnvironmentGroup=candidate;
@@ -2350,70 +2506,71 @@ function drawEnvironmentNavigation(){
     if(!trackedPerson) return;
 
     const w=overlay.clientWidth,h=overlay.clientHeight,p=trackedPerson;
+    const landscape=w>h;
     const isGroup=environmentPersonCount>=2 && trackedEnvironmentGroup;
     const ctx=overlay.getContext("2d");
 
-    // 群組/人物實際範圍
     const left=p.x-p.w/2, right=p.x+p.w/2;
     const top=p.y-p.h/2, bottom=p.y+p.h/2;
 
-    // V6.6.2 多人安全邊界：任何群組都不能太貼近畫面四周。
-    const safeX=w*.045;
-    const safeTop=h*.055;
-    const safeBottom=h*.055;
+    // 直/橫向分別計算安全邊界
+    const safeX=w*(landscape?.035:.045);
+    const safeTop=h*(landscape?.06:.055);
+    const safeBottom=h*(landscape?.07:.055);
     const safeEdges=left>safeX && right<w-safeX && top>safeTop && bottom<h-safeBottom;
 
-    // 群組不可過度橫向分散；單人不套此限制。
-    const groupSpread=isGroup ? (p.w/w) : 0;
-    const spreadOK=!isGroup || groupSpread<=.82;
+    // 橫向允許多人群組更寬
+    const groupSpread=isGroup ? p.w/w : 0;
+    const spreadLimit=landscape?.90:.82;
+    const spreadOK=!isGroup || groupSpread<=spreadLimit;
 
-    // 環境人像保留足夠環境，不要求人物填滿畫面。
+    // 人物高度比例依方向調整
     const ratio=p.h/h;
-    const minRatio=isGroup?.24:.22;
-    const maxRatio=isGroup?.76:.62;
+    const minRatio=isGroup ? (landscape?.34:.24) : (landscape?.30:.22);
+    const maxRatio=isGroup ? (landscape?.88:.76) : (landscape?.80:.62);
     const goodSize=ratio>=minRatio && ratio<=maxRatio;
 
-    // 自動選擇較接近的左右環境位置；不再畫大型建議框。
-    const leftTarget=w*.40;
-    const rightTarget=w*.60;
-    const targetX=Math.abs(p.x-leftTarget)<=Math.abs(p.x-rightTarget)?leftTarget:rightTarget;
-    const targetY=h*.50;
-    const dx=targetX-p.x, dy=targetY-p.y;
-    const goodX=Math.abs(dx)<w*(isGroup?.15:.12);
-    const goodY=Math.abs(dy)<h*(isGroup?.17:.15);
+    // 橫向多人較適合靠中央；直向環境人像仍保留左右留白
+    let targetX;
+    if(landscape && isGroup) targetX=w*.50;
+    else{
+        const leftTarget=w*.40,rightTarget=w*.60;
+        targetX=Math.abs(p.x-leftTarget)<=Math.abs(p.x-rightTarget)?leftTarget:rightTarget;
+    }
+    const targetY=h*(landscape?.51:.50);
+    const dx=targetX-p.x,dy=targetY-p.y;
+    const goodX=Math.abs(dx)<w*(isGroup?.14:.11);
+    const goodY=Math.abs(dy)<h*(isGroup?.16:.14);
 
-    const allGood=safeEdges && spreadOK && goodSize && goodX && goodY;
+    const countOK=environmentCountComplete();
+    const allGood=countOK && safeEdges && spreadOK && goodSize && goodX && goodY;
 
     if(allGood){
         if(!stableStartTime) stableStartTime=performance.now();
-        const elapsed=performance.now()-stableStartTime;
-        if(elapsed>=REQUIRED_STABLE_MS) completed=true;
+        if(performance.now()-stableStartTime>=REQUIRED_STABLE_MS) completed=true;
     }else{
         stableStartTime=null;
         completed=false;
     }
 
-    // 極簡：只畫一個細群組框；完成後更淡。
+    // 極簡單一群組框
     ctx.save();
     ctx.lineWidth=completed?2:3;
     ctx.strokeStyle=completed?"rgba(0,255,102,.55)":"#ffd400";
     ctx.setLineDash([]);
-    const bx=Math.max(2,left), by=Math.max(2,top);
+    const bx=Math.max(2,left),by=Math.max(2,top);
     const bw=Math.max(8,Math.min(w-4,right)-bx);
     const bh=Math.max(8,Math.min(h-4,bottom)-by);
     ctx.strokeRect(bx,by,bw,bh);
-
-    // 未完成時只顯示小目標點，不再顯示大圓圈/大虛線框。
     if(!completed){
         ctx.fillStyle="#00ff66";
-        ctx.beginPath();
-        ctx.arc(targetX,targetY,6,0,Math.PI*2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(targetX,targetY,5,0,Math.PI*2); ctx.fill();
     }
     ctx.restore();
 
     miniMode.innerText="👤 人像";
-    miniComposition.innerText=isGroup ? ("環境 "+environmentPersonCount+"人") : "環境人像";
+    const shownCount=environmentLockedCount || environmentPersonCount;
+    miniComposition.innerText=shownCount>=2 ? ("環境 "+shownCount+"人") : "環境人像";
 
     if(completed){
         miniStatus.innerText="✓ 完成";
@@ -2421,10 +2578,15 @@ function drawEnvironmentNavigation(){
         return;
     }
 
-    miniStatus.innerText=isGroup ? ("● "+environmentPersonCount+"人追蹤") : "● 人物追蹤";
+    miniStatus.innerText=environmentPersonCount>=2 ? ("● "+environmentPersonCount+"人追蹤") : "● 人物追蹤";
 
-    // 導航只留一句最重要的指令。
-    if(!safeEdges){
+    // 先確保完整人數，再談構圖
+    if(environmentLockedCount && environmentPersonCount<environmentLockedCount){
+        const missing=environmentLockedCount-environmentPersonCount;
+        messageEl.innerText="👤 少 "+missing+" 人｜調整畫面";
+    }else if(!environmentLockedCount){
+        messageEl.innerText="● 確認人物中";
+    }else if(!safeEdges){
         messageEl.innerText="↔ 人物離邊緣一點";
     }else if(!spreadOK){
         messageEl.innerText="↔ 人物靠近一些";
@@ -4984,6 +5146,19 @@ resizeOverlay();
 startCamera();
 
 </script>
+
+
+<div id="v67QuickBar">
+  <button class="v67QuickBtn" id="v67ModeBtn">構圖模式</button>
+  <button class="v67QuickBtn" id="v67StartBtn">▶ 開始</button>
+  <button class="v67QuickBtn" id="v67CameraBtn">🔄 鏡頭</button>
+  <button class="v67QuickBtn" id="v67ZoomBtn">1×</button>
+</div>
+<div id="v67ModeDrawer">
+  <div style="font-weight:800;margin-bottom:8px">選擇構圖模式</div>
+  <div id="v67ModeHost"></div>
+  <button class="v67QuickBtn" id="v67CloseDrawer" style="width:100%;margin-top:10px">完成</button>
+</div>
 
 </body>
 </html>
