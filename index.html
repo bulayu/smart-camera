@@ -368,6 +368,43 @@ body.v67-minimal #runBtn{display:none !important;}
   body.v67-minimal .v67QuickBtn{padding:7px 12px;font-size:13px;}
 }
 
+
+
+/* ===== V6.7.1 全螢幕取景 UI ===== */
+body.v671-fullscreen #cameraArea{height:100dvh;flex:1 1 auto;}
+body.v671-fullscreen #controls{display:none!important;}
+body.v671-fullscreen #v67QuickBar{
+  position:absolute;left:50%;bottom:max(10px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);z-index:50;background:rgba(0,0,0,.48);
+  border:1px solid rgba(255,255,255,.14);border-radius:999px;
+  padding:5px;gap:4px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  width:auto;max-width:calc(100% - 20px);
+}
+body.v671-fullscreen .v67QuickBtn{padding:8px 11px;font-size:12px;border:0;background:rgba(35,35,35,.88);white-space:nowrap;}
+body.v671-fullscreen #v67ModeBtn{background:rgba(255,255,255,.92);color:#000;}
+body.v671-fullscreen #message{
+  bottom:62px;width:auto;max-width:82%;min-height:0;padding:8px 13px;
+  border-radius:999px;font-size:14px;background:rgba(0,0,0,.62);white-space:nowrap;
+}
+body.v671-fullscreen #miniInfo{height:38px;top:max(7px,env(safe-area-inset-top));width:calc(100% - 24px);}
+body.v671-fullscreen #version{bottom:58px;}
+body.v671-fullscreen #v67ModeDrawer{
+  display:none;position:fixed;left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));
+  z-index:100;background:rgba(8,8,8,.96);border:1px solid #333;border-radius:22px;
+  padding:12px;max-height:min(72dvh,560px);overflow:auto;box-shadow:0 10px 35px rgba(0,0,0,.65);
+}
+body.v671-fullscreen.v67-drawer-open #v67ModeDrawer{display:block;}
+body.v671-fullscreen.v67-drawer-open #v67QuickBar{display:none;}
+body.v671-fullscreen #v67ModeHost #controls{display:block!important;background:transparent;padding:0;}
+body.v671-fullscreen #v67ModeHost #mainButton{margin:4px 0 8px;}
+body.v671-fullscreen #v67ModeHost #status{display:none;}
+@media (orientation:landscape){
+  body.v671-fullscreen #v67QuickBar{left:auto;right:max(8px,env(safe-area-inset-right));bottom:10px;transform:none;}
+  body.v671-fullscreen #message{bottom:12px;left:max(8px,env(safe-area-inset-left));transform:none;max-width:48%;font-size:13px;}
+  body.v671-fullscreen #version{bottom:4px;}
+  body.v671-fullscreen #v67ModeDrawer{left:auto;width:min(430px,48vw);right:max(8px,env(safe-area-inset-right));top:8px;bottom:8px;max-height:none;}
+}
+
 </style>
 </head>
 
@@ -411,7 +448,7 @@ body.v67-minimal #runBtn{display:none !important;}
     </div>
 
     <div id="version">
-        V6.6
+        V6.7.1
     </div>
 
 </div>
@@ -548,7 +585,7 @@ body.v67-minimal #runBtn{display:none !important;}
     </div>
 
     <div id="status">
-        V6.7｜極簡橫向整合版
+        V6.7.1｜全螢幕取景版
     </div>
 
 </div>
@@ -558,7 +595,7 @@ body.v67-minimal #runBtn{display:none !important;}
 
 /* =========================================================
 
-   構圖導航 V6.7
+   構圖導航 V6.7.1
 
    V6.4 主要修改：
 
@@ -2337,7 +2374,7 @@ function environmentCountComplete(){
 }
 
 function installV67UI(){
-    document.body.classList.add("v67-minimal");
+    document.body.classList.add("v67-minimal","v671-fullscreen");
 
     const modeBtn=document.getElementById("v67ModeBtn");
     const closeBtn=document.getElementById("v67CloseDrawer");
@@ -2345,60 +2382,52 @@ function installV67UI(){
     const cameraBtn=document.getElementById("v67CameraBtn");
     const zoomBtn=document.getElementById("v67ZoomBtn");
     const host=document.getElementById("v67ModeHost");
+    const quickBar=document.getElementById("v67QuickBar");
+    const drawer=document.getElementById("v67ModeDrawer");
+    const cameraArea=document.getElementById("cameraArea");
+    const controls=document.getElementById("controls");
 
-    if(modeBtn) modeBtn.onclick=()=>document.body.classList.toggle("v67-drawer-open");
+    // V6.7.1：快捷列浮在取景畫面，不再另外佔一整排高度。
+    if(cameraArea && quickBar) cameraArea.appendChild(quickBar);
+    if(document.body && drawer) document.body.appendChild(drawer);
+
+    // 抽屜直接收納原本完整控制區，原本所有 onclick / 功能全部保留。
+    if(host && controls) host.appendChild(controls);
+
+    if(modeBtn) modeBtn.onclick=()=>document.body.classList.add("v67-drawer-open");
     if(closeBtn) closeBtn.onclick=()=>document.body.classList.remove("v67-drawer-open");
-
-    // 抽屜內直接沿用既有模式按鈕，避免改壞原本模式切換事件。
-    if(host){
-        const modes=document.querySelector(".modes");
-        const subs=document.querySelector(".submodes");
-        if(modes) host.appendChild(modes);
-        if(subs) host.appendChild(subs);
-        if(modes) modes.style.display="flex";
-        if(subs) subs.style.display="flex";
-    }
 
     if(startBtn){
         startBtn.onclick=()=>{
             document.body.classList.remove("v67-drawer-open");
-            const old=document.getElementById("runBtn");
-            if(old) old.click();
-            else if(typeof runComposition==="function") runComposition();
+            runComposition();
         };
     }
 
     if(cameraBtn){
-        cameraBtn.onclick=()=>{
-            // 優先沿用原本前/後鏡按鈕，避免重寫相機初始化。
-            const rear=[...document.querySelectorAll("button")].find(b=>/後鏡/.test(b.innerText));
-            const front=[...document.querySelectorAll("button")].find(b=>/前鏡/.test(b.innerText));
-            if(typeof facingMode!=="undefined" && facingMode==="environment" && front) front.click();
-            else if(rear) rear.click();
+        cameraBtn.onclick=async()=>{
+            const next=facing==="environment" ? "user" : "environment";
+            await changeCamera(next);
+            cameraBtn.innerText=next==="environment" ? "📷 後鏡" : "🤳 前鏡";
         };
     }
 
     if(zoomBtn){
         zoomBtn.onclick=()=>{
-            const slider=[...document.querySelectorAll('input[type="range"]')].find(x=>Number(x.max)>=2);
-            if(!slider) return;
-            const cur=parseFloat(slider.value||1);
+            const cur=parseFloat(zoom.value||1);
             const next=cur<1.5?2:(cur<2.5?3:1);
-            slider.value=Math.min(Number(slider.max||3),next);
-            slider.dispatchEvent(new Event("input",{bubbles:true}));
-            slider.dispatchEvent(new Event("change",{bubbles:true}));
-            zoomBtn.innerText=(parseFloat(slider.value)||1).toFixed(0)+"×";
+            zoom.value=Math.min(Number(zoom.max||3),next);
+            zoom.dispatchEvent(new Event("input",{bubbles:true}));
+            zoomBtn.innerText=(parseFloat(zoom.value)||1).toFixed(0)+"×";
         };
     }
 
+    // 點選模式/構圖後仍留在抽屜，方便連續設定；按「完成」才收起。
     const refreshOrientation=()=>{
-        const now=v67IsLandscape();
-        if(now!==v67Landscape){
-            v67Landscape=now;
-            stableStartTime=null;
-            completed=false;
-            resizeOverlay();
-        }
+        v67Landscape=v67IsLandscape();
+        stableStartTime=null;
+        completed=false;
+        setTimeout(resizeOverlay,80);
     };
     window.addEventListener("resize",refreshOrientation);
     window.addEventListener("orientationchange",()=>setTimeout(refreshOrientation,180));
@@ -5149,9 +5178,9 @@ startCamera();
 
 
 <div id="v67QuickBar">
-  <button class="v67QuickBtn" id="v67ModeBtn">構圖模式</button>
+  <button class="v67QuickBtn" id="v67ModeBtn">⚙️ 模式</button>
   <button class="v67QuickBtn" id="v67StartBtn">▶ 開始</button>
-  <button class="v67QuickBtn" id="v67CameraBtn">🔄 鏡頭</button>
+  <button class="v67QuickBtn" id="v67CameraBtn">📷 後鏡</button>
   <button class="v67QuickBtn" id="v67ZoomBtn">1×</button>
 </div>
 <div id="v67ModeDrawer">
