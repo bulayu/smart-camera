@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.5</title>
+<title>構圖導航 V6.5.1</title>
 
 <style>
 
@@ -348,7 +348,7 @@ body{
         </div>
 
         <div id="miniStatus">
-            V6.5
+            V6.5.1
         </div>
 
     </div>
@@ -358,7 +358,7 @@ body{
     </div>
 
     <div id="version">
-        V6.5
+        V6.5.1
     </div>
 
 </div>
@@ -495,7 +495,7 @@ body{
     </div>
 
     <div id="status">
-        V6.5｜全身人像導航版
+        V6.5.1｜全身構圖比例修正版
     </div>
 
 </div>
@@ -505,7 +505,7 @@ body{
 
 /* =========================================================
 
-   構圖導航 V6.5
+   構圖導航 V6.5.1
 
    V6.4 主要修改：
 
@@ -621,7 +621,7 @@ let missingFrames=0;
 
 const MAX_MISSING_FRAMES=60;
 
-/* V6.5：短暫漏抓約 2 秒仍保留最後臉框，避免黃框閃爍 */
+/* V6.5.1：短暫漏抓約 2 秒仍保留最後臉框，避免黃框閃爍 */
 
 const SMOOTHING=0.72;
 
@@ -1300,7 +1300,7 @@ async function initFaceDetector(){
 
 
 /* =========================================================
-   V6.5 PERSON DETECTOR (BACKGROUND)
+   V6.5.1 PERSON DETECTOR (BACKGROUND)
 ========================================================= */
 
 async function initPersonDetectorInBackground(){
@@ -1651,7 +1651,7 @@ async function runComposition(){
     ){
 
         messageEl.innerText=
-        "👉 V6.5 請先測試人像模式";
+        "👉 V6.5.1 請先測試人像模式";
 
 
         return;
@@ -1739,7 +1739,7 @@ function portraitLoop(){
 
     try{
 
-        // V6.5 全身構圖：直接以人物框導航，不依賴臉部位置。
+        // V6.5.1 全身構圖：直接以人物框導航，不依賴臉部位置。
         if(currentComposition==="fullbody"){
             let person=null;
             if(personDetector){
@@ -1946,7 +1946,7 @@ function chooseMainFace(
 
 
 /* =========================================================
-   V6.5 FULL BODY TRACKING
+   V6.5.1 FULL BODY TRACKING
 ========================================================= */
 
 function updateTrackedPerson(detection){
@@ -1978,24 +1978,24 @@ function drawFullBodyNavigation(){
     const w=overlay.clientWidth, h=overlay.clientHeight;
     const p=trackedPerson;
 
-    // 目標：人物水平置中，頭頂約 8% 留白、腳底約 92%，保留完整全身。
+    // V6.5.1：全身構圖改成「合理範圍」而不是要求人物貼滿綠框。
+    // 建議視覺框約佔畫面 64% 高；實際人物高度 40%～78% 都視為合理距離。
     const targetX=w/2;
-    const targetTop=h*.08;
-    const targetBottom=h*.92;
+    const targetTop=h*.16;
+    const targetBottom=h*.84;
     const targetH=targetBottom-targetTop;
     const targetY=(targetTop+targetBottom)/2;
+    const targetW=w*.46;
 
-    // 目標框
     ctx.save();
     ctx.strokeStyle="#2cff67";
     ctx.lineWidth=3;
     ctx.setLineDash([10,8]);
-    const targetW=Math.max(w*.28, Math.min(w*.52, targetH*(p.w/Math.max(p.h,1))));
     ctx.strokeRect(targetX-targetW/2,targetTop,targetW,targetH);
     ctx.setLineDash([]);
     ctx.font="bold 15px sans-serif";
     ctx.fillStyle="#2cff67";
-    ctx.fillText("全身目標",Math.max(8,targetX-targetW/2),Math.max(20,targetTop-8));
+    ctx.fillText("建議人物範圍",Math.max(8,targetX-targetW/2),Math.max(20,targetTop-8));
     ctx.restore();
 
     // 目前人物框
@@ -2005,13 +2005,19 @@ function drawFullBodyNavigation(){
     ctx.strokeRect(p.x-p.w/2,p.y-p.h/2,p.w,p.h);
     ctx.restore();
 
+    const personTop=p.y-p.h/2;
+    const personBottom=p.y+p.h/2;
+    const personHeightRatio=p.h/h;
     const dx=targetX-p.x;
     const dy=targetY-p.y;
-    const ratio=p.h/targetH;
-    const goodX=Math.abs(dx)<w*.07;
-    const goodY=Math.abs(dy)<h*.06;
-    const goodSize=ratio>0.88 && ratio<1.08;
-    const inside=goodX && goodY && goodSize;
+
+    // 距離容許放寬：人物高度佔畫面 40%～78% 即可。
+    // 同時確認頭、腳沒有太貼近畫面邊緣，避免「有抓到人但切頭/切腳」。
+    const goodSize=personHeightRatio>=0.40 && personHeightRatio<=0.78;
+    const fullBodySafe=personTop>=h*.035 && personBottom<=h*.965;
+    const goodX=Math.abs(dx)<w*.10;
+    const goodY=Math.abs(dy)<h*.12;
+    const inside=goodX && goodY && goodSize && fullBodySafe;
 
     const now=performance.now();
     let stableElapsed=0;
@@ -2022,7 +2028,7 @@ function drawFullBodyNavigation(){
     }else if(!completed){
         stableStartTime=null;
     }
-    if(completed && (!goodX || !goodY || ratio<0.80 || ratio>1.18)){
+    if(completed && (!goodX || !goodY || personHeightRatio<0.36 || personHeightRatio>0.84 || !fullBodySafe)){
         completed=false;
         stableStartTime=null;
     }
@@ -2044,17 +2050,19 @@ function drawFullBodyNavigation(){
     }
 
     miniStatus.innerText="● 人物追蹤";
-    if(!goodSize){
-        messageEl.innerText=ratio<0.88 ? "⬆ 靠近人物一點" : "⬇ 離人物遠一點";
+    if(!fullBodySafe){
+        if(personTop<h*.035) messageEl.innerText="↓ 稍微降低｜保留頭頂空間";
+        else messageEl.innerText="↑ 稍微抬高｜保留腳下空間";
+    }else if(!goodSize){
+        messageEl.innerText=personHeightRatio<0.40 ? "⬆ 靠近人物一點" : "⬇ 離人物遠一點";
     }else if(!goodX){
         messageEl.innerText=dx>0 ? "← 手機向左" : "→ 手機向右";
     }else if(!goodY){
         messageEl.innerText=dy>0 ? "↑ 稍微抬高" : "↓ 稍微降低";
     }else{
-        messageEl.innerText="👤 保持完整全身在框內";
+        messageEl.innerText="👤 距離OK｜微調人物位置";
     }
 }
-
 function handleMissingPerson(){
     missingFrames++;
     if(trackedPerson && missingFrames<=MAX_MISSING_FRAMES){
@@ -2075,7 +2083,7 @@ function handleMissingPerson(){
 }
 
 /* =========================================================
-   V6.5 PERSON FALLBACK
+   V6.5.1 PERSON FALLBACK
 ========================================================= */
 
 function chooseMainPerson(detections){
