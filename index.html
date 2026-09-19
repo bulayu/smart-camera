@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.5.1</title>
+<title>構圖導航 V6.5.2</title>
 
 <style>
 
@@ -348,7 +348,7 @@ body{
         </div>
 
         <div id="miniStatus">
-            V6.5.1
+            V6.5.2
         </div>
 
     </div>
@@ -358,7 +358,7 @@ body{
     </div>
 
     <div id="version">
-        V6.5.1
+        V6.5.2
     </div>
 
 </div>
@@ -495,7 +495,7 @@ body{
     </div>
 
     <div id="status">
-        V6.5.1｜全身構圖比例修正版
+        V6.5.2｜遠距全身追蹤版
     </div>
 
 </div>
@@ -505,7 +505,7 @@ body{
 
 /* =========================================================
 
-   構圖導航 V6.5.1
+   構圖導航 V6.5.2
 
    V6.4 主要修改：
 
@@ -616,12 +616,15 @@ let lastVideoTime=-1;
 
 let trackedFace=null;
 let trackedPerson=null;
+let lastPersonSeenAt=0;
+let lastPersonDetectionBox=null;
+const PERSON_HOLD_MS=2200;
 
 let missingFrames=0;
 
 const MAX_MISSING_FRAMES=60;
 
-/* V6.5.1：短暫漏抓約 2 秒仍保留最後臉框，避免黃框閃爍 */
+/* V6.5.2：短暫漏抓約 2 秒仍保留最後臉框，避免黃框閃爍 */
 
 const SMOOTHING=0.72;
 
@@ -1190,6 +1193,8 @@ function resetTracking(){
 
     trackedFace=null;
     trackedPerson=null;
+    lastPersonSeenAt=0;
+    lastPersonDetectionBox=null;
 
     missingFrames=0;
 
@@ -1300,7 +1305,7 @@ async function initFaceDetector(){
 
 
 /* =========================================================
-   V6.5.1 PERSON DETECTOR (BACKGROUND)
+   V6.5.2 PERSON DETECTOR (BACKGROUND)
 ========================================================= */
 
 async function initPersonDetectorInBackground(){
@@ -1312,7 +1317,7 @@ async function initPersonDetectorInBackground(){
                 modelAssetPath:"https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite"
             },
             runningMode:"VIDEO",
-            scoreThreshold:0.35,
+            scoreThreshold:0.25,
             maxResults:3
         });
     }catch(error){
@@ -1651,7 +1656,7 @@ async function runComposition(){
     ){
 
         messageEl.innerText=
-        "👉 V6.5.1 請先測試人像模式";
+        "👉 V6.5.2 請先測試人像模式";
 
 
         return;
@@ -1739,7 +1744,7 @@ function portraitLoop(){
 
     try{
 
-        // V6.5.1 全身構圖：直接以人物框導航，不依賴臉部位置。
+        // V6.5.2 全身構圖：直接以人物框導航，不依賴臉部位置。
         if(currentComposition==="fullbody"){
             let person=null;
             if(personDetector){
@@ -1753,10 +1758,32 @@ function portraitLoop(){
 
             if(person){
                 missingFrames=0;
+                lastPersonSeenAt=performance.now();
+                lastPersonDetectionBox=person.boundingBox || null;
                 updateTrackedPerson(person);
                 drawFullBodyNavigation();
             }else{
-                handleMissingPerson();
+                // V6.5.2：人物模型遠距漏抓時，立即嘗試用遠距臉部偵測維持全身追蹤。
+                let faceFallback=null;
+                if(faceDetector){
+                    try{
+                        const faceResult=faceDetector.detectForVideo(video,performance.now());
+                        if(faceResult && faceResult.detections && faceResult.detections.length){
+                            faceFallback=chooseMainFace(faceResult.detections);
+                        }
+                    }catch(faceError){
+                        console.warn("Fullbody face fallback error",faceError);
+                    }
+                }
+                if(faceFallback){
+                    missingFrames=0;
+                    lastPersonSeenAt=performance.now();
+                    updateTrackedPersonFromFace(faceFallback);
+                    drawFullBodyNavigation();
+                    miniStatus.innerText="● 臉部輔助追蹤";
+                }else{
+                    handleMissingPerson();
+                }
             }
 
             detecting=false;
@@ -1946,7 +1973,7 @@ function chooseMainFace(
 
 
 /* =========================================================
-   V6.5.1 FULL BODY TRACKING
+   V6.5.2 FULL BODY TRACKING
 ========================================================= */
 
 function updateTrackedPerson(detection){
@@ -1972,13 +1999,50 @@ function updateTrackedPerson(detection){
     trackedPerson.top=trackedPerson.y-trackedPerson.h/2;
 }
 
+function updateTrackedPersonFromFace(detection){
+    const b=detection && detection.boundingBox;
+    if(!b) return;
+    const f1=videoPointToScreen(b.originX,b.originY);
+    const f2=videoPointToScreen(b.originX+b.width,b.originY+b.height);
+    const fx=(f1.x+f2.x)/2;
+    const fy=(f1.y+f2.y)/2;
+    const fw=Math.abs(f2.x-f1.x);
+    const fh=Math.abs(f2.y-f1.y);
+
+    // 有上一個人物框時，保留其人物/臉比例與寬高，僅用臉的位置校正人物中心。
+    // 這樣往後退造成人物模型漏抓時，黃框不會突然消失或跳成錯誤尺寸。
+    if(trackedPerson){
+        const expectedFaceY=trackedPerson.y-trackedPerson.h*0.32;
+        const dx=fx-trackedPerson.x;
+        const dy=fy-expectedFaceY;
+        const a=0.72;
+        trackedPerson.x += dx*(1-a);
+        trackedPerson.y += dy*(1-a);
+        // 臉變小時，緩慢縮放人物框；限制單幀縮放，避免框突然跳動。
+        const estimatedH=Math.max(fh*5.2, fh+20);
+        const scaleTarget=Math.max(0.88,Math.min(1.12,estimatedH/Math.max(1,trackedPerson.h)));
+        trackedPerson.h*=0.92+0.08*scaleTarget;
+        trackedPerson.w*=0.92+0.08*scaleTarget;
+        trackedPerson.left=trackedPerson.x-trackedPerson.w/2;
+        trackedPerson.top=trackedPerson.y-trackedPerson.h/2;
+        return;
+    }
+
+    // 若一開始人物模型就沒抓到，但臉抓得到，先建立保守的全身估算框。
+    const h=overlay.clientHeight, w=overlay.clientWidth;
+    const ph=Math.min(h*.78,Math.max(h*.34,fh*5.2));
+    const pw=Math.min(w*.52,Math.max(fw*2.2,ph*.34));
+    const py=fy+ph*.32;
+    trackedPerson={x:fx,y:py,w:pw,h:ph,left:fx-pw/2,top:py-ph/2};
+}
+
 function drawFullBodyNavigation(){
     if(!trackedPerson) return;
     clearOverlay();
     const w=overlay.clientWidth, h=overlay.clientHeight;
     const p=trackedPerson;
 
-    // V6.5.1：全身構圖改成「合理範圍」而不是要求人物貼滿綠框。
+    // V6.5.2：全身構圖改成「合理範圍」而不是要求人物貼滿綠框。
     // 建議視覺框約佔畫面 64% 高；實際人物高度 40%～78% 都視為合理距離。
     const targetX=w/2;
     const targetTop=h*.16;
@@ -2065,11 +2129,13 @@ function drawFullBodyNavigation(){
 }
 function handleMissingPerson(){
     missingFrames++;
-    if(trackedPerson && missingFrames<=MAX_MISSING_FRAMES){
+    const now=performance.now();
+    const elapsed=lastPersonSeenAt ? now-lastPersonSeenAt : Infinity;
+    if(trackedPerson && elapsed<=PERSON_HOLD_MS){
         if(!completed) stableStartTime=null;
         drawFullBodyNavigation();
         miniStatus.innerText="● 追蹤保持";
-        if(!completed) messageEl.innerText="👤 暫時漏抓｜保持全身在畫面中";
+        if(!completed) messageEl.innerText="👤 暫時漏抓｜持續鎖定人物";
         return;
     }
     trackedPerson=null;
@@ -2083,7 +2149,7 @@ function handleMissingPerson(){
 }
 
 /* =========================================================
-   V6.5.1 PERSON FALLBACK
+   V6.5.2 PERSON FALLBACK
 ========================================================= */
 
 function chooseMainPerson(detections){
