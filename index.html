@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.7.1｜智慧構圖版</title>
+<title>構圖導航 V6.7.2｜人物重心智慧判斷版</title>
 
 <style>
 
@@ -442,7 +442,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
         </div>
 
         <div id="miniStatus">
-            V6.6
+            V6.7.2
         </div>
 
     </div>
@@ -589,7 +589,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="status">
-        V6.7.1｜全螢幕取景版
+        V6.7.2｜人物重心智慧判斷版
     </div>
 
 </div>
@@ -710,6 +710,8 @@ let lastVideoTime=-1;
 
 let trackedFace=null;
 let trackedPerson=null;
+let smartPortraitPerson=null; // V6.7.2 一般人像的人物整體框
+let smartPortraitPersonSeenAt=0;
 /* V6.7：環境人像多人群組追蹤 */
 let trackedEnvironmentGroup=null;
 let environmentPersonCount=0;
@@ -1302,6 +1304,8 @@ function resetTracking(){
 
     trackedFace=null;
     trackedPerson=null;
+    smartPortraitPerson=null;
+    smartPortraitPersonSeenAt=0;
     trackedEnvironmentGroup=null;
     environmentPersonCount=0;
     environmentLockedCount=0;
@@ -1985,6 +1989,15 @@ function portraitLoop(){
                 detection
             );
 
+            // V6.7.2：一般人像同時取得人物整體框，避免只看臉。
+            if(personDetector){
+                try{
+                    const pr=personDetector.detectForVideo(video,performance.now());
+                    const pp=chooseMainPerson(pr && pr.detections ? pr.detections : []);
+                    if(pp) updateSmartPortraitPerson(pp);
+                }catch(e){ console.warn("Smart portrait person detection",e); }
+            }
+
 
             /*
                V6.3.2：
@@ -2042,15 +2055,14 @@ function portraitLoop(){
             if(person){
                 missingFrames=0;
                 updateTrackedFromPerson(person);
+                updateSmartPortraitPerson(person);
 
                 if(!lockedTargetSide && trackedFace){
                     if(currentComposition==="portraitCenter"){
                         lockedTargetSide="center";
                         targetReason="portrait-center-person";
                     }else{
-                        const w=overlay.clientWidth;
-                        lockedTargetSide=Math.abs(trackedFace.x-w/3)<=Math.abs(trackedFace.x-w*2/3)?"left":"right";
-                        targetReason="person-nearest-third";
+                        lockSmartPortraitTarget();
                     }
                     stableStartTime=null;
                     completed=false;
@@ -2415,18 +2427,12 @@ function installV67UI(){
             document.body.classList.remove("manual-composition");
             if(manualBtn) manualBtn.innerText="▾ 手動選擇構圖";
 
-            // 智慧構圖：一般模式沿用各場景推薦；人像由人物位置自動選中央/三分。
+            // V6.7.2：人像由「人物整體重心 + 臉 + 留白 + 人物大小」智慧選擇。
             if(currentMode==="portrait"){
-                const w=overlay.clientWidth || window.innerWidth;
-                if(trackedFace && Math.abs(trackedFace.x-w/2)<w*.13){
-                    currentComposition="portraitCenter";
-                    selectComposition("portraitCenter");
-                    messageEl.innerText="✨ AI 建議：中央人像";
-                }else{
-                    currentComposition="portraitThirds";
-                    selectComposition("portraitThirds");
-                    messageEl.innerText="✨ AI 建議：三分人像";
-                }
+                const picked=chooseSmartPortraitComposition();
+                currentComposition=picked;
+                selectComposition(picked);
+                messageEl.innerText=picked==="portraitCenter" ? "✨ AI 建議：中央人像" : (picked==="environment" ? "✨ AI 建議：環境人像" : "✨ AI 建議：三分人像");
             }
             runComposition();
         };
@@ -3172,6 +3178,76 @@ function videoPointToScreen(
 
 
 /* =========================================================
+   V6.7.2 SMART PORTRAIT WEIGHT
+   臉 + 人物整體重心 + 人物大小 + 左右留白
+========================================================= */
+function updateSmartPortraitPerson(detection){
+    const b=detection && detection.boundingBox;
+    if(!b) return;
+    const p1=videoPointToScreen(b.originX,b.originY);
+    const p2=videoPointToScreen(b.originX+b.width,b.originY+b.height);
+    const np={
+        x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2,
+        w:Math.abs(p2.x-p1.x), h:Math.abs(p2.y-p1.y)
+    };
+    if(![np.x,np.y,np.w,np.h].every(Number.isFinite)) return;
+    smartPortraitPersonSeenAt=performance.now();
+    if(!smartPortraitPerson){ smartPortraitPerson=np; return; }
+    const a=.64;
+    smartPortraitPerson.x=smartPortraitPerson.x*a+np.x*(1-a);
+    smartPortraitPerson.y=smartPortraitPerson.y*a+np.y*(1-a);
+    smartPortraitPerson.w=smartPortraitPerson.w*a+np.w*(1-a);
+    smartPortraitPerson.h=smartPortraitPerson.h*a+np.h*(1-a);
+}
+
+function getSmartPortraitMetrics(){
+    if(!trackedFace) return null;
+    const w=overlay.clientWidth,h=overlay.clientHeight;
+    let p=smartPortraitPerson;
+    // 人物模型暫時漏抓時，以臉估一個保守人物區域；只用於重心，不畫成真實人體框。
+    if(!p || performance.now()-smartPortraitPersonSeenAt>1800){
+        const ph=Math.min(h*.78,Math.max(h*.30,trackedFace.h*4.8));
+        const pw=Math.min(w*.55,Math.max(trackedFace.w*2.0,ph*.36));
+        p={x:trackedFace.x,y:Math.min(h*.86,trackedFace.y+ph*.30),w:pw,h:ph};
+    }
+    const left=p.x-p.w/2,right=p.x+p.w/2;
+    const leftSpace=Math.max(0,left), rightSpace=Math.max(0,w-right);
+    const sizeRatio=(p.w*p.h)/(w*h);
+    const heightRatio=p.h/h;
+    const balance=Math.abs(leftSpace-rightSpace)/w;
+    return {w,h,p,left,right,leftSpace,rightSpace,sizeRatio,heightRatio,balance};
+}
+
+function chooseSmartPortraitComposition(){
+    const m=getSmartPortraitMetrics();
+    if(!m) return 'portraitThirds';
+    const {w,p,leftSpace,rightSpace,sizeRatio,heightRatio,balance}=m;
+    const personNearCenter=Math.abs(p.x-w/2)<w*.105;
+    const faceNearCenter=Math.abs(trackedFace.x-w/2)<w*.12;
+    const backgroundRich=sizeRatio<.24 || heightRatio<.60;
+    // 人物較小且背景資訊多，交給環境人像。
+    if(backgroundRich && sizeRatio<.18) return 'environment';
+    // 中央人像必須「臉 + 人體重心」都靠中央，且左右留白不能明顯失衡。
+    if(personNearCenter && faceNearCenter && balance<.12 && sizeRatio>=.12) return 'portraitCenter';
+    return 'portraitThirds';
+}
+
+function lockSmartPortraitTarget(){
+    const m=getSmartPortraitMetrics();
+    if(!m){ lockTargetSide(); return; }
+    const {w,p,leftSpace,rightSpace}=m;
+    // 先看人物整體重心，再看哪側留白較適合；臉方向只做輔助，不再主導。
+    if(p.x<w*.46) lockedTargetSide='left';
+    else if(p.x>w*.54) lockedTargetSide='right';
+    else if(rightSpace>leftSpace+w*.06) lockedTargetSide='left';
+    else if(leftSpace>rightSpace+w*.06) lockedTargetSide='right';
+    else lockedTargetSide=Math.abs(p.x-w/3)<=Math.abs(p.x-w*2/3)?'left':'right';
+    targetReason='v672-person-weight';
+    stableStartTime=null; completed=false;
+    miniComposition.innerText=lockedTargetSide==='left'?'左三分':'右三分';
+}
+
+/* =========================================================
    PORTRAIT NAVIGATION
 ========================================================= */
 
@@ -3388,9 +3464,22 @@ function drawPortraitNavigation(){
     toleranceY;
 
 
-    const inside=
-    goodX &&
-    goodY;
+    const smartMetrics=getSmartPortraitMetrics();
+    let bodyGood=true, sizeGood=true, balanceGood=true;
+    if(smartMetrics){
+        const p=smartMetrics.p;
+        sizeGood=smartMetrics.heightRatio>=.28 && smartMetrics.heightRatio<=.86;
+        if(isCenterPortrait){
+            bodyGood=Math.abs(p.x-w/2)<w*.095;
+            balanceGood=smartMetrics.balance<.13;
+        }else{
+            const bodyTargetX=side==="left" ? w*.38 : w*.62;
+            bodyGood=Math.abs(p.x-bodyTargetX)<w*.12;
+            // 三分人像要求主體外側有合理環境留白，不允許整體重量全擠一邊。
+            balanceGood=side==="left" ? smartMetrics.rightSpace>w*.12 : smartMetrics.leftSpace>w*.12;
+        }
+    }
+    const inside=goodX && goodY && bodyGood && sizeGood && balanceGood;
 
 
     /* =====================================================
@@ -3773,6 +3862,23 @@ function drawPortraitNavigation(){
     let horizontal="";
 
     let vertical="";
+
+    // V6.7.2：臉已到位但人物重心/大小/留白未到位時，不提早完成。
+    if(goodX && goodY && smartMetrics){
+        if(!sizeGood){
+            messageEl.innerText=smartMetrics.heightRatio<.28 ? "⬆ 靠近人物一點" : "⬇ 離人物遠一點";
+            return;
+        }
+        if(!bodyGood){
+            const bodyTargetX=isCenterPortrait ? w/2 : (side==="left"?w*.38:w*.62);
+            messageEl.innerText=(bodyTargetX-smartMetrics.p.x)>0 ? "← 手機向左｜調整人物重心" : "→ 手機向右｜調整人物重心";
+            return;
+        }
+        if(!balanceGood){
+            messageEl.innerText="↔ 微調左右空間｜平衡人物與背景";
+            return;
+        }
+    }
 
 
     if(!goodX){
