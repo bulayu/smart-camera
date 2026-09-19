@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.6｜環境人像導航版</title>
+<title>構圖導航 V6.6.1.1｜多人環境人像導航版</title>
 
 <style>
 
@@ -495,7 +495,7 @@ body{
     </div>
 
     <div id="status">
-        V6.6｜環境人像導航版
+        V6.6.1｜多人環境人像導航版
     </div>
 
 </div>
@@ -505,7 +505,7 @@ body{
 
 /* =========================================================
 
-   構圖導航 V6.6
+   構圖導航 V6.6.1
 
    V6.4 主要修改：
 
@@ -616,6 +616,10 @@ let lastVideoTime=-1;
 
 let trackedFace=null;
 let trackedPerson=null;
+/* V6.6.1：環境人像多人群組追蹤 */
+let trackedEnvironmentGroup=null;
+let environmentPersonCount=0;
+
 let lastPersonSeenAt=0;
 let lastPersonDetectionBox=null;
 const PERSON_HOLD_MS=2200;
@@ -1193,6 +1197,8 @@ function resetTracking(){
 
     trackedFace=null;
     trackedPerson=null;
+    trackedEnvironmentGroup=null;
+    environmentPersonCount=0;
     lastPersonSeenAt=0;
     lastPersonDetectionBox=null;
 
@@ -1657,7 +1663,7 @@ async function runComposition(){
     ){
 
         messageEl.innerText=
-        "👉 V6.6 請先測試人像模式";
+        "👉 V6.6.1 請先測試人像模式";
 
 
         return;
@@ -1748,19 +1754,20 @@ function portraitLoop(){
         // V6.6 環境人像：人物可站、坐、靠、斜躺；不要求頭到腳直立。
         // 優先使用人物框；人物模型漏抓時，以臉部位置維持環境人像導航。
         if(currentComposition==="environment"){
-            let person=null;
+            let people=[];
             if(personDetector){
                 try{
                     const personResult=personDetector.detectForVideo(video,performance.now());
-                    person=chooseMainPerson(personResult && personResult.detections ? personResult.detections : []);
+                    people=chooseEnvironmentPeople(personResult && personResult.detections ? personResult.detections : []);
                 }catch(personError){
-                    console.warn("Environment person detection error",personError);
+                    console.warn("Environment people detection error",personError);
                 }
             }
-            if(person){
+
+            if(people.length){
                 missingFrames=0;
                 lastPersonSeenAt=performance.now();
-                updateTrackedPerson(person);
+                updateTrackedEnvironmentGroup(people);
                 drawEnvironmentNavigation();
             }else{
                 let faceFallback=null;
@@ -1777,6 +1784,8 @@ function portraitLoop(){
                 if(faceFallback){
                     missingFrames=0;
                     lastPersonSeenAt=performance.now();
+                    trackedEnvironmentGroup=null;
+                    environmentPersonCount=1;
                     updateTrackedEnvironmentFromFace(faceFallback);
                     drawEnvironmentNavigation();
                     miniStatus.innerText="● 臉部輔助追蹤";
@@ -2218,6 +2227,75 @@ function handleMissingPerson(){
    - 不要求完整頭到腳
    - 人物約佔畫面 22%～62%，保留環境資訊
 ========================================================= */
+
+/* V6.6.1：保留畫面中的主要人物，並將多人合併成一個群組框。 */
+function chooseEnvironmentPeople(detections){
+    const w=Math.max(1,video.videoWidth || 1);
+    const h=Math.max(1,video.videoHeight || 1);
+    const minArea=w*h*.004;
+    const people=[];
+    detections.forEach(d=>{
+        const cat=d.categories && d.categories[0];
+        const name=((cat && (cat.categoryName || cat.displayName)) || "").toLowerCase();
+        const score=(cat && Number.isFinite(cat.score)) ? cat.score : 0;
+        const b=d.boundingBox;
+        if(name!=="person" || !b || score<.22) return;
+        const area=b.width*b.height;
+        if(area<minArea) return;
+        people.push(d);
+    });
+    people.sort((a,b)=>(b.boundingBox.width*b.boundingBox.height)-(a.boundingBox.width*a.boundingBox.height));
+    return people.slice(0,4);
+}
+
+function updateTrackedEnvironmentGroup(detections){
+    if(!detections || !detections.length) return;
+
+    let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;
+    let valid=0;
+
+    detections.forEach(d=>{
+        const b=d && d.boundingBox;
+        if(!b) return;
+        const p1=videoPointToScreen(b.originX,b.originY);
+        const p2=videoPointToScreen(b.originX+b.width,b.originY+b.height);
+        const l=Math.min(p1.x,p2.x), t=Math.min(p1.y,p2.y);
+        const r=Math.max(p1.x,p2.x), bt=Math.max(p1.y,p2.y);
+        if(![l,t,r,bt].every(Number.isFinite)) return;
+        left=Math.min(left,l); top=Math.min(top,t);
+        right=Math.max(right,r); bottom=Math.max(bottom,bt);
+        valid++;
+    });
+
+    if(!valid) return;
+
+    const candidate={
+        x:(left+right)/2,
+        y:(top+bottom)/2,
+        w:Math.max(8,right-left),
+        h:Math.max(12,bottom-top),
+        left:left,
+        top:top
+    };
+
+    environmentPersonCount=valid;
+
+    if(!trackedEnvironmentGroup){
+        trackedEnvironmentGroup=candidate;
+    }else{
+        const a=.62;
+        trackedEnvironmentGroup.x=trackedEnvironmentGroup.x*a+candidate.x*(1-a);
+        trackedEnvironmentGroup.y=trackedEnvironmentGroup.y*a+candidate.y*(1-a);
+        trackedEnvironmentGroup.w=trackedEnvironmentGroup.w*a+candidate.w*(1-a);
+        trackedEnvironmentGroup.h=trackedEnvironmentGroup.h*a+candidate.h*(1-a);
+        trackedEnvironmentGroup.left=trackedEnvironmentGroup.x-trackedEnvironmentGroup.w/2;
+        trackedEnvironmentGroup.top=trackedEnvironmentGroup.y-trackedEnvironmentGroup.h/2;
+    }
+
+    /* 兼容原 V6.6 繪圖/導航結構 */
+    trackedPerson={...trackedEnvironmentGroup};
+}
+
 function updateTrackedEnvironmentFromFace(detection){
     const b=detection && detection.boundingBox;
     if(!b) return;
@@ -2245,6 +2323,7 @@ function drawEnvironmentNavigation(){
     if(!trackedPerson) return;
     clearOverlay();
     const w=overlay.clientWidth,h=overlay.clientHeight,p=trackedPerson;
+    const isGroup=environmentPersonCount>=2 && trackedEnvironmentGroup;
 
     // 人物放在較接近的三分線，讓另一側保留更多環境。
     // 第一次取得人物時，以目前所在半邊鎖定目標，避免左右跳動。
@@ -2277,10 +2356,10 @@ function drawEnvironmentNavigation(){
     const ratio=p.h/h;
     const dx=targetX-p.x,dy=targetY-p.y;
     // 環境人像刻意容許人物較小，也不要求腳部可見。
-    const goodSize=ratio>=.22 && ratio<=.62;
+    const goodSize=isGroup ? (ratio>=.24 && ratio<=.76) : (ratio>=.22 && ratio<=.62);
     const safe=top>=h*.03 && bottom<=h*.97 && left>=-w*.04 && right<=w*1.04;
-    const goodX=Math.abs(dx)<w*.12;
-    const goodY=Math.abs(dy)<h*.15;
+    const goodX=Math.abs(dx)<w*(isGroup?.15:.12);
+    const goodY=Math.abs(dy)<h*(isGroup?.17:.15);
     const inside=goodSize && safe && goodX && goodY;
 
     const now=performance.now(); let stableElapsed=0;
@@ -2293,15 +2372,15 @@ function drawEnvironmentNavigation(){
         completed=false; stableStartTime=null;
     }
 
-    miniMode.innerText="👤 人像"; miniComposition.innerText="環境人像";
-    if(completed){ miniStatus.innerText="✓ 完成"; messageEl.innerText="✓ 環境人像構圖完成"; return; }
+    miniMode.innerText="👤 人像"; miniComposition.innerText=isGroup ? ("多人環境 "+environmentPersonCount+"人") : "環境人像";
+    if(completed){ miniStatus.innerText="✓ 完成"; messageEl.innerText=isGroup ? ("✓ "+environmentPersonCount+"人環境構圖完成") : "✓ 環境人像構圖完成"; return; }
     if(inside){
         const step=Math.min(8,Math.max(1,Math.floor(stableElapsed/REQUIRED_STABLE_MS*8)+1));
         miniStatus.innerText="● 穩定中"; messageEl.innerText="● 正在穩定位置 "+step+"/8"; return;
     }
     miniStatus.innerText="● 人物追蹤";
     if(!safe){ messageEl.innerText="↔ 保留人物周圍空間"; }
-    else if(!goodSize){ messageEl.innerText=ratio<.22 ? "⬆ 靠近人物一點｜仍保留環境" : "⬇ 離人物遠一點｜增加環境"; }
+    else if(!goodSize){ const minRatio=isGroup?.24:.22; messageEl.innerText=ratio<minRatio ? "⬆ 靠近人物一點｜仍保留環境" : "⬇ 離人物遠一點｜增加環境"; }
     else if(!goodX){ messageEl.innerText=dx>0 ? "← 手機向左｜保留環境" : "→ 手機向右｜保留環境"; }
     else if(!goodY){ messageEl.innerText=dy>0 ? "↑ 稍微抬高" : "↓ 稍微降低"; }
     else messageEl.innerText="👤 人物與環境比例OK｜微調位置";
@@ -2317,7 +2396,7 @@ function handleMissingEnvironmentPerson(){
         if(!completed) messageEl.innerText="👤 暫時漏抓｜保持人物與環境";
         return;
     }
-    trackedPerson=null; stableStartTime=null; completed=false; clearOverlay();
+    trackedPerson=null; trackedEnvironmentGroup=null; environmentPersonCount=0; stableStartTime=null; completed=false; clearOverlay();
     miniMode.innerText="👤 人像"; miniComposition.innerText="環境人像"; miniStatus.innerText="● 等待";
     messageEl.innerText="👤 讓人物留在畫面中，不必站直或露出全身";
 }
