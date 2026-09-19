@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.4.2.1</title>
+<title>構圖導航 V6.5</title>
 
 <style>
 
@@ -348,7 +348,7 @@ body{
         </div>
 
         <div id="miniStatus">
-            V6.4.2.1
+            V6.5
         </div>
 
     </div>
@@ -358,7 +358,7 @@ body{
     </div>
 
     <div id="version">
-        V6.4.2.1
+        V6.5
     </div>
 
 </div>
@@ -495,7 +495,7 @@ body{
     </div>
 
     <div id="status">
-        V6.4.2.1｜遠距追蹤修正版
+        V6.5｜全身人像導航版
     </div>
 
 </div>
@@ -505,7 +505,7 @@ body{
 
 /* =========================================================
 
-   構圖導航 V6.4.2.1
+   構圖導航 V6.5
 
    V6.4 主要修改：
 
@@ -615,12 +615,13 @@ let lastVideoTime=-1;
 ========================================================= */
 
 let trackedFace=null;
+let trackedPerson=null;
 
 let missingFrames=0;
 
 const MAX_MISSING_FRAMES=60;
 
-/* V6.4.2.1：短暫漏抓約 2 秒仍保留最後臉框，避免黃框閃爍 */
+/* V6.5：短暫漏抓約 2 秒仍保留最後臉框，避免黃框閃爍 */
 
 const SMOOTHING=0.72;
 
@@ -1188,6 +1189,7 @@ async function changeCamera(mode){
 function resetTracking(){
 
     trackedFace=null;
+    trackedPerson=null;
 
     missingFrames=0;
 
@@ -1298,7 +1300,7 @@ async function initFaceDetector(){
 
 
 /* =========================================================
-   V6.4.2.1 PERSON DETECTOR (BACKGROUND)
+   V6.5 PERSON DETECTOR (BACKGROUND)
 ========================================================= */
 
 async function initPersonDetectorInBackground(){
@@ -1609,7 +1611,8 @@ async function runComposition(){
 
         if(
             currentComposition!=="portraitThirds" &&
-            currentComposition!=="portraitCenter"
+            currentComposition!=="portraitCenter" &&
+            currentComposition!=="fullbody"
         ){
             currentComposition="portraitThirds";
         }
@@ -1619,11 +1622,9 @@ async function runComposition(){
 
 
         miniComposition.innerText=
-        currentComposition==="portraitCenter"
-        ?
-        "中央定位中"
-        :
-        "選擇位置中";
+        currentComposition==="fullbody"
+        ? "全身定位中"
+        : (currentComposition==="portraitCenter" ? "中央定位中" : "選擇位置中");
 
 
         miniStatus.innerText=
@@ -1650,7 +1651,7 @@ async function runComposition(){
     ){
 
         messageEl.innerText=
-        "👉 V6.3.2 請先測試人像模式";
+        "👉 V6.5 請先測試人像模式";
 
 
         return;
@@ -1737,6 +1738,31 @@ function portraitLoop(){
 
 
     try{
+
+        // V6.5 全身構圖：直接以人物框導航，不依賴臉部位置。
+        if(currentComposition==="fullbody"){
+            let person=null;
+            if(personDetector){
+                try{
+                    const personResult=personDetector.detectForVideo(video,performance.now());
+                    person=chooseMainPerson(personResult && personResult.detections ? personResult.detections : []);
+                }catch(personError){
+                    console.warn("Fullbody person detection error",personError);
+                }
+            }
+
+            if(person){
+                missingFrames=0;
+                updateTrackedPerson(person);
+                drawFullBodyNavigation();
+            }else{
+                handleMissingPerson();
+            }
+
+            detecting=false;
+            requestAnimationFrame(portraitLoop);
+            return;
+        }
 
         const result=
         faceDetector.detectForVideo(
@@ -1920,7 +1946,136 @@ function chooseMainFace(
 
 
 /* =========================================================
-   V6.4.2.1 PERSON FALLBACK
+   V6.5 FULL BODY TRACKING
+========================================================= */
+
+function updateTrackedPerson(detection){
+    const b=detection && detection.boundingBox;
+    if(!b) return;
+    const p1=videoPointToScreen(b.originX,b.originY);
+    const p2=videoPointToScreen(b.originX+b.width,b.originY+b.height);
+    const np={
+        x:(p1.x+p2.x)/2,
+        y:(p1.y+p2.y)/2,
+        w:Math.abs(p2.x-p1.x),
+        h:Math.abs(p2.y-p1.y),
+        left:Math.min(p1.x,p2.x),
+        top:Math.min(p1.y,p2.y)
+    };
+    if(!trackedPerson){ trackedPerson=np; return; }
+    const a=0.62;
+    trackedPerson.x=trackedPerson.x*a+np.x*(1-a);
+    trackedPerson.y=trackedPerson.y*a+np.y*(1-a);
+    trackedPerson.w=trackedPerson.w*a+np.w*(1-a);
+    trackedPerson.h=trackedPerson.h*a+np.h*(1-a);
+    trackedPerson.left=trackedPerson.x-trackedPerson.w/2;
+    trackedPerson.top=trackedPerson.y-trackedPerson.h/2;
+}
+
+function drawFullBodyNavigation(){
+    if(!trackedPerson) return;
+    clearOverlay();
+    const w=overlay.clientWidth, h=overlay.clientHeight;
+    const p=trackedPerson;
+
+    // 目標：人物水平置中，頭頂約 8% 留白、腳底約 92%，保留完整全身。
+    const targetX=w/2;
+    const targetTop=h*.08;
+    const targetBottom=h*.92;
+    const targetH=targetBottom-targetTop;
+    const targetY=(targetTop+targetBottom)/2;
+
+    // 目標框
+    ctx.save();
+    ctx.strokeStyle="#2cff67";
+    ctx.lineWidth=3;
+    ctx.setLineDash([10,8]);
+    const targetW=Math.max(w*.28, Math.min(w*.52, targetH*(p.w/Math.max(p.h,1))));
+    ctx.strokeRect(targetX-targetW/2,targetTop,targetW,targetH);
+    ctx.setLineDash([]);
+    ctx.font="bold 15px sans-serif";
+    ctx.fillStyle="#2cff67";
+    ctx.fillText("全身目標",Math.max(8,targetX-targetW/2),Math.max(20,targetTop-8));
+    ctx.restore();
+
+    // 目前人物框
+    ctx.save();
+    ctx.strokeStyle=completed?"#2cff67":"#ffd400";
+    ctx.lineWidth=4;
+    ctx.strokeRect(p.x-p.w/2,p.y-p.h/2,p.w,p.h);
+    ctx.restore();
+
+    const dx=targetX-p.x;
+    const dy=targetY-p.y;
+    const ratio=p.h/targetH;
+    const goodX=Math.abs(dx)<w*.07;
+    const goodY=Math.abs(dy)<h*.06;
+    const goodSize=ratio>0.88 && ratio<1.08;
+    const inside=goodX && goodY && goodSize;
+
+    const now=performance.now();
+    let stableElapsed=0;
+    if(inside){
+        if(stableStartTime===null) stableStartTime=now;
+        stableElapsed=now-stableStartTime;
+        if(stableElapsed>=REQUIRED_STABLE_MS) completed=true;
+    }else if(!completed){
+        stableStartTime=null;
+    }
+    if(completed && (!goodX || !goodY || ratio<0.80 || ratio>1.18)){
+        completed=false;
+        stableStartTime=null;
+    }
+
+    miniMode.innerText="👤 人像";
+    miniComposition.innerText="全身構圖";
+
+    if(completed){
+        miniStatus.innerText="✓ 完成";
+        messageEl.innerText="✓ 全身構圖完成";
+        return;
+    }
+
+    if(inside){
+        const step=Math.min(8,Math.max(1,Math.floor(stableElapsed/REQUIRED_STABLE_MS*8)+1));
+        miniStatus.innerText="● 穩定中";
+        messageEl.innerText="● 正在穩定位置 "+step+"/8";
+        return;
+    }
+
+    miniStatus.innerText="● 人物追蹤";
+    if(!goodSize){
+        messageEl.innerText=ratio<0.88 ? "⬆ 靠近人物一點" : "⬇ 離人物遠一點";
+    }else if(!goodX){
+        messageEl.innerText=dx>0 ? "← 手機向左" : "→ 手機向右";
+    }else if(!goodY){
+        messageEl.innerText=dy>0 ? "↑ 稍微抬高" : "↓ 稍微降低";
+    }else{
+        messageEl.innerText="👤 保持完整全身在框內";
+    }
+}
+
+function handleMissingPerson(){
+    missingFrames++;
+    if(trackedPerson && missingFrames<=MAX_MISSING_FRAMES){
+        if(!completed) stableStartTime=null;
+        drawFullBodyNavigation();
+        miniStatus.innerText="● 追蹤保持";
+        if(!completed) messageEl.innerText="👤 暫時漏抓｜保持全身在畫面中";
+        return;
+    }
+    trackedPerson=null;
+    stableStartTime=null;
+    completed=false;
+    clearOverlay();
+    miniMode.innerText="👤 人像";
+    miniComposition.innerText="全身構圖";
+    miniStatus.innerText=personDetector ? "● 等待" : "載入人物模型…";
+    messageEl.innerText=personDetector ? "👤 請讓頭到腳完整進入畫面" : "👤 人物模型載入中，請稍候";
+}
+
+/* =========================================================
+   V6.5 PERSON FALLBACK
 ========================================================= */
 
 function chooseMainPerson(detections){
