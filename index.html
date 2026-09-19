@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.7.1｜多人環境人像導航版</title>
+<title>構圖導航 V6.7.1｜智慧構圖版</title>
 
 <style>
 
@@ -395,6 +395,10 @@ body.v671-fullscreen #v67ModeDrawer{
 }
 body.v671-fullscreen.v67-drawer-open #v67ModeDrawer{display:block;}
 body.v671-fullscreen.v67-drawer-open #v67QuickBar{display:none;}
+/* V6.7.1 智慧構圖：構圖法預設收起，AI 為主、手動為輔 */
+body.v671-smart #compositionRow{display:none !important;}
+body.v671-smart.manual-composition #compositionRow{display:flex !important;}
+#v671ManualBtn{width:100%;margin-top:8px;background:#171717;color:#bbb;border:1px solid #333;}
 body.v671-fullscreen #v67ModeHost #controls{display:block!important;background:transparent;padding:0;}
 body.v671-fullscreen #v67ModeHost #mainButton{margin:4px 0 8px;}
 body.v671-fullscreen #v67ModeHost #status{display:none;}
@@ -2374,7 +2378,7 @@ function environmentCountComplete(){
 }
 
 function installV67UI(){
-    document.body.classList.add("v67-minimal","v671-fullscreen");
+    document.body.classList.add("v67-minimal","v671-fullscreen","v671-smart");
 
     const modeBtn=document.getElementById("v67ModeBtn");
     const closeBtn=document.getElementById("v67CloseDrawer");
@@ -2386,6 +2390,7 @@ function installV67UI(){
     const drawer=document.getElementById("v67ModeDrawer");
     const cameraArea=document.getElementById("cameraArea");
     const controls=document.getElementById("controls");
+    const manualBtn=document.getElementById("v671ManualBtn");
 
     // V6.7.1：快捷列浮在取景畫面，不再另外佔一整排高度。
     if(cameraArea && quickBar) cameraArea.appendChild(quickBar);
@@ -2397,9 +2402,32 @@ function installV67UI(){
     if(modeBtn) modeBtn.onclick=()=>document.body.classList.add("v67-drawer-open");
     if(closeBtn) closeBtn.onclick=()=>document.body.classList.remove("v67-drawer-open");
 
+    if(manualBtn){
+        manualBtn.onclick=()=>{
+            const on=document.body.classList.toggle("manual-composition");
+            manualBtn.innerText=on ? "▴ 收起手動構圖" : "▾ 手動選擇構圖";
+        };
+    }
+
     if(startBtn){
         startBtn.onclick=()=>{
             document.body.classList.remove("v67-drawer-open");
+            document.body.classList.remove("manual-composition");
+            if(manualBtn) manualBtn.innerText="▾ 手動選擇構圖";
+
+            // 智慧構圖：一般模式沿用各場景推薦；人像由人物位置自動選中央/三分。
+            if(currentMode==="portrait"){
+                const w=overlay.clientWidth || window.innerWidth;
+                if(trackedFace && Math.abs(trackedFace.x-w/2)<w*.13){
+                    currentComposition="portraitCenter";
+                    selectComposition("portraitCenter");
+                    messageEl.innerText="✨ AI 建議：中央人像";
+                }else{
+                    currentComposition="portraitThirds";
+                    selectComposition("portraitThirds");
+                    messageEl.innerText="✨ AI 建議：三分人像";
+                }
+            }
             runComposition();
         };
     }
@@ -5179,13 +5207,14 @@ startCamera();
 
 <div id="v67QuickBar">
   <button class="v67QuickBtn" id="v67ModeBtn">⚙️ 模式</button>
-  <button class="v67QuickBtn" id="v67StartBtn">▶ 開始</button>
+  <button class="v67QuickBtn" id="v67StartBtn">✨ 智慧構圖</button>
   <button class="v67QuickBtn" id="v67CameraBtn">📷 後鏡</button>
   <button class="v67QuickBtn" id="v67ZoomBtn">1×</button>
 </div>
 <div id="v67ModeDrawer">
-  <div style="font-weight:800;margin-bottom:8px">選擇構圖模式</div>
+  <div style="font-weight:800;margin-bottom:8px">選擇拍攝模式</div>
   <div id="v67ModeHost"></div>
+  <button class="v67QuickBtn" id="v671ManualBtn">▾ 手動選擇構圖</button>
   <button class="v67QuickBtn" id="v67CloseDrawer" style="width:100%;margin-top:10px">完成</button>
 </div>
 
