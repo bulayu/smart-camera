@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.5.2.1</title>
+<title>構圖導航 V6.6｜環境人像導航版</title>
 
 <style>
 
@@ -348,7 +348,7 @@ body{
         </div>
 
         <div id="miniStatus">
-            V6.5.2.1
+            V6.6
         </div>
 
     </div>
@@ -358,7 +358,7 @@ body{
     </div>
 
     <div id="version">
-        V6.5.2.1
+        V6.6
     </div>
 
 </div>
@@ -495,7 +495,7 @@ body{
     </div>
 
     <div id="status">
-        V6.5.2.1｜黃框殘影修正版
+        V6.6｜環境人像導航版
     </div>
 
 </div>
@@ -505,7 +505,7 @@ body{
 
 /* =========================================================
 
-   構圖導航 V6.5.2.1
+   構圖導航 V6.6
 
    V6.4 主要修改：
 
@@ -624,7 +624,7 @@ let missingFrames=0;
 
 const MAX_MISSING_FRAMES=60;
 
-/* V6.5.2.1：短暫漏抓約 2 秒仍保留最後臉框，避免黃框閃爍 */
+/* V6.6：短暫漏抓約 2 秒仍保留最後臉框，避免黃框閃爍 */
 
 const SMOOTHING=0.72;
 
@@ -1305,7 +1305,7 @@ async function initFaceDetector(){
 
 
 /* =========================================================
-   V6.5.2.1 PERSON DETECTOR (BACKGROUND)
+   V6.6 PERSON DETECTOR (BACKGROUND)
 ========================================================= */
 
 async function initPersonDetectorInBackground(){
@@ -1617,7 +1617,8 @@ async function runComposition(){
         if(
             currentComposition!=="portraitThirds" &&
             currentComposition!=="portraitCenter" &&
-            currentComposition!=="fullbody"
+            currentComposition!=="fullbody" &&
+            currentComposition!=="environment"
         ){
             currentComposition="portraitThirds";
         }
@@ -1629,7 +1630,7 @@ async function runComposition(){
         miniComposition.innerText=
         currentComposition==="fullbody"
         ? "全身定位中"
-        : (currentComposition==="portraitCenter" ? "中央定位中" : "選擇位置中");
+        : (currentComposition==="environment" ? "環境人像定位中" : (currentComposition==="portraitCenter" ? "中央定位中" : "選擇位置中"));
 
 
         miniStatus.innerText=
@@ -1656,7 +1657,7 @@ async function runComposition(){
     ){
 
         messageEl.innerText=
-        "👉 V6.5.2.1 請先測試人像模式";
+        "👉 V6.6 請先測試人像模式";
 
 
         return;
@@ -1744,7 +1745,51 @@ function portraitLoop(){
 
     try{
 
-        // V6.5.2.1 全身構圖：直接以人物框導航，不依賴臉部位置。
+        // V6.6 環境人像：人物可站、坐、靠、斜躺；不要求頭到腳直立。
+        // 優先使用人物框；人物模型漏抓時，以臉部位置維持環境人像導航。
+        if(currentComposition==="environment"){
+            let person=null;
+            if(personDetector){
+                try{
+                    const personResult=personDetector.detectForVideo(video,performance.now());
+                    person=chooseMainPerson(personResult && personResult.detections ? personResult.detections : []);
+                }catch(personError){
+                    console.warn("Environment person detection error",personError);
+                }
+            }
+            if(person){
+                missingFrames=0;
+                lastPersonSeenAt=performance.now();
+                updateTrackedPerson(person);
+                drawEnvironmentNavigation();
+            }else{
+                let faceFallback=null;
+                if(faceDetector){
+                    try{
+                        const faceResult=faceDetector.detectForVideo(video,performance.now());
+                        if(faceResult && faceResult.detections && faceResult.detections.length){
+                            faceFallback=chooseMainFace(faceResult.detections);
+                        }
+                    }catch(faceError){
+                        console.warn("Environment face fallback error",faceError);
+                    }
+                }
+                if(faceFallback){
+                    missingFrames=0;
+                    lastPersonSeenAt=performance.now();
+                    updateTrackedEnvironmentFromFace(faceFallback);
+                    drawEnvironmentNavigation();
+                    miniStatus.innerText="● 臉部輔助追蹤";
+                }else{
+                    handleMissingEnvironmentPerson();
+                }
+            }
+            detecting=false;
+            requestAnimationFrame(portraitLoop);
+            return;
+        }
+
+        // V6.6 全身構圖：直接以人物框導航，不依賴臉部位置。
         if(currentComposition==="fullbody"){
             let person=null;
             if(personDetector){
@@ -1763,7 +1808,7 @@ function portraitLoop(){
                 updateTrackedPerson(person);
                 drawFullBodyNavigation();
             }else{
-                // V6.5.2.1：人物模型遠距漏抓時，立即嘗試用遠距臉部偵測維持全身追蹤。
+                // V6.6：人物模型遠距漏抓時，立即嘗試用遠距臉部偵測維持全身追蹤。
                 let faceFallback=null;
                 if(faceDetector){
                     try{
@@ -1973,7 +2018,7 @@ function chooseMainFace(
 
 
 /* =========================================================
-   V6.5.2.1 FULL BODY TRACKING
+   V6.6 FULL BODY TRACKING
 ========================================================= */
 
 function updateTrackedPerson(detection){
@@ -2042,7 +2087,7 @@ function drawFullBodyNavigation(){
     const w=overlay.clientWidth, h=overlay.clientHeight;
     const p=trackedPerson;
 
-    // V6.5.2.1：全身構圖改成「合理範圍」而不是要求人物貼滿綠框。
+    // V6.6：全身構圖改成「合理範圍」而不是要求人物貼滿綠框。
     // 建議視覺框約佔畫面 64% 高；實際人物高度 40%～78% 都視為合理距離。
     const targetX=w/2;
     const targetTop=h*.16;
@@ -2062,7 +2107,7 @@ function drawFullBodyNavigation(){
     ctx.fillText("建議人物範圍",Math.max(8,targetX-targetW/2),Math.max(20,targetTop-8));
     ctx.restore();
 
-    // 目前人物框。V6.5.2.1：限制繪圖座標在相機畫面附近，
+    // 目前人物框。V6.6：限制繪圖座標在相機畫面附近，
     // 避免遠距 fallback 產生異常尺寸時，在畫面底部留下大量黃色線條。
     const rawLeft=p.x-p.w/2;
     const rawTop=p.y-p.h/2;
@@ -2168,7 +2213,117 @@ function handleMissingPerson(){
 }
 
 /* =========================================================
-   V6.5.2.1 PERSON FALLBACK
+   V6.6 ENVIRONMENT PORTRAIT NAVIGATION
+   - 支援站姿、坐姿、靠姿、斜躺
+   - 不要求完整頭到腳
+   - 人物約佔畫面 22%～62%，保留環境資訊
+========================================================= */
+function updateTrackedEnvironmentFromFace(detection){
+    const b=detection && detection.boundingBox;
+    if(!b) return;
+    const center=videoPointToScreen(b.originX+b.width/2,b.originY+b.height/2);
+    const edge=videoPointToScreen(b.originX+b.width,b.originY+b.height);
+    const fw=Math.max(24,Math.abs(edge.x-center.x)*2);
+    const fh=Math.max(24,Math.abs(edge.y-center.y)*2);
+    const w=overlay.clientWidth,h=overlay.clientHeight;
+    // 環境人像只需要人物的大致區域，不把臉硬估成直立全身。
+    const ph=Math.min(h*.52,Math.max(h*.24,fh*3.4));
+    const pw=Math.min(w*.46,Math.max(fw*2.0,ph*.48));
+    const py=Math.min(h*.88,center.y+ph*.22);
+    const candidate={x:center.x,y:py,w:pw,h:ph,left:center.x-pw/2,top:py-ph/2};
+    if(!trackedPerson){ trackedPerson=candidate; return; }
+    const a=.70;
+    trackedPerson.x=trackedPerson.x*a+candidate.x*(1-a);
+    trackedPerson.y=trackedPerson.y*a+candidate.y*(1-a);
+    trackedPerson.w=trackedPerson.w*a+candidate.w*(1-a);
+    trackedPerson.h=trackedPerson.h*a+candidate.h*(1-a);
+    trackedPerson.left=trackedPerson.x-trackedPerson.w/2;
+    trackedPerson.top=trackedPerson.y-trackedPerson.h/2;
+}
+
+function drawEnvironmentNavigation(){
+    if(!trackedPerson) return;
+    clearOverlay();
+    const w=overlay.clientWidth,h=overlay.clientHeight,p=trackedPerson;
+
+    // 人物放在較接近的三分線，讓另一側保留更多環境。
+    // 第一次取得人物時，以目前所在半邊鎖定目標，避免左右跳動。
+    if(!lockedTargetSide || lockedTargetSide==="center"){
+        lockedTargetSide=p.x<=w/2 ? "left" : "right";
+    }
+    const targetX=lockedTargetSide==="left" ? w*.34 : w*.66;
+    const targetY=h*.47;
+
+    // 顯示環境人像安全區，而不是要求人物填滿固定框。
+    ctx.save();
+    ctx.strokeStyle="#2cff67"; ctx.lineWidth=3; ctx.setLineDash([10,8]);
+    ctx.strokeRect(w*.10,h*.12,w*.80,h*.72);
+    ctx.setLineDash([]);
+    ctx.font="bold 15px sans-serif"; ctx.fillStyle="#2cff67";
+    ctx.fillText("保留人物＋環境",w*.10,Math.max(20,h*.12-8));
+    ctx.beginPath(); ctx.arc(targetX,targetY,26,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+
+    const left=p.x-p.w/2,top=p.y-p.h/2,right=p.x+p.w/2,bottom=p.y+p.h/2;
+    if([left,top,right,bottom,p.w,p.h].every(Number.isFinite) && p.w>4 && p.h>8){
+        const dl=Math.max(1,left),dt=Math.max(1,top),dr=Math.min(w-1,right),db=Math.min(h-1,bottom);
+        if(dr>dl && db>dt){
+            ctx.save(); ctx.beginPath(); ctx.rect(0,0,w,h); ctx.clip();
+            ctx.strokeStyle=completed?"#2cff67":"#ffd400"; ctx.lineWidth=4;
+            ctx.strokeRect(dl,dt,dr-dl,db-dt); ctx.restore();
+        }
+    }
+
+    const ratio=p.h/h;
+    const dx=targetX-p.x,dy=targetY-p.y;
+    // 環境人像刻意容許人物較小，也不要求腳部可見。
+    const goodSize=ratio>=.22 && ratio<=.62;
+    const safe=top>=h*.03 && bottom<=h*.97 && left>=-w*.04 && right<=w*1.04;
+    const goodX=Math.abs(dx)<w*.12;
+    const goodY=Math.abs(dy)<h*.15;
+    const inside=goodSize && safe && goodX && goodY;
+
+    const now=performance.now(); let stableElapsed=0;
+    if(inside){
+        if(stableStartTime===null) stableStartTime=now;
+        stableElapsed=now-stableStartTime;
+        if(stableElapsed>=REQUIRED_STABLE_MS) completed=true;
+    }else if(!completed){ stableStartTime=null; }
+    if(completed && (!safe || ratio<.18 || ratio>.68 || Math.abs(dx)>w*.18 || Math.abs(dy)>h*.22)){
+        completed=false; stableStartTime=null;
+    }
+
+    miniMode.innerText="👤 人像"; miniComposition.innerText="環境人像";
+    if(completed){ miniStatus.innerText="✓ 完成"; messageEl.innerText="✓ 環境人像構圖完成"; return; }
+    if(inside){
+        const step=Math.min(8,Math.max(1,Math.floor(stableElapsed/REQUIRED_STABLE_MS*8)+1));
+        miniStatus.innerText="● 穩定中"; messageEl.innerText="● 正在穩定位置 "+step+"/8"; return;
+    }
+    miniStatus.innerText="● 人物追蹤";
+    if(!safe){ messageEl.innerText="↔ 保留人物周圍空間"; }
+    else if(!goodSize){ messageEl.innerText=ratio<.22 ? "⬆ 靠近人物一點｜仍保留環境" : "⬇ 離人物遠一點｜增加環境"; }
+    else if(!goodX){ messageEl.innerText=dx>0 ? "← 手機向左｜保留環境" : "→ 手機向右｜保留環境"; }
+    else if(!goodY){ messageEl.innerText=dy>0 ? "↑ 稍微抬高" : "↓ 稍微降低"; }
+    else messageEl.innerText="👤 人物與環境比例OK｜微調位置";
+}
+
+function handleMissingEnvironmentPerson(){
+    missingFrames++;
+    const elapsed=lastPersonSeenAt ? performance.now()-lastPersonSeenAt : Infinity;
+    if(trackedPerson && elapsed<=PERSON_HOLD_MS){
+        if(!completed) stableStartTime=null;
+        drawEnvironmentNavigation();
+        miniStatus.innerText="● 追蹤保持";
+        if(!completed) messageEl.innerText="👤 暫時漏抓｜保持人物與環境";
+        return;
+    }
+    trackedPerson=null; stableStartTime=null; completed=false; clearOverlay();
+    miniMode.innerText="👤 人像"; miniComposition.innerText="環境人像"; miniStatus.innerText="● 等待";
+    messageEl.innerText="👤 讓人物留在畫面中，不必站直或露出全身";
+}
+
+/* =========================================================
+   V6.6 PERSON FALLBACK
 ========================================================= */
 
 function chooseMainPerson(detections){
@@ -3634,7 +3789,7 @@ function drawPortraitNoFace(){
 ========================================================= */
 
 function clearOverlay(){
-    // V6.5.2.1：用實際 canvas 像素完整清除，避免 DPR/縮放後留下黃框殘影。
+    // V6.6：用實際 canvas 像素完整清除，避免 DPR/縮放後留下黃框殘影。
     ctx.save();
     ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0,0,overlay.width,overlay.height);
