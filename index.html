@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.6.1.1｜多人環境人像導航版</title>
+<title>構圖導航 V6.6.2.1｜多人環境人像導航版</title>
 
 <style>
 
@@ -315,6 +315,30 @@ body{
     opacity:.42;
 }
 
+
+/* ===== V6.6.2 極簡多人環境 UI ===== */
+body.environment-minimal #miniStatus{
+  font-size:13px;
+}
+body.environment-minimal #message{
+  left:50%;
+  transform:translateX(-50%);
+  width:auto;
+  max-width:82%;
+  min-width:0;
+  padding:12px 18px;
+  border-radius:18px;
+  font-size:18px;
+  white-space:nowrap;
+}
+body.environment-minimal .submodes{
+  gap:6px;
+}
+body.environment-minimal .submode{
+  padding:8px 12px;
+  font-size:14px;
+}
+
 </style>
 </head>
 
@@ -495,7 +519,7 @@ body{
     </div>
 
     <div id="status">
-        V6.6.1｜多人環境人像導航版
+        V6.6.2｜極簡多人環境版
     </div>
 
 </div>
@@ -505,7 +529,7 @@ body{
 
 /* =========================================================
 
-   構圖導航 V6.6.1
+   構圖導航 V6.6.2
 
    V6.4 主要修改：
 
@@ -616,7 +640,7 @@ let lastVideoTime=-1;
 
 let trackedFace=null;
 let trackedPerson=null;
-/* V6.6.1：環境人像多人群組追蹤 */
+/* V6.6.2：環境人像多人群組追蹤 */
 let trackedEnvironmentGroup=null;
 let environmentPersonCount=0;
 
@@ -1529,6 +1553,7 @@ function buildCompositionButtons(){
 ========================================================= */
 
 function selectComposition(id){
+    document.body.classList.toggle("environment-minimal", currentComposition==="environment");
 
     currentComposition=id;
 
@@ -1588,6 +1613,7 @@ function selectComposition(id){
 ========================================================= */
 
 async function runComposition(){
+    document.body.classList.toggle("environment-minimal", currentComposition==="environment");
 
     if(
         currentMode===
@@ -1663,7 +1689,7 @@ async function runComposition(){
     ){
 
         messageEl.innerText=
-        "👉 V6.6.1 請先測試人像模式";
+        "👉 V6.6.2 請先測試人像模式";
 
 
         return;
@@ -2228,7 +2254,7 @@ function handleMissingPerson(){
    - 人物約佔畫面 22%～62%，保留環境資訊
 ========================================================= */
 
-/* V6.6.1：保留畫面中的主要人物，並將多人合併成一個群組框。 */
+/* V6.6.2：保留畫面中的主要人物，並將多人合併成一個群組框。 */
 function chooseEnvironmentPeople(detections){
     const w=Math.max(1,video.videoWidth || 1);
     const h=Math.max(1,video.videoHeight || 1);
@@ -2320,70 +2346,99 @@ function updateTrackedEnvironmentFromFace(detection){
 }
 
 function drawEnvironmentNavigation(){
-    if(!trackedPerson) return;
     clearOverlay();
+    if(!trackedPerson) return;
+
     const w=overlay.clientWidth,h=overlay.clientHeight,p=trackedPerson;
     const isGroup=environmentPersonCount>=2 && trackedEnvironmentGroup;
+    const ctx=overlay.getContext("2d");
 
-    // 人物放在較接近的三分線，讓另一側保留更多環境。
-    // 第一次取得人物時，以目前所在半邊鎖定目標，避免左右跳動。
-    if(!lockedTargetSide || lockedTargetSide==="center"){
-        lockedTargetSide=p.x<=w/2 ? "left" : "right";
-    }
-    const targetX=lockedTargetSide==="left" ? w*.34 : w*.66;
-    const targetY=h*.47;
+    // 群組/人物實際範圍
+    const left=p.x-p.w/2, right=p.x+p.w/2;
+    const top=p.y-p.h/2, bottom=p.y+p.h/2;
 
-    // 顯示環境人像安全區，而不是要求人物填滿固定框。
-    ctx.save();
-    ctx.strokeStyle="#2cff67"; ctx.lineWidth=3; ctx.setLineDash([10,8]);
-    ctx.strokeRect(w*.10,h*.12,w*.80,h*.72);
-    ctx.setLineDash([]);
-    ctx.font="bold 15px sans-serif"; ctx.fillStyle="#2cff67";
-    ctx.fillText("保留人物＋環境",w*.10,Math.max(20,h*.12-8));
-    ctx.beginPath(); ctx.arc(targetX,targetY,26,0,Math.PI*2); ctx.stroke();
-    ctx.restore();
+    // V6.6.2 多人安全邊界：任何群組都不能太貼近畫面四周。
+    const safeX=w*.045;
+    const safeTop=h*.055;
+    const safeBottom=h*.055;
+    const safeEdges=left>safeX && right<w-safeX && top>safeTop && bottom<h-safeBottom;
 
-    const left=p.x-p.w/2,top=p.y-p.h/2,right=p.x+p.w/2,bottom=p.y+p.h/2;
-    if([left,top,right,bottom,p.w,p.h].every(Number.isFinite) && p.w>4 && p.h>8){
-        const dl=Math.max(1,left),dt=Math.max(1,top),dr=Math.min(w-1,right),db=Math.min(h-1,bottom);
-        if(dr>dl && db>dt){
-            ctx.save(); ctx.beginPath(); ctx.rect(0,0,w,h); ctx.clip();
-            ctx.strokeStyle=completed?"#2cff67":"#ffd400"; ctx.lineWidth=4;
-            ctx.strokeRect(dl,dt,dr-dl,db-dt); ctx.restore();
-        }
-    }
+    // 群組不可過度橫向分散；單人不套此限制。
+    const groupSpread=isGroup ? (p.w/w) : 0;
+    const spreadOK=!isGroup || groupSpread<=.82;
 
+    // 環境人像保留足夠環境，不要求人物填滿畫面。
     const ratio=p.h/h;
-    const dx=targetX-p.x,dy=targetY-p.y;
-    // 環境人像刻意容許人物較小，也不要求腳部可見。
-    const goodSize=isGroup ? (ratio>=.24 && ratio<=.76) : (ratio>=.22 && ratio<=.62);
-    const safe=top>=h*.03 && bottom<=h*.97 && left>=-w*.04 && right<=w*1.04;
+    const minRatio=isGroup?.24:.22;
+    const maxRatio=isGroup?.76:.62;
+    const goodSize=ratio>=minRatio && ratio<=maxRatio;
+
+    // 自動選擇較接近的左右環境位置；不再畫大型建議框。
+    const leftTarget=w*.40;
+    const rightTarget=w*.60;
+    const targetX=Math.abs(p.x-leftTarget)<=Math.abs(p.x-rightTarget)?leftTarget:rightTarget;
+    const targetY=h*.50;
+    const dx=targetX-p.x, dy=targetY-p.y;
     const goodX=Math.abs(dx)<w*(isGroup?.15:.12);
     const goodY=Math.abs(dy)<h*(isGroup?.17:.15);
-    const inside=goodSize && safe && goodX && goodY;
 
-    const now=performance.now(); let stableElapsed=0;
-    if(inside){
-        if(stableStartTime===null) stableStartTime=now;
-        stableElapsed=now-stableStartTime;
-        if(stableElapsed>=REQUIRED_STABLE_MS) completed=true;
-    }else if(!completed){ stableStartTime=null; }
-    if(completed && (!safe || ratio<.18 || ratio>.68 || Math.abs(dx)>w*.18 || Math.abs(dy)>h*.22)){
-        completed=false; stableStartTime=null;
+    const allGood=safeEdges && spreadOK && goodSize && goodX && goodY;
+
+    if(allGood){
+        if(!stableStartTime) stableStartTime=performance.now();
+        const elapsed=performance.now()-stableStartTime;
+        if(elapsed>=REQUIRED_STABLE_MS) completed=true;
+    }else{
+        stableStartTime=null;
+        completed=false;
     }
 
-    miniMode.innerText="👤 人像"; miniComposition.innerText=isGroup ? ("多人環境 "+environmentPersonCount+"人") : "環境人像";
-    if(completed){ miniStatus.innerText="✓ 完成"; messageEl.innerText=isGroup ? ("✓ "+environmentPersonCount+"人環境構圖完成") : "✓ 環境人像構圖完成"; return; }
-    if(inside){
-        const step=Math.min(8,Math.max(1,Math.floor(stableElapsed/REQUIRED_STABLE_MS*8)+1));
-        miniStatus.innerText="● 穩定中"; messageEl.innerText="● 正在穩定位置 "+step+"/8"; return;
+    // 極簡：只畫一個細群組框；完成後更淡。
+    ctx.save();
+    ctx.lineWidth=completed?2:3;
+    ctx.strokeStyle=completed?"rgba(0,255,102,.55)":"#ffd400";
+    ctx.setLineDash([]);
+    const bx=Math.max(2,left), by=Math.max(2,top);
+    const bw=Math.max(8,Math.min(w-4,right)-bx);
+    const bh=Math.max(8,Math.min(h-4,bottom)-by);
+    ctx.strokeRect(bx,by,bw,bh);
+
+    // 未完成時只顯示小目標點，不再顯示大圓圈/大虛線框。
+    if(!completed){
+        ctx.fillStyle="#00ff66";
+        ctx.beginPath();
+        ctx.arc(targetX,targetY,6,0,Math.PI*2);
+        ctx.fill();
     }
-    miniStatus.innerText="● 人物追蹤";
-    if(!safe){ messageEl.innerText="↔ 保留人物周圍空間"; }
-    else if(!goodSize){ const minRatio=isGroup?.24:.22; messageEl.innerText=ratio<minRatio ? "⬆ 靠近人物一點｜仍保留環境" : "⬇ 離人物遠一點｜增加環境"; }
-    else if(!goodX){ messageEl.innerText=dx>0 ? "← 手機向左｜保留環境" : "→ 手機向右｜保留環境"; }
-    else if(!goodY){ messageEl.innerText=dy>0 ? "↑ 稍微抬高" : "↓ 稍微降低"; }
-    else messageEl.innerText="👤 人物與環境比例OK｜微調位置";
+    ctx.restore();
+
+    miniMode.innerText="👤 人像";
+    miniComposition.innerText=isGroup ? ("環境 "+environmentPersonCount+"人") : "環境人像";
+
+    if(completed){
+        miniStatus.innerText="✓ 完成";
+        messageEl.innerText="✓ 構圖完成";
+        return;
+    }
+
+    miniStatus.innerText=isGroup ? ("● "+environmentPersonCount+"人追蹤") : "● 人物追蹤";
+
+    // 導航只留一句最重要的指令。
+    if(!safeEdges){
+        messageEl.innerText="↔ 人物離邊緣一點";
+    }else if(!spreadOK){
+        messageEl.innerText="↔ 人物靠近一些";
+    }else if(!goodSize){
+        messageEl.innerText=ratio<minRatio ? "↑ 靠近一點" : "↓ 退後一點";
+    }else if(!goodX){
+        messageEl.innerText=dx>0 ? "← 手機向左" : "→ 手機向右";
+    }else if(!goodY){
+        messageEl.innerText=dy>0 ? "↑ 稍微抬高" : "↓ 稍微降低";
+    }else{
+        const elapsed=stableStartTime ? performance.now()-stableStartTime : 0;
+        const step=Math.min(8,Math.max(1,Math.floor((elapsed/REQUIRED_STABLE_MS)*8)+1));
+        messageEl.innerText="● 穩定 "+step+"/8";
+    }
 }
 
 function handleMissingEnvironmentPerson(){
