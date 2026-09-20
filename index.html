@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.7.4.1｜螢幕座標硬鎖定版</title>
+<title>構圖導航 V6.7.4.2｜場景錨點追蹤版</title>
 
 <style>
 
@@ -409,20 +409,6 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
   body.v671-fullscreen #v67ModeDrawer{left:auto;width:min(430px,48vw);right:max(8px,env(safe-area-inset-right));top:8px;bottom:8px;max-height:none;}
 }
 
-
-/* V6.7.4.1：真正 DOM 螢幕座標硬鎖定目標，不參與 canvas 重繪 */
-#landscapeHardTargetV6741{
-  position:absolute; left:50%; top:42%; width:52px; height:52px;
-  transform:translate(-50%,-50%); z-index:18; pointer-events:none; display:none;
-  border:5px solid #00e676; border-radius:50%; box-sizing:border-box;
-  filter:drop-shadow(0 1px 2px rgba(0,0,0,.45));
-}
-#landscapeHardTargetV6741::before,#landscapeHardTargetV6741::after{
-  content:""; position:absolute; background:#00e676; left:50%; top:50%; transform:translate(-50%,-50%);
-}
-#landscapeHardTargetV6741::before{width:72px;height:3px;}
-#landscapeHardTargetV6741::after{width:3px;height:72px;}
-
 </style>
 </head>
 
@@ -438,8 +424,6 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </video>
 
     <canvas id="overlay"></canvas>
-
-    <div id="landscapeHardTargetV6741" aria-hidden="true"></div>
 
     <div id="miniInfo">
 
@@ -458,7 +442,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
         </div>
 
         <div id="miniStatus">
-            V6.7.4
+            V6.7.4.2
         </div>
 
     </div>
@@ -468,7 +452,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="version">
-        V6.7.4
+        V6.7.4.2
     </div>
 
 </div>
@@ -605,7 +589,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="status">
-        V6.7.4.1｜螢幕座標硬鎖定版
+        V6.7.4.2｜場景錨點追蹤版
     </div>
 
 </div>
@@ -615,7 +599,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
 
 /* =========================================================
 
-   構圖導航 V6.7.4.1｜螢幕座標硬鎖定版
+   構圖導航 V6.7.4.2｜場景錨點追蹤版
 
    V6.4 主要修改：
 
@@ -726,7 +710,7 @@ let lastVideoTime=-1;
 
 let trackedFace=null;
 let trackedPerson=null;
-let smartPortraitPerson=null; // V6.7.4 一般人像的人物整體框
+let smartPortraitPerson=null; // V6.7.4.2 一般人像的人物整體框
 let smartPortraitPersonSeenAt=0;
 /* V6.7：環境人像多人群組追蹤 */
 let trackedEnvironmentGroup=null;
@@ -1319,8 +1303,6 @@ async function changeCamera(mode){
 
 function resetTracking(){
 
-    landscapeNavigationV674=false;
-    hideLandscapeHardTargetV6741();
     trackedFace=null;
     trackedPerson=null;
     smartPortraitPerson=null;
@@ -1820,7 +1802,7 @@ async function runComposition(){
 
 
 /* =========================================================
-   V6.7.4.1 AUTO SMART COMPOSITION
+   V6.7.4.2 AUTO SMART COMPOSITION
    人物 + 風景全自動判斷
 ========================================================= */
 
@@ -2002,7 +1984,7 @@ async function runAutoSmartComposition(){
             drawComposition();
         }
     }catch(e){
-        console.warn("V6.7.4.1 auto smart error",e);
+        console.warn("V6.7.4.2 auto smart error",e);
         miniStatus.innerText="分析失敗";
         messageEl.innerText="⚠️ 請保持畫面穩定後再按一次智慧構圖";
     }finally{
@@ -2011,133 +1993,155 @@ async function runAutoSmartComposition(){
 }
 
 /* =========================================================
-   V6.7.4.1 LANDSCAPE SCREEN HARD LOCK NAVIGATION
-   綠圈 = 固定最佳構圖位置
-   黃點 = 目前偵測到的消失點
+   V6.7.4.2 SCENE ANCHOR TRACKING
+   綠圈 = 鎖在真實場景的錨點（會隨場景在螢幕內移動）
+   白色準星 = 固定構圖目標
+   黃線 = 以穩定後的場景錨點繪製，不再逐幀亂跳
 ========================================================= */
 let landscapeNavigationV674=false;
 let landscapeNavCompV674=null;
 let landscapeStableFramesV674=0;
-let landscapeLastVpV674=null;
 let landscapeMissV674=0;
-
-function showLandscapeHardTargetV6741(){
-    const el=document.getElementById("landscapeHardTargetV6741");
-    if(el) el.style.display="block";
-}
-function hideLandscapeHardTargetV6741(){
-    const el=document.getElementById("landscapeHardTargetV6741");
-    if(el) el.style.display="none";
-}
+let sceneAnchor6742=null;       // low-res 160x120 coordinates
+let sceneAnchorTemplate6742=null;
+let sceneAnchorReady6742=false;
+let sceneAnchorWarmup6742=[];
+let sceneAnchorLost6742=0;
+const ANCHOR_W6742=160, ANCHOR_H6742=120;
+const anchorCanvas6742=document.createElement('canvas');
+anchorCanvas6742.width=ANCHOR_W6742; anchorCanvas6742.height=ANCHOR_H6742;
+const anchorCtx6742=anchorCanvas6742.getContext('2d',{willReadFrequently:true});
 
 function startLandscapeNavigationV674(comp){
     landscapeNavigationV674=true;
-    showLandscapeHardTargetV6741();
     landscapeNavCompV674=comp;
     landscapeStableFramesV674=0;
-    landscapeLastVpV674=null;
     landscapeMissV674=0;
+    sceneAnchor6742=null;
+    sceneAnchorTemplate6742=null;
+    sceneAnchorReady6742=false;
+    sceneAnchorWarmup6742=[];
+    sceneAnchorLost6742=0;
     completed=false;
-    miniStatus.innerText="● 目標已鎖定";
+    miniStatus.innerText="● 鎖定場景中";
     requestAnimationFrame(landscapeNavigationLoopV674);
 }
 
 function landscapeTargetV674(){
-    // V6.7.4.1：導航數學直接讀取 DOM 固定靶心的螢幕位置。
-    // 綠圈不再由 canvas / 消失點 / 每幀分析結果決定。
-    const el=document.getElementById("landscapeHardTargetV6741");
-    const or=overlay.getBoundingClientRect();
-    if(el && el.style.display!=="none"){
-        const r=el.getBoundingClientRect();
-        return {x:(r.left+r.width/2)-or.left,y:(r.top+r.height/2)-or.top};
-    }
-    return {x:overlay.clientWidth*.50,y:overlay.clientHeight*.42};
-}
-
-function metricVpToScreenV674(m){
-    // sceneMetrics uses the full camera frame (160x120). Convert through the same
-    // object-fit:cover transform used by the preview so the live point follows scenery.
-    if(!m || !video.videoWidth || !video.videoHeight) return null;
-    return videoPointToScreen(
-        (m.vpX/160)*video.videoWidth,
-        (m.vpY/120)*video.videoHeight
-    );
-}
-
-function drawLandscapeNavigationV674(cur){
     const w=overlay.clientWidth, h=overlay.clientHeight;
-    const t=landscapeTargetV674();
-    clearOverlay();
+    return {x:w*.50,y:h*.42};
+}
 
-    // Current perspective structure: only 4 representative rays, not every detected line.
-    if(cur){
-        ctx.save();
-        ctx.strokeStyle="#ffd400";
-        ctx.fillStyle="#ffd400";
-        ctx.lineWidth=3;
-        ctx.globalAlpha=.88;
-        const starts=[[0,h*.78],[w*.18,h],[w*.82,h],[w,h*.78]];
-        ctx.beginPath();
-        for(const p of starts){ ctx.moveTo(p[0],p[1]); ctx.lineTo(cur.x,cur.y); }
-        ctx.stroke();
-        ctx.beginPath(); ctx.arc(cur.x,cur.y,8,0,Math.PI*2); ctx.fill();
-        ctx.restore();
+function lowToScreen6742(x,y){
+    if(!video.videoWidth || !video.videoHeight) return null;
+    return videoPointToScreen((x/ANCHOR_W6742)*video.videoWidth,(y/ANCHOR_H6742)*video.videoHeight);
+}
+
+function captureGray6742(){
+    try{ anchorCtx6742.drawImage(video,0,0,ANCHOR_W6742,ANCHOR_H6742); }catch(e){return null;}
+    const d=anchorCtx6742.getImageData(0,0,ANCHOR_W6742,ANCHOR_H6742).data;
+    const g=new Uint8Array(ANCHOR_W6742*ANCHOR_H6742);
+    for(let i=0,j=0;i<d.length;i+=4,j++) g[j]=(d[i]*77+d[i+1]*150+d[i+2]*29)>>8;
+    return g;
+}
+
+function makeTemplate6742(gray,cx,cy,r=7){
+    cx=Math.round(cx); cy=Math.round(cy);
+    if(cx-r<1||cy-r<1||cx+r>=ANCHOR_W6742-1||cy+r>=ANCHOR_H6742-1) return null;
+    const a=new Uint8Array((r*2+1)*(r*2+1)); let k=0;
+    for(let y=-r;y<=r;y++) for(let x=-r;x<=r;x++) a[k++]=gray[(cy+y)*ANCHOR_W6742+cx+x];
+    return {data:a,r};
+}
+
+function trackTemplate6742(gray,prev,tpl){
+    if(!gray||!prev||!tpl) return null;
+    const r=tpl.r, searchX=22, searchY=20;
+    let best=null,bestScore=1e18,second=1e18;
+    const minX=Math.max(r+1,Math.round(prev.x-searchX)), maxX=Math.min(ANCHOR_W6742-r-2,Math.round(prev.x+searchX));
+    const minY=Math.max(r+1,Math.round(prev.y-searchY)), maxY=Math.min(ANCHOR_H6742-r-2,Math.round(prev.y+searchY));
+    for(let cy=minY;cy<=maxY;cy+=2){
+      for(let cx=minX;cx<=maxX;cx+=2){
+        let sad=0,k=0;
+        for(let y=-r;y<=r;y+=2) for(let x=-r;x<=r;x+=2){ sad+=Math.abs(gray[(cy+y)*ANCHOR_W6742+cx+x]-tpl.data[(y+r)*(r*2+1)+(x+r)]); k++; }
+        sad/=k;
+        if(sad<bestScore){second=bestScore;bestScore=sad;best={x:cx,y:cy,score:sad};}
+        else if(sad<second) second=sad;
+      }
     }
+    if(!best || bestScore>38) return null;
+    return best;
+}
 
-    // V6.7.4.1：綠色目標改由獨立 DOM 疊層顯示。
-    // Canvas 只畫會隨場景變化的黃色「目前消失點＋透視線」。
+function drawLandscapeNavigationV674(anchorScreen){
+    const w=overlay.clientWidth,h=overlay.clientHeight,t=landscapeTargetV674();
+    clearOverlay();
+    if(anchorScreen){
+      // Stable perspective rays follow the locked scene anchor only.
+      ctx.save(); ctx.strokeStyle="#ffd400"; ctx.lineWidth=3; ctx.globalAlpha=.82;
+      const starts=[[0,h*.80],[w*.20,h],[w*.80,h],[w,h*.80]];
+      ctx.beginPath(); for(const p of starts){ctx.moveTo(p[0],p[1]);ctx.lineTo(anchorScreen.x,anchorScreen.y);} ctx.stroke();
+      // Green = real-world scene anchor.
+      ctx.strokeStyle="#00e676";ctx.lineWidth=5;ctx.beginPath();ctx.arc(anchorScreen.x,anchorScreen.y,19,0,Math.PI*2);ctx.stroke();
+      ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(anchorScreen.x-27,anchorScreen.y);ctx.lineTo(anchorScreen.x+27,anchorScreen.y);ctx.moveTo(anchorScreen.x,anchorScreen.y-27);ctx.lineTo(anchorScreen.x,anchorScreen.y+27);ctx.stroke();ctx.restore();
+    }
+    // White fixed target = where the scene anchor should be placed for composition.
+    ctx.save();ctx.strokeStyle="rgba(255,255,255,.95)";ctx.lineWidth=3;ctx.setLineDash([7,6]);
+    ctx.beginPath();ctx.arc(t.x,t.y,14,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(t.x-20,t.y);ctx.lineTo(t.x+20,t.y);ctx.moveTo(t.x,t.y-20);ctx.lineTo(t.x,t.y+20);ctx.stroke();ctx.restore();
 }
 
 function landscapeNavigationLoopV674(){
     if(!landscapeNavigationV674 || !(currentComposition==="perspective" || currentComposition==="leading")) return;
-    if(video.readyState<2){ requestAnimationFrame(landscapeNavigationLoopV674); return; }
+    if(video.readyState<2){requestAnimationFrame(landscapeNavigationLoopV674);return;}
+    const gray=captureGray6742();
 
-    const m=sceneMetricsV673();
-    let cur=null;
-    // Reject weak/noisy VP frames instead of making the live point jump randomly.
-    if(m && m.vpCount>12 && m.vpCluster>=2){
-        cur=metricVpToScreenV674(m);
-        if(cur && Number.isFinite(cur.x) && Number.isFinite(cur.y)){
-            if(landscapeLastVpV674){
-                cur.x=landscapeLastVpV674.x*.72+cur.x*.28;
-                cur.y=landscapeLastVpV674.y*.72+cur.y*.28;
-            }
-            landscapeLastVpV674=cur;
-            landscapeMissV674=0;
+    if(!sceneAnchorReady6742){
+      const m=sceneMetricsV673();
+      if(m && m.vpCount>14 && m.vpCluster>=2){
+        sceneAnchorWarmup6742.push({x:m.vpX,y:m.vpY});
+        if(sceneAnchorWarmup6742.length>10) sceneAnchorWarmup6742.shift();
+      }
+      if(sceneAnchorWarmup6742.length>=7){
+        const xs=sceneAnchorWarmup6742.map(p=>p.x).sort((a,b)=>a-b), ys=sceneAnchorWarmup6742.map(p=>p.y).sort((a,b)=>a-b);
+        const mid=Math.floor(xs.length/2), candidate={x:xs[mid],y:ys[mid]};
+        const spread=Math.hypot(xs[xs.length-1]-xs[0],ys[ys.length-1]-ys[0]);
+        if(spread<28 && gray){
+          const tpl=makeTemplate6742(gray,candidate.x,candidate.y,7);
+          if(tpl){sceneAnchor6742=candidate;sceneAnchorTemplate6742=tpl;sceneAnchorReady6742=true;miniStatus.innerText="● 場景已鎖定";}
         }
-    }
-    if(!cur){
-        landscapeMissV674++;
-        if(landscapeMissV674<=8) cur=landscapeLastVpV674;
+      }
+      drawLandscapeNavigationV674(sceneAnchor6742?lowToScreen6742(sceneAnchor6742.x,sceneAnchor6742.y):null);
+      messageEl.innerText="保持畫面穩定｜正在鎖定場景";
+      requestAnimationFrame(landscapeNavigationLoopV674);return;
     }
 
+    const found=trackTemplate6742(gray,sceneAnchor6742,sceneAnchorTemplate6742);
+    if(found){
+      // Smooth, but keep following the same physical scene patch.
+      sceneAnchor6742={x:sceneAnchor6742.x*.58+found.x*.42,y:sceneAnchor6742.y*.58+found.y*.42};
+      sceneAnchorLost6742=0;
+    }else sceneAnchorLost6742++;
+
+    const cur=lowToScreen6742(sceneAnchor6742.x,sceneAnchor6742.y);
     drawLandscapeNavigationV674(cur);
-    const t=landscapeTargetV674();
-    if(!cur){
-        landscapeStableFramesV674=0;
-        miniStatus.innerText="● 尋找消失點";
-        messageEl.innerText="保持畫面穩定｜尋找透視線";
-        requestAnimationFrame(landscapeNavigationLoopV674); return;
+    if(sceneAnchorLost6742>10){
+      landscapeStableFramesV674=0; miniStatus.innerText="● 錨點暫時遺失"; messageEl.innerText="慢慢移回原畫面｜重新抓取場景";
+      requestAnimationFrame(landscapeNavigationLoopV674);return;
     }
 
-    const dx=t.x-cur.x, dy=t.y-cur.y;
-    const tolX=overlay.clientWidth*.055, tolY=overlay.clientHeight*.05;
-    const goodX=Math.abs(dx)<=tolX, goodY=Math.abs(dy)<=tolY;
-
-    if(goodX && goodY){
-        landscapeStableFramesV674++;
-        const n=Math.min(8,landscapeStableFramesV674);
-        miniStatus.innerText="● 穩定位置 "+n+"/8";
-        messageEl.innerText=n>=8 ? "✓ 構圖完成" : "保持目前位置";
-        if(n>=8) completed=true;
+    const t=landscapeTargetV674(), dx=t.x-cur.x, dy=t.y-cur.y;
+    const tolX=overlay.clientWidth*.05,tolY=overlay.clientHeight*.045;
+    const goodX=Math.abs(dx)<=tolX,goodY=Math.abs(dy)<=tolY;
+    if(goodX&&goodY){
+      landscapeStableFramesV674++;const n=Math.min(8,landscapeStableFramesV674);
+      miniStatus.innerText="● 穩定位置 "+n+"/8";messageEl.innerText=n>=8?"✓ 構圖完成":"保持目前位置";if(n>=8)completed=true;
     }else{
-        landscapeStableFramesV674=0; completed=false;
-        let htxt="", vtxt="";
-        // To move a scene feature right on screen, pan the phone left; vice versa.
-        if(!goodX) htxt=dx>0 ? "← 手機向左" : "→ 手機向右";
-        if(!goodY) vtxt=dy>0 ? "↑ 稍微抬高" : "↓ 稍微降低";
-        messageEl.innerText=[htxt,vtxt].filter(Boolean).join("　");
-        miniStatus.innerText="● 對準綠圈";
+      landscapeStableFramesV674=0;completed=false;
+      let a=[];
+      // Describe movement of the GREEN scene anchor itself, avoiding camera-direction ambiguity.
+      if(!goodX)a.push(dx>0?"🟢 往右":"🟢 往左");
+      if(!goodY)a.push(dy>0?"🟢 往下":"🟢 往上");
+      messageEl.innerText=a.join("　")+"｜對準白色準星";miniStatus.innerText="● 場景追蹤中";
     }
     requestAnimationFrame(landscapeNavigationLoopV674);
 }
@@ -2329,7 +2333,7 @@ function portraitLoop(){
                 detection
             );
 
-            // V6.7.4：一般人像同時取得人物整體框，避免只看臉。
+            // V6.7.4.2：一般人像同時取得人物整體框，避免只看臉。
             if(personDetector){
                 try{
                     const pr=personDetector.detectForVideo(video,performance.now());
@@ -2767,7 +2771,7 @@ function installV67UI(){
             document.body.classList.remove("manual-composition");
             if(manualBtn) manualBtn.innerText="▾ 手動選擇構圖";
 
-            // V6.7.4：人像由「人物整體重心 + 臉 + 留白 + 人物大小」智慧選擇。
+            // V6.7.4.2：人像由「人物整體重心 + 臉 + 留白 + 人物大小」智慧選擇。
             if(currentMode==="portrait"){
                 const picked=chooseSmartPortraitComposition();
                 currentComposition=picked;
@@ -3518,7 +3522,7 @@ function videoPointToScreen(
 
 
 /* =========================================================
-   V6.7.4 SMART PORTRAIT WEIGHT
+   V6.7.4.2 SMART PORTRAIT WEIGHT
    臉 + 人物整體重心 + 人物大小 + 左右留白
 ========================================================= */
 function updateSmartPortraitPerson(detection){
@@ -4203,7 +4207,7 @@ function drawPortraitNavigation(){
 
     let vertical="";
 
-    // V6.7.4：臉已到位但人物重心/大小/留白未到位時，不提早完成。
+    // V6.7.4.2：臉已到位但人物重心/大小/留白未到位時，不提早完成。
     if(goodX && goodY && smartMetrics){
         if(!sizeGood){
             messageEl.innerText=smartMetrics.heightRatio<.28 ? "⬆ 靠近人物一點" : "⬇ 離人物遠一點";
