@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.7.2｜人物重心智慧判斷版</title>
+<title>構圖導航 V6.7.3｜人物＋風景全自動智慧構圖版</title>
 
 <style>
 
@@ -442,7 +442,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
         </div>
 
         <div id="miniStatus">
-            V6.7.2
+            V6.7.3
         </div>
 
     </div>
@@ -452,7 +452,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="version">
-        V6.7.2
+        V6.7.3
     </div>
 
 </div>
@@ -589,7 +589,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="status">
-        V6.7.2｜人物重心智慧判斷版
+        V6.7.3｜人物＋風景全自動智慧構圖版
     </div>
 
 </div>
@@ -599,7 +599,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
 
 /* =========================================================
 
-   構圖導航 V6.7.2｜人物重心智慧判斷版
+   構圖導航 V6.7.3｜人物＋風景全自動智慧構圖版
 
    V6.4 主要修改：
 
@@ -710,7 +710,7 @@ let lastVideoTime=-1;
 
 let trackedFace=null;
 let trackedPerson=null;
-let smartPortraitPerson=null; // V6.7.2 一般人像的人物整體框
+let smartPortraitPerson=null; // V6.7.3 一般人像的人物整體框
 let smartPortraitPersonSeenAt=0;
 /* V6.7：環境人像多人群組追蹤 */
 let trackedEnvironmentGroup=null;
@@ -1504,7 +1504,7 @@ function selectMode(
 
 
         miniStatus.innerText=
-        "V6.4";
+        "● 待分析";
 
 
         mainButton.innerText=
@@ -1512,7 +1512,7 @@ function selectMode(
 
 
         messageEl.innerText=
-        "👉 目前可測試人像構圖導航";
+        "✨ 按智慧構圖，AI 自動判斷人物或風景";
 
 
         return;
@@ -1776,13 +1776,8 @@ async function runComposition(){
         currentMode===
         "auto"
     ){
-
-        messageEl.innerText=
-        "👉 V6.7 請先測試人像模式";
-
-
+        await runAutoSmartComposition();
         return;
-
     }
 
 
@@ -1801,6 +1796,194 @@ async function runComposition(){
 
 }
 
+
+
+/* =========================================================
+   V6.7.3 AUTO SMART COMPOSITION
+   人物 + 風景全自動判斷
+========================================================= */
+
+let autoSmartBusy=false;
+let autoSmartToken=0;
+const autoSceneCanvas=document.createElement("canvas");
+const autoSceneCtx=autoSceneCanvas.getContext("2d",{willReadFrequently:true});
+
+function sleepV673(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+async function ensurePersonDetectorV673(){
+    const ok=await initFaceDetector();
+    if(!ok) return false;
+    if(personDetector) return true;
+    initPersonDetectorInBackground();
+    const start=performance.now();
+    while(!personDetector && personDetectorLoading && performance.now()-start<2600){
+        await sleepV673(80);
+    }
+    return !!personDetector;
+}
+
+function detectPersonV673(){
+    if(!personDetector || video.readyState<2) return null;
+    try{
+        const r=personDetector.detectForVideo(video,performance.now());
+        return chooseMainPerson(r?.detections||[]);
+    }catch(e){ return null; }
+}
+
+function sceneMetricsV673(){
+    const W=160,H=120;
+    autoSceneCanvas.width=W; autoSceneCanvas.height=H;
+    try{ autoSceneCtx.drawImage(video,0,0,W,H); }catch(e){ return null; }
+    const d=autoSceneCtx.getImageData(0,0,W,H).data;
+    const g=new Float32Array(W*H);
+    for(let i=0,j=0;i<d.length;i+=4,j++) g[j]=.299*d[i]+.587*d[i+1]+.114*d[i+2];
+
+    let diag=0, vert=0, horiz=0, total=0, sx=0, sy=0, sw=0;
+    const lines=[];
+    for(let y=2;y<H-2;y+=2){
+        for(let x=2;x<W-2;x+=2){
+            const gx=(g[y*W+x+1]-g[y*W+x-1]);
+            const gy=(g[(y+1)*W+x]-g[(y-1)*W+x]);
+            const mag=Math.hypot(gx,gy);
+            if(mag<34) continue;
+            total++;
+            sw+=mag; sx+=x*mag; sy+=y*mag;
+            // edge tangent is perpendicular to gradient
+            const tx=-gy, ty=gx;
+            const a=Math.abs(Math.atan2(ty,tx)*180/Math.PI);
+            const aa=a>90?180-a:a;
+            if(aa<18) horiz++;
+            else if(aa>72) vert++;
+            else { diag++; if(lines.length<260) lines.push({x,y,tx,ty,mag}); }
+        }
+    }
+
+    // Pair diagonal edge tangents and find plausible intersections (vanishing points).
+    const pts=[];
+    for(let i=0;i<lines.length;i+=3){
+        const A=lines[i];
+        for(let j=i+5;j<lines.length;j+=7){
+            const B=lines[j];
+            const den=A.tx*B.ty-A.ty*B.tx;
+            if(Math.abs(den)<35) continue;
+            const dx=B.x-A.x, dy=B.y-A.y;
+            const t=(dx*B.ty-dy*B.tx)/den;
+            const ix=A.x+t*A.tx, iy=A.y+t*A.ty;
+            if(ix>-W*.15 && ix<W*1.15 && iy>-H*.15 && iy<H*.78) pts.push([ix,iy]);
+            if(pts.length>500) break;
+        }
+        if(pts.length>500) break;
+    }
+    let cluster=0,vx=W/2,vy=H*.4;
+    if(pts.length){
+        const bins=new Map();
+        for(const [x,y] of pts){
+            const bx=Math.round(x/12), by=Math.round(y/10), k=bx+','+by;
+            bins.set(k,(bins.get(k)||0)+1);
+        }
+        let bestK=null;
+        for(const [k,n] of bins) if(n>cluster){cluster=n;bestK=k;}
+        if(bestK){ const [bx,by]=bestK.split(',').map(Number); vx=bx*12;vy=by*10; }
+    }
+
+    // approximate left/right visual balance
+    let diff=0,base=0;
+    for(let y=0;y<H;y+=3){
+        for(let x=0;x<W/2;x+=3){
+            const a=g[y*W+x], b=g[y*W+(W-1-x)];
+            diff+=Math.abs(a-b); base+=255;
+        }
+    }
+    const symmetry=1-Math.min(1,diff/Math.max(1,base)*2.25);
+    return {
+        edgeCount:total,
+        diagRatio:diag/Math.max(1,total),
+        vertRatio:vert/Math.max(1,total),
+        horizRatio:horiz/Math.max(1,total),
+        salX:sw?sx/sw:W/2,
+        salY:sw?sy/sw:H/2,
+        vpCount:pts.length,
+        vpCluster:cluster,
+        vpX:vx, vpY:vy,
+        symmetry
+    };
+}
+
+function classifySceneV673(m){
+    if(!m) return {mode:"landscape",comp:"thirds",label:"三分法",score:0};
+    const centeredVP=Math.abs(m.vpX-80)<42;
+    const strongPerspective=m.vpCount>18 && m.vpCluster>=3 && m.diagRatio>.12 && centeredVP;
+    if(strongPerspective) return {mode:"street",comp:"perspective",label:"單點透視",score:m.vpCluster};
+    if(m.diagRatio>.24 && m.edgeCount>90) return {mode:"street",comp:"leading",label:"引導線",score:m.diagRatio*10};
+    if(m.symmetry>.76 && m.edgeCount>80) return {mode:"street",comp:"symmetry",label:"對稱",score:m.symmetry*10};
+    const nx=m.salX/160;
+    if(Math.abs(nx-.5)<.09) return {mode:"landscape",comp:"center",label:"中央構圖",score:5};
+    if(Math.abs(nx-.382)<.10 || Math.abs(nx-.618)<.10) return {mode:"landscape",comp:"golden",label:"黃金比例",score:4};
+    return {mode:"landscape",comp:"thirds",label:"三分法",score:3};
+}
+
+async function runAutoSmartComposition(){
+    if(autoSmartBusy) return;
+    autoSmartBusy=true;
+    const token=++autoSmartToken;
+    portraitNavigation=false;
+    resetTracking();
+    miniStatus.innerText="● AI 分析中";
+    miniComposition.innerText="辨識場景";
+    messageEl.innerText="✨ AI 正在判斷人物或風景…";
+
+    try{
+        await ensurePersonDetectorV673();
+        if(token!==autoSmartToken) return;
+
+        // First priority: a confidently detected person.
+        let person=null;
+        for(let i=0;i<4 && !person;i++){
+            person=detectPersonV673();
+            if(!person) await sleepV673(90);
+        }
+        if(person){
+            const btn=document.querySelector('.modeBtn[data-mode="portrait"]');
+            selectMode("portrait",btn);
+            updateTrackedPerson(person);
+            smartPortraitPerson=trackedPerson;
+            const picked=chooseSmartPortraitComposition();
+            currentComposition=picked;
+            selectComposition(picked);
+            miniStatus.innerText="● 人物已辨識";
+            messageEl.innerText=picked==="portraitCenter"?"✨ AI：中央人像":(picked==="environment"?"✨ AI：環境人像":"✨ AI：三分人像");
+            await runComposition();
+            return;
+        }
+
+        // No person: vote across several frames so one noisy frame does not change the result.
+        const votes=[];
+        for(let i=0;i<7;i++){
+            const m=sceneMetricsV673();
+            if(m) votes.push(classifySceneV673(m));
+            await sleepV673(70);
+        }
+        if(!votes.length) throw new Error("scene analysis unavailable");
+        const tally=new Map();
+        for(const v of votes){
+            const k=v.mode+":"+v.comp;
+            const old=tally.get(k)||{n:0,score:0,v}; old.n++;old.score+=v.score;tally.set(k,old);
+        }
+        const best=[...tally.values()].sort((a,b)=>(b.n-a.n)||(b.score-a.score))[0].v;
+        const btn=document.querySelector('.modeBtn[data-mode="'+best.mode+'"]');
+        selectMode(best.mode,btn);
+        selectComposition(best.comp);
+        miniStatus.innerText="● AI 已選擇";
+        messageEl.innerText="✨ AI 建議："+best.label;
+        drawComposition();
+    }catch(e){
+        console.warn("V6.7.3 auto smart error",e);
+        miniStatus.innerText="分析失敗";
+        messageEl.innerText="⚠️ 請保持畫面穩定後再按一次智慧構圖";
+    }finally{
+        autoSmartBusy=false;
+    }
+}
 
 /* =========================================================
    PORTRAIT LOOP
@@ -1989,7 +2172,7 @@ function portraitLoop(){
                 detection
             );
 
-            // V6.7.2：一般人像同時取得人物整體框，避免只看臉。
+            // V6.7.3：一般人像同時取得人物整體框，避免只看臉。
             if(personDetector){
                 try{
                     const pr=personDetector.detectForVideo(video,performance.now());
@@ -2427,7 +2610,7 @@ function installV67UI(){
             document.body.classList.remove("manual-composition");
             if(manualBtn) manualBtn.innerText="▾ 手動選擇構圖";
 
-            // V6.7.2：人像由「人物整體重心 + 臉 + 留白 + 人物大小」智慧選擇。
+            // V6.7.3：人像由「人物整體重心 + 臉 + 留白 + 人物大小」智慧選擇。
             if(currentMode==="portrait"){
                 const picked=chooseSmartPortraitComposition();
                 currentComposition=picked;
@@ -3178,7 +3361,7 @@ function videoPointToScreen(
 
 
 /* =========================================================
-   V6.7.2 SMART PORTRAIT WEIGHT
+   V6.7.3 SMART PORTRAIT WEIGHT
    臉 + 人物整體重心 + 人物大小 + 左右留白
 ========================================================= */
 function updateSmartPortraitPerson(detection){
@@ -3863,7 +4046,7 @@ function drawPortraitNavigation(){
 
     let vertical="";
 
-    // V6.7.2：臉已到位但人物重心/大小/留白未到位時，不提早完成。
+    // V6.7.3：臉已到位但人物重心/大小/留白未到位時，不提早完成。
     if(goodX && goodY && smartMetrics){
         if(!sizeGood){
             messageEl.innerText=smartMetrics.heightRatio<.28 ? "⬆ 靠近人物一點" : "⬇ 離人物遠一點";
