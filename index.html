@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.7.3｜人物＋風景全自動智慧構圖版</title>
+<title>構圖導航 V6.7.4｜風景目標鎖定導航版</title>
 
 <style>
 
@@ -442,7 +442,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
         </div>
 
         <div id="miniStatus">
-            V6.7.3
+            V6.7.4
         </div>
 
     </div>
@@ -452,7 +452,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="version">
-        V6.7.3
+        V6.7.4
     </div>
 
 </div>
@@ -589,7 +589,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="status">
-        V6.7.3｜人物＋風景全自動智慧構圖版
+        V6.7.4｜風景目標鎖定導航版
     </div>
 
 </div>
@@ -599,7 +599,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
 
 /* =========================================================
 
-   構圖導航 V6.7.3｜人物＋風景全自動智慧構圖版
+   構圖導航 V6.7.4｜風景目標鎖定導航版
 
    V6.4 主要修改：
 
@@ -710,7 +710,7 @@ let lastVideoTime=-1;
 
 let trackedFace=null;
 let trackedPerson=null;
-let smartPortraitPerson=null; // V6.7.3 一般人像的人物整體框
+let smartPortraitPerson=null; // V6.7.4 一般人像的人物整體框
 let smartPortraitPersonSeenAt=0;
 /* V6.7：環境人像多人群組追蹤 */
 let trackedEnvironmentGroup=null;
@@ -1288,6 +1288,7 @@ async function changeCamera(mode){
     facing=mode;
 
     portraitNavigation=false;
+    landscapeNavigationV674=false;
 
     resetTracking();
 
@@ -1457,6 +1458,7 @@ function selectMode(
 ){
 
     portraitNavigation=false;
+    landscapeNavigationV674=false;
 
     resetTracking();
 
@@ -1702,6 +1704,7 @@ function selectComposition(id){
 ========================================================= */
 
 async function runComposition(){
+    landscapeNavigationV674=false;
     document.body.classList.toggle("environment-minimal", currentComposition==="environment");
 
     if(
@@ -1799,7 +1802,7 @@ async function runComposition(){
 
 
 /* =========================================================
-   V6.7.3 AUTO SMART COMPOSITION
+   V6.7.4 AUTO SMART COMPOSITION
    人物 + 風景全自動判斷
 ========================================================= */
 
@@ -1975,14 +1978,143 @@ async function runAutoSmartComposition(){
         selectComposition(best.comp);
         miniStatus.innerText="● AI 已選擇";
         messageEl.innerText="✨ AI 建議："+best.label;
-        drawComposition();
+        if(best.comp==="perspective" || best.comp==="leading"){
+            startLandscapeNavigationV674(best.comp);
+        }else{
+            drawComposition();
+        }
     }catch(e){
-        console.warn("V6.7.3 auto smart error",e);
+        console.warn("V6.7.4 auto smart error",e);
         miniStatus.innerText="分析失敗";
         messageEl.innerText="⚠️ 請保持畫面穩定後再按一次智慧構圖";
     }finally{
         autoSmartBusy=false;
     }
+}
+
+/* =========================================================
+   V6.7.4 LANDSCAPE TARGET LOCK NAVIGATION
+   綠圈 = 固定最佳構圖位置
+   黃點 = 目前偵測到的消失點
+========================================================= */
+let landscapeNavigationV674=false;
+let landscapeNavCompV674=null;
+let landscapeStableFramesV674=0;
+let landscapeLastVpV674=null;
+let landscapeMissV674=0;
+
+function startLandscapeNavigationV674(comp){
+    landscapeNavigationV674=true;
+    landscapeNavCompV674=comp;
+    landscapeStableFramesV674=0;
+    landscapeLastVpV674=null;
+    landscapeMissV674=0;
+    completed=false;
+    miniStatus.innerText="● 目標已鎖定";
+    requestAnimationFrame(landscapeNavigationLoopV674);
+}
+
+function landscapeTargetV674(){
+    const w=overlay.clientWidth, h=overlay.clientHeight;
+    // 單點透視與引導線：固定在畫面中央略偏上，手機移動時絕不跟著景物跑。
+    return {x:w*.50,y:h*.42};
+}
+
+function metricVpToScreenV674(m){
+    // sceneMetrics uses the full camera frame (160x120). Convert through the same
+    // object-fit:cover transform used by the preview so the live point follows scenery.
+    if(!m || !video.videoWidth || !video.videoHeight) return null;
+    return videoPointToScreen(
+        (m.vpX/160)*video.videoWidth,
+        (m.vpY/120)*video.videoHeight
+    );
+}
+
+function drawLandscapeNavigationV674(cur){
+    const w=overlay.clientWidth, h=overlay.clientHeight;
+    const t=landscapeTargetV674();
+    clearOverlay();
+
+    // Current perspective structure: only 4 representative rays, not every detected line.
+    if(cur){
+        ctx.save();
+        ctx.strokeStyle="#ffd400";
+        ctx.fillStyle="#ffd400";
+        ctx.lineWidth=3;
+        ctx.globalAlpha=.88;
+        const starts=[[0,h*.78],[w*.18,h],[w*.82,h],[w,h*.78]];
+        ctx.beginPath();
+        for(const p of starts){ ctx.moveTo(p[0],p[1]); ctx.lineTo(cur.x,cur.y); }
+        ctx.stroke();
+        ctx.beginPath(); ctx.arc(cur.x,cur.y,8,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+
+    // Fixed AI target. This must never move during one navigation session.
+    ctx.save();
+    ctx.strokeStyle="#00e676";
+    ctx.lineWidth=5;
+    ctx.beginPath(); ctx.arc(t.x,t.y,19,0,Math.PI*2); ctx.stroke();
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(t.x-27,t.y);ctx.lineTo(t.x+27,t.y);
+    ctx.moveTo(t.x,t.y-27);ctx.lineTo(t.x,t.y+27);
+    ctx.stroke();
+    ctx.restore();
+}
+
+function landscapeNavigationLoopV674(){
+    if(!landscapeNavigationV674 || !(currentComposition==="perspective" || currentComposition==="leading")) return;
+    if(video.readyState<2){ requestAnimationFrame(landscapeNavigationLoopV674); return; }
+
+    const m=sceneMetricsV673();
+    let cur=null;
+    // Reject weak/noisy VP frames instead of making the live point jump randomly.
+    if(m && m.vpCount>12 && m.vpCluster>=2){
+        cur=metricVpToScreenV674(m);
+        if(cur && Number.isFinite(cur.x) && Number.isFinite(cur.y)){
+            if(landscapeLastVpV674){
+                cur.x=landscapeLastVpV674.x*.72+cur.x*.28;
+                cur.y=landscapeLastVpV674.y*.72+cur.y*.28;
+            }
+            landscapeLastVpV674=cur;
+            landscapeMissV674=0;
+        }
+    }
+    if(!cur){
+        landscapeMissV674++;
+        if(landscapeMissV674<=8) cur=landscapeLastVpV674;
+    }
+
+    drawLandscapeNavigationV674(cur);
+    const t=landscapeTargetV674();
+    if(!cur){
+        landscapeStableFramesV674=0;
+        miniStatus.innerText="● 尋找消失點";
+        messageEl.innerText="保持畫面穩定｜尋找透視線";
+        requestAnimationFrame(landscapeNavigationLoopV674); return;
+    }
+
+    const dx=t.x-cur.x, dy=t.y-cur.y;
+    const tolX=overlay.clientWidth*.055, tolY=overlay.clientHeight*.05;
+    const goodX=Math.abs(dx)<=tolX, goodY=Math.abs(dy)<=tolY;
+
+    if(goodX && goodY){
+        landscapeStableFramesV674++;
+        const n=Math.min(8,landscapeStableFramesV674);
+        miniStatus.innerText="● 穩定位置 "+n+"/8";
+        messageEl.innerText=n>=8 ? "✓ 構圖完成" : "保持目前位置";
+        if(n>=8) completed=true;
+    }else{
+        landscapeStableFramesV674=0; completed=false;
+        let htxt="", vtxt="";
+        // To move a scene feature right on screen, pan the phone left; vice versa.
+        if(!goodX) htxt=dx>0 ? "← 手機向左" : "→ 手機向右";
+        if(!goodY) vtxt=dy>0 ? "↑ 稍微抬高" : "↓ 稍微降低";
+        messageEl.innerText=[htxt,vtxt].filter(Boolean).join("　");
+        miniStatus.innerText="● 對準綠圈";
+    }
+    requestAnimationFrame(landscapeNavigationLoopV674);
 }
 
 /* =========================================================
@@ -2172,7 +2304,7 @@ function portraitLoop(){
                 detection
             );
 
-            // V6.7.3：一般人像同時取得人物整體框，避免只看臉。
+            // V6.7.4：一般人像同時取得人物整體框，避免只看臉。
             if(personDetector){
                 try{
                     const pr=personDetector.detectForVideo(video,performance.now());
@@ -2610,7 +2742,7 @@ function installV67UI(){
             document.body.classList.remove("manual-composition");
             if(manualBtn) manualBtn.innerText="▾ 手動選擇構圖";
 
-            // V6.7.3：人像由「人物整體重心 + 臉 + 留白 + 人物大小」智慧選擇。
+            // V6.7.4：人像由「人物整體重心 + 臉 + 留白 + 人物大小」智慧選擇。
             if(currentMode==="portrait"){
                 const picked=chooseSmartPortraitComposition();
                 currentComposition=picked;
@@ -3361,7 +3493,7 @@ function videoPointToScreen(
 
 
 /* =========================================================
-   V6.7.3 SMART PORTRAIT WEIGHT
+   V6.7.4 SMART PORTRAIT WEIGHT
    臉 + 人物整體重心 + 人物大小 + 左右留白
 ========================================================= */
 function updateSmartPortraitPerson(detection){
@@ -4046,7 +4178,7 @@ function drawPortraitNavigation(){
 
     let vertical="";
 
-    // V6.7.3：臉已到位但人物重心/大小/留白未到位時，不提早完成。
+    // V6.7.4：臉已到位但人物重心/大小/留白未到位時，不提早完成。
     if(goodX && goodY && smartMetrics){
         if(!sizeGood){
             messageEl.innerText=smartMetrics.heightRatio<.28 ? "⬆ 靠近人物一點" : "⬇ 離人物遠一點";
