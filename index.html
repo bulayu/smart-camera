@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V7.3.1｜AI綠框決策修正版</title>
+<title>構圖導航 V7.3.2｜構圖差異決策版</title>
 
 <style>
 
@@ -438,7 +438,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
         </div>
 
         <div id="miniStatus">
-            V7.3.1
+            V7.3.2
         </div>
 
     </div>
@@ -448,7 +448,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="version">
-        V7.3.1
+        V7.3.2
     </div>
 
 </div>
@@ -585,7 +585,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="status">
-        V7.3.1｜AI綠框決策修正版
+        V7.3.2｜構圖差異決策版
     </div>
 
 </div>
@@ -1496,7 +1496,7 @@ function selectMode(
 
 
         miniStatus.innerText=
-        "V7.3.1";
+        "V7.3.2";
 
 
         mainButton.innerText=
@@ -5213,7 +5213,7 @@ function analyzeScene(g){
     const i=y*TW+x;
     const e=Math.abs(g[i+1]-g[i-1])+Math.abs(g[i+TW]-g[i-TW]);
     if(e<30)continue;
-    // V7.3.1：不再偏袒畫面中央，讓左/中/右真正參與決策
+    // V7.3.2：不再偏袒畫面中央，讓左/中/右真正參與決策
     const vertical=1-Math.min(.35,Math.abs(y-TH*.52)/(TH*.52)*.22);
     const w=e*vertical;
     sx+=x*w; sy+=y*w; sw+=w;
@@ -5224,26 +5224,46 @@ function analyzeScene(g){
 }
 function chooseTarget(a){
   const E=a.E, total=E[0]+E[1]+E[2]||1;
-  const shares=E.map(v=>v/total), max=Math.max(...shares), min=Math.min(...shares);
-  let idx=shares.indexOf(max), x=.5, name='中央構圖';
-  // 中央只有在中央能量真的佔優，或三區非常接近時才成立
-  const balanced=(max-min)<.055;
-  if(!balanced && idx===0){x=.333;name='左三分';}
-  else if(!balanced && idx===2){x=.667;name='右三分';}
-  else if(idx===1 && shares[1] > Math.max(shares[0],shares[2])*1.10){x=.5;name='中央構圖';}
-  else if(a.x<.47){x=.333;name='左三分';}
-  else if(a.x>.53){x=.667;name='右三分';}
-  else {x=.5;name='中央構圖';}
-  decisionInfo={label:name,xPct:Math.round(a.x*100),energy:shares.map(v=>Math.round(v*100))};
-  return{x,y:.50,name};
+  const shares=E.map(v=>v/total);
+  const candidates=[
+    {x:.333,name:'左三分'},
+    {x:.500,name:'中央構圖'},
+    {x:.667,name:'右三分'}
+  ];
+  // V7.3.2：先判斷「目前位置」與三個標準構圖位置的差異，
+  // 不再用「主視覺在哪邊，就把綠框放同一邊」的舊規則。
+  // 中央構圖只有畫面中央能量明顯較強時才加分；左右三分則依主視覺距離評估。
+  const centerDominant=shares[1] > Math.max(shares[0],shares[2])*1.13;
+  const scored=candidates.map(c=>{
+    let score=Math.abs(a.x-c.x);
+    if(c.x===.5){
+      score += centerDominant ? -.055 : .035;
+    }else{
+      // 非對稱場景稍微偏好三分法，但不強迫跨到另一側。
+      const side=c.x<.5?0:2;
+      score -= Math.max(0,shares[side]-shares[1])*.10;
+    }
+    return {...c,score};
+  }).sort((u,v)=>u.score-v.score);
+  let best=scored[0];
+  const currentDist=Math.abs(a.x-best.x);
+  const alreadyGood=currentDist<.055;
+  decisionInfo={
+    label:best.name,
+    xPct:Math.round(a.x*100),
+    energy:shares.map(v=>Math.round(v*100)),
+    alreadyGood,
+    deltaPct:Math.round(currentDist*100)
+  };
+  return{x:best.x,y:.50,name:best.name,alreadyGood};
 }
 function acquire(g){const a=analyzeScene(g);pos={x:a.x,y:a.y};let cx=Math.round(pos.x*TW),cy=Math.round(pos.y*TH);cx=Math.max(R,Math.min(TW-R-1,cx));cy=Math.max(R,Math.min(TH-R-1,cy));tpl=makeTpl(g,cx,cy);target=chooseTarget(a);tracking=true;lost=0;}
 function search(g,cx,cy,range,step){let best=null;for(let y=Math.max(R,cy-range);y<=Math.min(TH-R-1,cy+range);y+=step)for(let x=Math.max(R,cx-range);x<=Math.min(TW-R-1,cx+range);x+=step){const sc=score(g,x,y);if(!best||sc<best.s)best={x,y,s:sc};}return best;}
 function track(g){let cx=Math.round(pos.x*TW),cy=Math.round(pos.y*TH);let best=search(g,cx,cy,24,2);if((!best||best.s>=44)&&lost>=2)best=search(g,TW>>1,TH>>1,Math.max(TW,TH),3);if(best&&best.s<48){pos.x=.62*pos.x+.38*(best.x/TW);pos.y=.62*pos.y+.38*(best.y/TH);tracking=true;lost=0;}else{lost++;tracking=false;}}
 function rr(c,x,y,w,h,r){c.beginPath();if(c.roundRect)c.roundRect(x,y,w,h,r);else c.rect(x,y,w,h);c.stroke();}
 function inside(w,h){return tracking&&Math.abs(target.x-pos.x)<.065&&Math.abs(target.y-pos.y)<.055;}
-function freeze(){frozen=true;active=true;tracking=true;badge.textContent='✓ 構圖完成｜可以拍照';draw();}
-function draw(){if(!ctx||!overlay)return;const w=overlay.clientWidth,h=overlay.clientHeight;ctx.clearRect(0,0,w,h);if(!active)return;const bw=Math.min(w*.34,190),bh=Math.min(h*.28,260),gx=target.x*w,gy=target.y*h,px=pos.x*w,py=pos.y*h;ctx.save();ctx.lineWidth=4;ctx.font='700 16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';ctx.textAlign='center';ctx.strokeStyle='#25ff72';ctx.setLineDash([12,10]);rr(ctx,gx-bw/2,gy-bh/2,bw,bh,8);ctx.setLineDash([]);ctx.fillStyle='#25ff72';ctx.fillText('AI 建議位置｜'+target.name,gx,gy-bh/2-12);ctx.strokeStyle='#fff';rr(ctx,px-bw/2,py-bh/2,bw,bh,8);ctx.fillStyle='#fff';ctx.fillText(frozen?'目前位置｜已鎖定':(tracking?'目前位置':'目前位置｜重新搜尋中'),px,py-bh/2-12);if(!frozen){if(tracking){const dx=target.x-pos.x,dy=target.y-pos.y;let t=[];if(Math.abs(dx)>.05)t.push(dx>0?'→':'←');if(Math.abs(dy)>.045)t.push(dy>0?'↓':'↑');badge.textContent=t.length?('AI：'+decisionInfo.label+'｜主視覺 X='+decisionInfo.xPct+'%｜白框往 '+t.join(' ')):'AI：'+decisionInfo.label+'｜主視覺 X='+decisionInfo.xPct+'%｜✓ 對準中';}else badge.textContent=lost<12?'重新搜尋目前位置…':'追蹤暫失｜再按智慧構圖重新開始';}ctx.restore();}
+function freeze(msg='✓ 構圖完成｜可以拍照'){frozen=true;active=true;tracking=true;badge.textContent=msg;draw();}
+function draw(){if(!ctx||!overlay)return;const w=overlay.clientWidth,h=overlay.clientHeight;ctx.clearRect(0,0,w,h);if(!active)return;const bw=Math.min(w*.34,190),bh=Math.min(h*.28,260),gx=target.x*w,gy=target.y*h,px=pos.x*w,py=pos.y*h;ctx.save();ctx.lineWidth=4;ctx.font='700 16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';ctx.textAlign='center';ctx.strokeStyle='#25ff72';ctx.setLineDash([12,10]);rr(ctx,gx-bw/2,gy-bh/2,bw,bh,8);ctx.setLineDash([]);ctx.fillStyle='#25ff72';ctx.fillText('AI 建議位置｜'+target.name,gx,gy-bh/2-12);ctx.strokeStyle='#fff';rr(ctx,px-bw/2,py-bh/2,bw,bh,8);ctx.fillStyle='#fff';ctx.fillText(frozen?'目前位置｜已鎖定':(tracking?'目前位置':'目前位置｜重新搜尋中'),px,py-bh/2-12);if(!frozen){if(tracking){const dx=target.x-pos.x,dy=target.y-pos.y;let t=[];if(Math.abs(dx)>.05)t.push(dx>0?'→':'←');if(Math.abs(dy)>.045)t.push(dy>0?'↓':'↑');badge.textContent=t.length?('AI：'+decisionInfo.label+'｜目前 X='+decisionInfo.xPct+'%｜差 '+decisionInfo.deltaPct+'%｜白框往 '+t.join(' ')):'AI：'+decisionInfo.label+'｜目前 X='+decisionInfo.xPct+'%｜✓ 對準中';}else badge.textContent=lost<12?'重新搜尋目前位置…':'追蹤暫失｜再按智慧構圖重新開始';}ctx.restore();}
 function loop(){if(active&&!frozen){const g=gray();if(g&&tpl){track(g);if(inside(overlay.clientWidth,overlay.clientHeight)){freeze();return;}draw();}}requestAnimationFrame(loop);}
 function start(){
   const token=++analysisToken;
@@ -5255,7 +5275,9 @@ function start(){
     const g=gray(); active=true;
     if(g){
       acquire(g);
-      badge.textContent='AI：'+decisionInfo.label+'｜主視覺 X='+decisionInfo.xPct+'%';
+      badge.textContent='AI：'+decisionInfo.label+'｜目前 X='+decisionInfo.xPct+'%｜差 '+decisionInfo.deltaPct+'%';
+      draw();
+      if(target.alreadyGood){freeze('✓ 目前構圖已合適｜可以拍照');return;}
     }else{
       pos={x:.5,y:.52}; target={x:.5,y:.50,name:'中央構圖'};
       decisionInfo={label:'中央構圖',xPct:50,energy:[0,0,0]};
@@ -5264,7 +5286,7 @@ function start(){
     draw();
   },140);
 }
-function init(){video=document.getElementById('video');area=document.getElementById('cameraArea');if(!video||!area)return;overlay=document.createElement('canvas');overlay.id='v73Overlay';badge=document.createElement('div');badge.id='v73Badge';area.style.position='relative';area.appendChild(overlay);area.appendChild(badge);ctx=overlay.getContext('2d');fit();addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,250));const quick=document.getElementById('v67StartBtn');if(quick){quick.onclick=(e)=>{e.preventDefault();e.stopPropagation();start();};quick.textContent='✨ 智慧構圖';}const main=document.getElementById('mainButton');if(main){main.removeAttribute('onclick');main.onclick=(e)=>{e.preventDefault();e.stopPropagation();start();};main.textContent='✨ 智慧構圖';}const st=document.getElementById('status');if(st)st.textContent='V7.3.1｜AI綠框決策修正版';loop();}
+function init(){video=document.getElementById('video');area=document.getElementById('cameraArea');if(!video||!area)return;overlay=document.createElement('canvas');overlay.id='v73Overlay';badge=document.createElement('div');badge.id='v73Badge';area.style.position='relative';area.appendChild(overlay);area.appendChild(badge);ctx=overlay.getContext('2d');fit();addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,250));const quick=document.getElementById('v67StartBtn');if(quick){quick.onclick=(e)=>{e.preventDefault();e.stopPropagation();start();};quick.textContent='✨ 智慧構圖';}const main=document.getElementById('mainButton');if(main){main.removeAttribute('onclick');main.onclick=(e)=>{e.preventDefault();e.stopPropagation();start();};main.textContent='✨ 智慧構圖';}const st=document.getElementById('status');if(st)st.textContent='V7.3.2｜構圖差異決策版';loop();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,0));else setTimeout(init,0);
 })();
 </script>
