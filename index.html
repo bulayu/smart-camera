@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.7.4.6｜主透視共識版</title>
+<title>構圖導航 V7.0｜AI智慧構圖模板版</title>
 
 <style>
 
@@ -409,6 +409,14 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
   body.v671-fullscreen #v67ModeDrawer{left:auto;width:min(430px,48vw);right:max(8px,env(safe-area-inset-right));top:8px;bottom:8px;max-height:none;}
 }
 
+
+/* V7.0 AI智慧構圖模板：AI只做簡單場景判斷，使用者照模板對齊 */
+#v7TemplateStrip{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);z-index:25;display:none;gap:7px;max-width:92vw;padding:6px 8px;border-radius:18px;background:rgba(12,12,12,.58);backdrop-filter:blur(10px);overflow-x:auto;white-space:nowrap}
+body.v7-template-ready #v7TemplateStrip{display:flex}
+.v7TemplateCard{border:1px solid rgba(255,255,255,.24);background:rgba(35,35,35,.82);color:#fff;border-radius:13px;padding:7px 10px;font-size:12px;font-weight:800;min-width:76px}
+.v7TemplateCard.active{background:rgba(255,255,255,.94);color:#111;border-color:#fff}
+@media (orientation:landscape){#v7TemplateStrip{bottom:62px;left:12px;transform:none;max-width:52vw}}
+
 </style>
 </head>
 
@@ -442,7 +450,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
         </div>
 
         <div id="miniStatus">
-            V6.7.4.6
+            V7.0
         </div>
 
     </div>
@@ -452,7 +460,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="version">
-        V6.7.4.6
+        V7.0
     </div>
 
 </div>
@@ -589,7 +597,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="status">
-        V6.7.4.6｜主透視共識版
+        V7.0｜AI智慧構圖模板版
     </div>
 
 </div>
@@ -599,7 +607,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
 
 /* =========================================================
 
-   構圖導航 V6.7.4.6｜主透視共識版
+   構圖導航 V7.0｜AI智慧構圖模板版
 
    V6.4 主要修改：
 
@@ -710,7 +718,7 @@ let lastVideoTime=-1;
 
 let trackedFace=null;
 let trackedPerson=null;
-let smartPortraitPerson=null; // V6.7.4.6 一般人像的人物整體框
+let smartPortraitPerson=null; // V7.0 一般人像的人物整體框
 let smartPortraitPersonSeenAt=0;
 /* V6.7：環境人像多人群組追蹤 */
 let trackedEnvironmentGroup=null;
@@ -1328,7 +1336,7 @@ function resetTracking(){
 
     lastVideoTime=-1;
 
-    // V6.7.4.6：完整解除上一輪風景導航與場景錨點。
+    // V7.0：完整解除上一輪風景導航與場景錨點。
     landscapeNavigationV674=false;
     landscapeNavCompV674=null;
     landscapeStableFramesV674=0;
@@ -1814,7 +1822,7 @@ async function runComposition(){
 
 
 /* =========================================================
-   V6.7.4.6 AUTO SMART COMPOSITION
+   V7.0 AUTO SMART COMPOSITION
    人物 + 風景全自動判斷
 ========================================================= */
 
@@ -1855,113 +1863,81 @@ function sceneMetricsV673(){
 
     let diag=0, vert=0, horiz=0, total=0, sx=0, sy=0, sw=0;
     const lines=[];
-    // V6.7.4.6：每個強邊緣視為「局部直線證據」。不再只用交點數量決定消失點，
-    // 而是讓不同畫面區域、不同角度的線共同投票。
-    for(let y=3;y<H-3;y+=2){
-        for(let x=3;x<W-3;x+=2){
+    for(let y=2;y<H-2;y+=2){
+        for(let x=2;x<W-2;x+=2){
             const gx=(g[y*W+x+1]-g[y*W+x-1]);
             const gy=(g[(y+1)*W+x]-g[(y-1)*W+x]);
             const mag=Math.hypot(gx,gy);
-            if(mag<36) continue;
-            total++; sw+=mag; sx+=x*mag; sy+=y*mag;
+            if(mag<34) continue;
+            total++;
+            sw+=mag; sx+=x*mag; sy+=y*mag;
+            // edge tangent is perpendicular to gradient
             const tx=-gy, ty=gx;
-            const len=Math.hypot(tx,ty)||1, ux=tx/len, uy=ty/len;
-            const a=Math.abs(Math.atan2(uy,ux)*180/Math.PI), aa=a>90?180-a:a;
-            if(aa<16) horiz++; else if(aa>74) vert++; else diag++;
-            // 純水平/純垂直線通常是窗框、門框、格柵；保留統計但不讓它們主導透視點。
-            if(aa>=12 && aa<=78 && lines.length<420){
-                lines.push({x,y,ux,uy,mag,region:(x<W*.42?0:(x>W*.58?2:1)) + (y>H*.55?3:0)});
-            }
+            const a=Math.abs(Math.atan2(ty,tx)*180/Math.PI);
+            const aa=a>90?180-a:a;
+            if(aa<18) horiz++;
+            else if(aa>72) vert++;
+            else { diag++; if(lines.length<260) lines.push({x,y,tx,ty,mag}); }
         }
     }
 
-    function intersect(A,B){
-        const den=A.ux*B.uy-A.uy*B.ux;
-        if(Math.abs(den)<.20) return null; // 太平行，不可靠
-        const dx=B.x-A.x,dy=B.y-A.y;
-        const t=(dx*B.uy-dy*B.ux)/den;
-        return {x:A.x+t*A.ux,y:A.y+t*A.uy};
-    }
-    function lineDist(L,x,y){ return Math.abs((x-L.x)*L.uy-(y-L.y)*L.ux); }
-
-    // 先產生候選交點。要求兩條線來源位置有距離，避免同一個窗框/樹枝局部自己投票。
-    const candidates=[];
-    for(let i=0;i<lines.length;i+=4){
+    // Pair diagonal edge tangents and find plausible intersections (vanishing points).
+    const pts=[];
+    for(let i=0;i<lines.length;i+=3){
         const A=lines[i];
-        for(let j=i+9;j<lines.length;j+=11){
+        for(let j=i+5;j<lines.length;j+=7){
             const B=lines[j];
-            if(Math.hypot(A.x-B.x,A.y-B.y)<30) continue;
-            const p=intersect(A,B); if(!p) continue;
-            if(p.x<-W*.08||p.x>W*1.08||p.y<-H*.05||p.y>H*.82) continue;
-            candidates.push(p);
-            if(candidates.length>=260) break;
+            const den=A.tx*B.ty-A.ty*B.tx;
+            if(Math.abs(den)<35) continue;
+            const dx=B.x-A.x, dy=B.y-A.y;
+            const t=(dx*B.ty-dy*B.tx)/den;
+            const ix=A.x+t*A.tx, iy=A.y+t*A.ty;
+            if(ix>-W*.15 && ix<W*1.15 && iy>-H*.15 && iy<H*.78) pts.push([ix,iy]);
+            if(pts.length>500) break;
         }
-        if(candidates.length>=260) break;
+        if(pts.length>500) break;
+    }
+    let cluster=0,vx=W/2,vy=H*.4;
+    if(pts.length){
+        const bins=new Map();
+        for(const [x,y] of pts){
+            const bx=Math.round(x/12), by=Math.round(y/10), k=bx+','+by;
+            bins.set(k,(bins.get(k)||0)+1);
+        }
+        let bestK=null;
+        for(const [k,n] of bins) if(n>cluster){cluster=n;bestK=k;}
+        if(bestK){ const [bx,by]=bestK.split(',').map(Number); vx=bx*12;vy=by*10; }
     }
 
-    // 對每個候選點計算「共識分數」：支持線數 + 左/中/右與上/下區域多樣性 + 角度多樣性。
-    // 同時對畫面極端角落加懲罰，避免單側窗框/樹枝把綠點拉到左上或右上。
-    let best={score:0,x:W/2,y:H*.43,support:[],regions:0};
-    for(let ci=0;ci<candidates.length;ci+=2){
-        const p=candidates[ci];
-        let score=0; const support=[]; const regs=new Set(); const angBins=new Set();
-        for(let k=0;k<lines.length;k+=2){
-            const L=lines[k], dist=lineDist(L,p.x,p.y);
-            if(dist>3.3) continue;
-            // 線段方向必須大致指向候選消失點，而且來源不能離候選太近。
-            const vx=p.x-L.x,vy=p.y-L.y,vl=Math.hypot(vx,vy); if(vl<18) continue;
-            const align=Math.abs((vx/vl)*L.ux+(vy/vl)*L.uy); if(align<.965) continue;
-            const wgt=Math.min(2.2,L.mag/55) * (1-dist/4.0);
-            score+=wgt; support.push(L); regs.add(L.region);
-            const ang=Math.atan2(L.uy,L.ux); angBins.add(Math.round(ang/.22));
-        }
-        if(support.length<5) continue;
-        const regionBonus=1+Math.min(.55,(regs.size-1)*.10);
-        const angleBonus=1+Math.min(.35,(angBins.size-1)*.06);
-        // 中央區不是硬限制，只是極端邊角需要更強證據。
-        const nx=Math.abs(p.x-W/2)/(W/2), ny=Math.abs(p.y-H*.43)/(H*.57);
-        let prior=1;
-        if(nx>.72) prior*=.55; else if(nx>.55) prior*=.78;
-        if(p.y<H*.12) prior*=.55;
-        if(p.y>H*.72) prior*=.78;
-        const finalScore=score*regionBonus*angleBonus*prior;
-        if(finalScore>best.score) best={score:finalScore,x:p.x,y:p.y,support,regions:regs.size};
-    }
-
-    // 從真正支持最佳消失點的線中，挑 2~4 條「分散且長方向明確」的代表線給黃線顯示。
-    const guideLines=[];
-    if(best.support.length){
-        const pool=best.support.slice().sort((a,b)=>b.mag-a.mag);
-        const chosen=[];
-        for(const L of pool){
-            const angle=Math.atan2(L.uy,L.ux);
-            if(chosen.some(C=>Math.abs(C.x-L.x)<18 && Math.abs(C.y-L.y)<14 && Math.abs(Math.sin(angle-C.angle))<.18)) continue;
-            // 從來源點沿反方向延伸到畫面邊緣附近，顯示的是實際支持線，不再用假造四條線。
-            chosen.push({...L,angle});
-            if(chosen.length>=4) break;
-        }
-        for(const L of chosen) guideLines.push({x:L.x,y:L.y});
-    }
-
+    // approximate left/right visual balance
     let diff=0,base=0;
-    for(let y=0;y<H;y+=3) for(let x=0;x<W/2;x+=3){
-        const a=g[y*W+x], b=g[y*W+(W-1-x)]; diff+=Math.abs(a-b); base+=255;
+    for(let y=0;y<H;y+=3){
+        for(let x=0;x<W/2;x+=3){
+            const a=g[y*W+x], b=g[y*W+(W-1-x)];
+            diff+=Math.abs(a-b); base+=255;
+        }
     }
     const symmetry=1-Math.min(1,diff/Math.max(1,base)*2.25);
     return {
-        edgeCount:total, diagRatio:diag/Math.max(1,total), vertRatio:vert/Math.max(1,total), horizRatio:horiz/Math.max(1,total),
-        salX:sw?sx/sw:W/2, salY:sw?sy/sw:H/2,
-        vpCount:candidates.length, vpCluster:best.score, vpX:best.x, vpY:best.y,
-        vpSupport:best.support.length, vpRegions:best.regions, guideLines,
+        edgeCount:total,
+        diagRatio:diag/Math.max(1,total),
+        vertRatio:vert/Math.max(1,total),
+        horizRatio:horiz/Math.max(1,total),
+        salX:sw?sx/sw:W/2,
+        salY:sw?sy/sw:H/2,
+        vpCount:pts.length,
+        vpCluster:cluster,
+        vpX:vx, vpY:vy,
         symmetry
     };
 }
+
 function classifySceneV673(m){
     if(!m) return {mode:"landscape",comp:"thirds",label:"三分法",score:0};
-    const strongPerspective=m.vpSupport>=6 && m.vpRegions>=2 && m.vpCluster>=5.5;
+    const centeredVP=Math.abs(m.vpX-80)<42;
+    const strongPerspective=m.vpCount>18 && m.vpCluster>=3 && m.diagRatio>.12 && centeredVP;
     if(strongPerspective) return {mode:"street",comp:"perspective",label:"單點透視",score:m.vpCluster};
-    const strongLeading=m.vpSupport>=5 && m.vpRegions>=2 && m.vpCluster>=4.0;
-    if(strongLeading || (m.diagRatio>.26 && m.edgeCount>100)) return {mode:"street",comp:"leading",label:"引導線",score:Math.max(m.vpCluster,m.diagRatio*10)};
+    if(m.diagRatio>.24 && m.edgeCount>90) return {mode:"street",comp:"leading",label:"引導線",score:m.diagRatio*10};
     if(m.symmetry>.76 && m.edgeCount>80) return {mode:"street",comp:"symmetry",label:"對稱",score:m.symmetry*10};
     const nx=m.salX/160;
     if(Math.abs(nx-.5)<.09) return {mode:"landscape",comp:"center",label:"中央構圖",score:5};
@@ -2028,7 +2004,7 @@ async function runAutoSmartComposition(){
             drawComposition();
         }
     }catch(e){
-        console.warn("V6.7.4.6 auto smart error",e);
+        console.warn("V7.0 auto smart error",e);
         miniStatus.innerText="分析失敗";
         messageEl.innerText="⚠️ 請保持畫面穩定後再按一次智慧構圖";
     }finally{
@@ -2037,7 +2013,7 @@ async function runAutoSmartComposition(){
 }
 
 /* =========================================================
-   V6.7.4.6 SCENE ANCHOR TRACKING
+   V7.0 SCENE ANCHOR TRACKING
    綠圈 = 鎖在真實場景的錨點（會隨場景在螢幕內移動）
    白色準星 = 固定構圖目標
    黃線 = 以穩定後的場景錨點繪製，不再逐幀亂跳
@@ -2052,7 +2028,7 @@ let sceneAnchorTemplate6742=null;
 let sceneAnchorReady6742=false;
 let sceneAnchorWarmup6742=[];
 let sceneAnchorLost6742=0;
-// V6.7.4.6：顯示用錨點與整組引導線鎖定。偵測可以微動，但畫面不跟著每幀抖動。
+// V7.0：顯示用錨點與整組引導線鎖定。偵測可以微動，但畫面不跟著每幀抖動。
 let displayAnchor6745=null;
 let guideGroup6745=null;
 const GUIDE_DEADBAND_6745=2.8; // low-res pixels，約畫面 1.7%
@@ -2126,11 +2102,17 @@ function trackTemplate6742(gray,prev,tpl){
     return best;
 }
 
-function buildGuideGroup6745(anchorLow, detectedLines=[]){
-    // V6.7.4.6：只畫真正支持消失點的線。若不足兩條，寧可少畫，也不再假造四條黃線。
-    const pts=(detectedLines||[]).filter(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)).slice(0,4);
-    return pts.map(p=>({x:p.x,y:p.y,ax:anchorLow.x,ay:anchorLow.y}));
+function buildGuideGroup6745(anchorLow){
+    // 鎖定「一整組」線：端點只在第一次鎖定時建立，之後整組一起平移，不再逐幀換線。
+    const ax=anchorLow.x, ay=anchorLow.y;
+    return [
+      {x:8,y:104, ax,ay},
+      {x:38,y:118,ax,ay},
+      {x:122,y:118,ax,ay},
+      {x:152,y:104,ax,ay}
+    ];
 }
+
 function updateDisplayAnchor6745(raw){
     if(!raw) return null;
     if(!displayAnchor6745){displayAnchor6745={x:raw.x,y:raw.y};return displayAnchor6745;}
@@ -2149,7 +2131,7 @@ function drawLandscapeNavigationV674(anchorScreen){
     clearOverlay();
     if(anchorScreen){
       ctx.save(); ctx.strokeStyle="#ffd400"; ctx.lineWidth=3; ctx.globalAlpha=.82;
-      // V6.7.4.6：引導線是一個鎖定群組；不再每幀依新偵測結果換線。
+      // V7.0：引導線是一個鎖定群組；不再每幀依新偵測結果換線。
       if(guideGroup6745 && displayAnchor6745){
         const base=lowToScreen6742(displayAnchor6745.x,displayAnchor6745.y);
         ctx.beginPath();
@@ -2174,17 +2156,17 @@ function landscapeNavigationLoopV674(){
 
     if(!sceneAnchorReady6742){
       const m=sceneMetricsV673();
-      if(m && m.vpSupport>=5 && m.vpRegions>=2 && m.vpCluster>=4){
-        sceneAnchorWarmup6742.push({x:m.vpX,y:m.vpY,guides:m.guideLines||[],score:m.vpCluster,support:m.vpSupport||0,regions:m.vpRegions||0});
+      if(m && m.vpCount>14 && m.vpCluster>=2){
+        sceneAnchorWarmup6742.push({x:m.vpX,y:m.vpY});
         if(sceneAnchorWarmup6742.length>10) sceneAnchorWarmup6742.shift();
       }
       if(sceneAnchorWarmup6742.length>=7){
         const xs=sceneAnchorWarmup6742.map(p=>p.x).sort((a,b)=>a-b), ys=sceneAnchorWarmup6742.map(p=>p.y).sort((a,b)=>a-b);
         const mid=Math.floor(xs.length/2), candidate={x:xs[mid],y:ys[mid]};
         const spread=Math.hypot(xs[xs.length-1]-xs[0],ys[ys.length-1]-ys[0]);
-        if(spread<20 && gray){
+        if(spread<28 && gray){
           const tpl=makeTemplate6742(gray,candidate.x,candidate.y,7);
-          if(tpl){sceneAnchor6742=candidate;displayAnchor6745={x:candidate.x,y:candidate.y};const bestFrame=sceneAnchorWarmup6742.slice().sort((a,b)=>(b.score-a.score))[0];guideGroup6745=buildGuideGroup6745(candidate,bestFrame?.guides||[]);sceneAnchorTemplate6742=tpl;sceneAnchorReady6742=true;miniStatus.innerText="● 主透視線已鎖定";}
+          if(tpl){sceneAnchor6742=candidate;displayAnchor6745={x:candidate.x,y:candidate.y};guideGroup6745=buildGuideGroup6745(candidate);sceneAnchorTemplate6742=tpl;sceneAnchorReady6742=true;miniStatus.innerText="● 引導線群組已鎖定";}
         }
       }
       drawLandscapeNavigationV674(sceneAnchor6742?lowToScreen6742(sceneAnchor6742.x,sceneAnchor6742.y):null);
@@ -2209,7 +2191,7 @@ function landscapeNavigationLoopV674(){
     }
 
     const t=landscapeTargetV674(), dx=t.x-cur.x, dy=t.y-cur.y;
-    // V6.7.4.6：進入約 5% 範圍立即完成；完成後使用較大的 10% 釋放範圍，避免手震反覆解鎖。
+    // V7.0：進入約 5% 範圍立即完成；完成後使用較大的 10% 釋放範圍，避免手震反覆解鎖。
     const enterX=overlay.clientWidth*.05, enterY=overlay.clientHeight*.045;
     const releaseX=overlay.clientWidth*.10, releaseY=overlay.clientHeight*.09;
     const insideEnter=Math.abs(dx)<=enterX && Math.abs(dy)<=enterY;
@@ -2234,7 +2216,7 @@ function landscapeNavigationLoopV674(){
       if(!goodX)a.push(dx>0?"🟢 往右":"🟢 往左");
       if(!goodY)a.push(dy>0?"🟢 往下":"🟢 往上");
       messageEl.innerText=(a.length?a.join("　"):"微調位置")+"｜對準白色準星";
-      miniStatus.innerText="● 主透視線追蹤";
+      miniStatus.innerText="● 引導線群組追蹤";
     }
     requestAnimationFrame(landscapeNavigationLoopV674);
 }
@@ -2426,7 +2408,7 @@ function portraitLoop(){
                 detection
             );
 
-            // V6.7.4.6：一般人像同時取得人物整體框，避免只看臉。
+            // V7.0：一般人像同時取得人物整體框，避免只看臉。
             if(personDetector){
                 try{
                     const pr=personDetector.detectForVideo(video,performance.now());
@@ -2864,7 +2846,7 @@ function installV67UI(){
             document.body.classList.remove("manual-composition");
             if(manualBtn) manualBtn.innerText="▾ 手動選擇構圖";
 
-            // V6.7.4.6：每按一次智慧構圖，都從目前畫面重新 AI 分析。
+            // V7.0：每按一次智慧構圖，都從目前畫面重新 AI 分析。
             landscapeNavigationV674=false;
             portraitNavigation=false;
             resetTracking();
@@ -3622,7 +3604,7 @@ function videoPointToScreen(
 
 
 /* =========================================================
-   V6.7.4.6 SMART PORTRAIT WEIGHT
+   V7.0 SMART PORTRAIT WEIGHT
    臉 + 人物整體重心 + 人物大小 + 左右留白
 ========================================================= */
 function updateSmartPortraitPerson(detection){
@@ -4307,7 +4289,7 @@ function drawPortraitNavigation(){
 
     let vertical="";
 
-    // V6.7.4.6：臉已到位但人物重心/大小/留白未到位時，不提早完成。
+    // V7.0：臉已到位但人物重心/大小/留白未到位時，不提早完成。
     if(goodX && goodY && smartMetrics){
         if(!sizeGood){
             messageEl.innerText=smartMetrics.heightRatio<.28 ? "⬆ 靠近人物一點" : "⬇ 離人物遠一點";
@@ -5728,6 +5710,145 @@ zoom.addEventListener(
 );
 
 
+
+/* =========================================================
+   V7.0 AI SMART TEMPLATE CORE
+   原則：不再以「線段交點」當導航核心。
+   AI只做簡單場景/人物判斷，推薦可直接對齊的構圖模板。
+========================================================= */
+let v7TemplateMode=false;
+let v7TemplateId="thirds";
+let v7TemplateLabel="三分構圖";
+let v7LastPerson=null;
+
+function v7SetCards(items, active){
+    const strip=document.getElementById("v7TemplateStrip");
+    if(!strip) return;
+    strip.innerHTML="";
+    items.forEach(it=>{
+        const b=document.createElement("button");
+        b.className="v7TemplateCard"+(it.id===active?" active":"");
+        b.dataset.v7=it.id;
+        b.textContent=it.label;
+        b.onclick=()=>v7ChooseTemplate(it.id,it.label);
+        strip.appendChild(b);
+    });
+    document.body.classList.add("v7-template-ready");
+}
+
+function v7ChooseTemplate(id,label){
+    v7TemplateMode=true; v7TemplateId=id; v7TemplateLabel=label||id;
+    document.querySelectorAll('.v7TemplateCard').forEach(b=>b.classList.toggle('active',b.dataset.v7===id));
+    miniComposition.innerText=v7TemplateLabel;
+    miniStatus.innerText="● 模板已套用";
+    messageEl.innerText="把主體對齊半透明模板即可拍照";
+    portraitNavigation=false; landscapeNavigationV674=false;
+    drawComposition();
+}
+
+function v7Line(x1,y1,x2,y2,alpha=.72,dash=[]){
+    ctx.save(); ctx.strokeStyle=`rgba(255,255,255,${alpha})`; ctx.lineWidth=1.6; ctx.setLineDash(dash);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore();
+}
+function v7GuideBox(x,y,w,h,r=18){
+    ctx.save();ctx.strokeStyle="rgba(255,255,255,.82)";ctx.lineWidth=2;ctx.setLineDash([8,7]);
+    ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.stroke();ctx.restore();
+}
+function drawV7Template(){
+    clearOverlay();
+    const W=overlay.clientWidth,H=overlay.clientHeight;
+    if(!W||!H) return;
+    ctx.save();
+    if(v7TemplateId==="portraitLeft" || v7TemplateId==="portraitRight"){
+        const left=v7TemplateId==="portraitLeft";
+        v7Line(W/3,0,W/3,H,.48);v7Line(2*W/3,0,2*W/3,H,.48);v7Line(0,H/3,W,H/3,.48);v7Line(0,2*H/3,W,2*H/3,.48);
+        const cx=left?W*.34:W*.66, bw=Math.min(W*.28,150), bh=Math.min(H*.52,330);
+        v7GuideBox(cx-bw/2,H*.30,bw,bh,Math.min(28,bw*.18));
+        ctx.strokeStyle="rgba(255,255,255,.9)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,H*.27,Math.min(24,W*.045),0,Math.PI*2);ctx.stroke();
+    }else if(v7TemplateId==="portraitCenter"){
+        v7Line(W/2,0,W/2,H,.6,[8,7]);
+        const bw=Math.min(W*.32,170),bh=Math.min(H*.56,350);v7GuideBox(W/2-bw/2,H*.25,bw,bh,30);
+        ctx.strokeStyle="rgba(255,255,255,.9)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(W/2,H*.22,Math.min(25,W*.045),0,Math.PI*2);ctx.stroke();
+    }else if(v7TemplateId==="environment"){
+        v7Line(W/3,0,W/3,H,.45);v7Line(2*W/3,0,2*W/3,H,.45);v7Line(0,2*H/3,W,2*H/3,.45);
+        v7GuideBox(W*.18,H*.39,W*.25,H*.42,24);
+    }else if(v7TemplateId==="symmetry" || v7TemplateId==="center"){
+        v7Line(W/2,H*.08,W/2,H*.92,.86,[10,8]);
+        v7Line(W*.44,H/2,W*.56,H/2,.75);v7Line(W/2,H*.44,W/2,H*.56,.75);
+        if(v7TemplateId==="symmetry"){
+            ctx.save();ctx.strokeStyle="rgba(255,255,255,.28)";ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(W*.18,H*.86);ctx.lineTo(W/2,H*.52);ctx.lineTo(W*.82,H*.86);ctx.stroke();ctx.restore();
+        }
+    }else if(v7TemplateId==="frame"){
+        v7GuideBox(W*.16,H*.17,W*.68,H*.66,28);v7Line(W/2,H*.17,W/2,H*.83,.35,[8,8]);
+    }else if(v7TemplateId==="circle"){
+        ctx.save();ctx.strokeStyle="rgba(255,255,255,.82)";ctx.lineWidth=2;ctx.setLineDash([9,7]);ctx.beginPath();ctx.arc(W/2,H*.47,Math.min(W,H)*.30,0,Math.PI*2);ctx.stroke();ctx.restore();
+        v7Line(W/2,H*.12,W/2,H*.82,.4);v7Line(W*.18,H*.47,W*.82,H*.47,.4);
+    }else{
+        v7Line(W/3,0,W/3,H,.65);v7Line(2*W/3,0,2*W/3,H,.65);v7Line(0,H/3,W,H/3,.65);v7Line(0,2*H/3,W,2*H/3,.65);
+        // 讓交點更直觀，但不強迫追蹤任何數學消失點
+        [[W/3,H/3],[2*W/3,H/3],[W/3,2*H/3],[2*W/3,2*H/3]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle="rgba(255,255,255,.85)";ctx.fill();});
+    }
+    ctx.restore();
+}
+
+// V7 覆寫繪圖路由：模板模式完全不畫 V6 黃色透視線。
+function drawComposition(){
+    if(v7TemplateMode){ drawV7Template(); return; }
+    if(portraitNavigation) return;
+    clearOverlay();
+    switch(currentComposition){
+        case "thirds":case "macroThirds":case "petThirds":case "productThirds":case "foodThirds":drawThirds();break;
+        case "golden":drawGolden();break; case "leading":drawLeading();break;
+        case "center":case "macroCenter":case "petCenter":case "productCenter":drawCenter();break;
+        case "frame":drawFrame();break;case "perspective":drawPerspective();break;case "symmetry":drawSymmetry();break;
+        case "diagonal":case "foodDiagonal":case "product45":drawDiagonal();break;
+        case "portraitThirds":case "environment":case "lookSpace":drawPortraitThirds();break;
+        case "portraitCenter":drawPortraitCenter();break;
+        case "fullbody":case "petFull":case "petAction":case "petLook":drawFullBody();break;
+        case "reflection":drawCenter();break;case "foodCenter":case "foodTop":drawCircle();break;case "fill":drawFill();break;case "negative":drawThirds();break;
+    }
+}
+
+function v7SceneChoice(m){
+    if(!m) return {id:"thirds",label:"三分構圖",mode:"landscape",alts:[{id:"thirds",label:"三分"},{id:"center",label:"中央"},{id:"symmetry",label:"對稱"}]};
+    // V7刻意不用 vanishing point。只看左右平衡、線條密度與視覺重心。
+    const nx=m.salX/160, ny=m.salY/120;
+    if(m.symmetry>.70 && m.edgeCount>70)
+        return {id:"symmetry",label:"中央對稱",mode:"street",alts:[{id:"symmetry",label:"對稱"},{id:"center",label:"中央"},{id:"thirds",label:"三分"}]};
+    if(Math.abs(nx-.5)<.10 && m.edgeCount>55)
+        return {id:"center",label:"中央主體",mode:"landscape",alts:[{id:"center",label:"中央"},{id:"thirds",label:"三分"},{id:"frame",label:"框景"}]};
+    return {id:"thirds",label:"三分構圖",mode:"landscape",alts:[{id:"thirds",label:"三分"},{id:"center",label:"中央"},{id:"symmetry",label:"對稱"}]};
+}
+
+async function runAutoSmartComposition(){
+    if(autoSmartBusy) return; autoSmartBusy=true; const token=++autoSmartToken;
+    v7TemplateMode=false; document.body.classList.remove("v7-template-ready");
+    portraitNavigation=false; landscapeNavigationV674=false; resetTracking(); clearOverlay();
+    miniStatus.innerText="● AI 審視畫面";miniComposition.innerText="分析中";messageEl.innerText="✨ AI 正在選擇最直觀的構圖模板…";
+    try{
+        await ensurePersonDetectorV673(); if(token!==autoSmartToken) return;
+        let person=null;
+        for(let i=0;i<3&&!person;i++){person=detectPersonV673();if(!person) await sleepV673(80);}
+        if(person){
+            const b=person.boundingBox||{}; const vw=video.videoWidth||1; const cx=((b.originX||0)+(b.width||0)/2)/vw;
+            const area=((b.width||0)*(b.height||0))/Math.max(1,(video.videoWidth||1)*(video.videoHeight||1));
+            let id,label,alts;
+            if(area<.12){id="environment";label="環境人像";alts=[{id:"environment",label:"環境"},{id:"portraitLeft",label:"左三分"},{id:"portraitRight",label:"右三分"},{id:"portraitCenter",label:"中央"}];}
+            else if(Math.abs(cx-.5)<.12){id="portraitCenter";label="中央人像";alts=[{id:"portraitCenter",label:"中央"},{id:"portraitLeft",label:"左三分"},{id:"portraitRight",label:"右三分"},{id:"environment",label:"環境"}];}
+            else {id=cx<.5?"portraitLeft":"portraitRight";label=cx<.5?"左三分人像":"右三分人像";alts=[{id,label:id==="portraitLeft"?"左三分":"右三分"},{id:"portraitCenter",label:"中央"},{id:"environment",label:"環境"}];}
+            currentMode="portrait";miniMode.innerText="👤 人像";v7TemplateMode=true;v7TemplateId=id;v7TemplateLabel=label;v7SetCards(alts,id);
+            miniComposition.innerText=label;miniStatus.innerText="● AI 模板";messageEl.innerText="把人物放進白色模板，不必追綠點";drawComposition();return;
+        }
+        const samples=[];for(let i=0;i<5;i++){const m=sceneMetricsV673();if(m)samples.push(m);await sleepV673(55);}
+        if(!samples.length) throw new Error("no scene");
+        const avg={};["edgeCount","diagRatio","vertRatio","horizRatio","salX","salY","symmetry"].forEach(k=>avg[k]=samples.reduce((a,m)=>a+(m[k]||0),0)/samples.length);
+        const c=v7SceneChoice(avg);currentMode=c.mode;miniMode.innerText=c.mode==="street"?"🏙️ 場景":"🏞️ 風景";
+        v7TemplateMode=true;v7TemplateId=c.id;v7TemplateLabel=c.label;v7SetCards(c.alts,c.id);
+        miniComposition.innerText=c.label;miniStatus.innerText="● AI 模板";messageEl.innerText="照白色模板調整畫面；也可點下方模板切換";drawComposition();
+    }catch(e){console.warn("V7 smart template",e);v7TemplateMode=true;v7TemplateId="thirds";v7TemplateLabel="三分構圖";v7SetCards([{id:"thirds",label:"三分"},{id:"center",label:"中央"},{id:"symmetry",label:"對稱"}],"thirds");miniMode.innerText="🏞️ 場景";miniComposition.innerText="三分構圖";miniStatus.innerText="● 基本模板";messageEl.innerText="先用三分模板取景，可手動切換";drawComposition();}
+    finally{autoSmartBusy=false;}
+}
+
 /* =========================================================
    EXPOSE
 ========================================================= */
@@ -5754,6 +5875,13 @@ startCamera();
 
 </script>
 
+
+
+<div id="v7TemplateStrip" aria-label="AI構圖模板">
+  <button class="v7TemplateCard" data-v7="thirds">三分</button>
+  <button class="v7TemplateCard" data-v7="center">中央</button>
+  <button class="v7TemplateCard" data-v7="symmetry">對稱</button>
+</div>
 
 <div id="v67QuickBar">
   <button class="v67QuickBtn" id="v67ModeBtn">⚙️ 模式</button>
