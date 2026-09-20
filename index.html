@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V7.0.1｜引導線群組鎖定版</title>
+<title>構圖導航 V7.0.2｜雙框啟動修正版</title>
 
 <style>
 
@@ -442,7 +442,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
         </div>
 
         <div id="miniStatus">
-            V7.0.1
+            V7.0.2
         </div>
 
     </div>
@@ -452,7 +452,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="version">
-        V7.0.1
+        V7.0.2
     </div>
 
 </div>
@@ -589,7 +589,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="status">
-        V7.0.1｜引導線群組鎖定版
+        V7.0.2｜雙框啟動修正版
     </div>
 
 </div>
@@ -599,7 +599,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
 
 /* =========================================================
 
-   構圖導航 V7.0.1｜引導線群組鎖定版
+   構圖導航 V7.0.2｜雙框啟動修正版
 
    V6.4 主要修改：
 
@@ -710,7 +710,7 @@ let lastVideoTime=-1;
 
 let trackedFace=null;
 let trackedPerson=null;
-let smartPortraitPerson=null; // V7.0.1 一般人像的人物整體框
+let smartPortraitPerson=null; // V7.0.2 一般人像的人物整體框
 let smartPortraitPersonSeenAt=0;
 /* V6.7：環境人像多人群組追蹤 */
 let trackedEnvironmentGroup=null;
@@ -1328,7 +1328,7 @@ function resetTracking(){
 
     lastVideoTime=-1;
 
-    // V7.0.1：完整解除上一輪風景導航與場景錨點。
+    // V7.0.2：完整解除上一輪風景導航與場景錨點。
     landscapeNavigationV674=false;
     landscapeNavCompV674=null;
     landscapeStableFramesV674=0;
@@ -1814,7 +1814,7 @@ async function runComposition(){
 
 
 /* =========================================================
-   V7.0.1 AUTO SMART COMPOSITION
+   V7.0.2 AUTO SMART COMPOSITION
    人物 + 風景全自動判斷
 ========================================================= */
 
@@ -1990,11 +1990,11 @@ async function runAutoSmartComposition(){
         selectComposition(best.comp);
         miniStatus.innerText="● AI 已選擇";
         messageEl.innerText="✨ AI 建議："+best.label;
-        // V7.0.1：風景不再顯示黃線／消失點；所有風景構圖統一進入雙框導航。
+        // V7.0.2：風景不再顯示黃線／消失點；所有風景構圖統一進入雙框導航。
         // 白框追蹤目前場景主視覺，綠框固定在 AI 建議的螢幕位置。
         startLandscapeNavigationV674(best.comp);
     }catch(e){
-        console.warn("V7.0.1 auto smart error",e);
+        console.warn("V7.0.2 auto smart error",e);
         miniStatus.innerText="分析失敗";
         messageEl.innerText="⚠️ 請保持畫面穩定後再按一次智慧構圖";
     }finally{
@@ -2003,7 +2003,7 @@ async function runAutoSmartComposition(){
 }
 
 /* =========================================================
-   V7.0.1 雙框 AI 構圖導航
+   V7.0.2 雙框 AI 構圖導航
    白框 = 目前場景主視覺（鎖在真實場景，跟著畫面移動）
    綠框 = AI 建議位置（固定在螢幕座標，不跟場景移動）
 ========================================================= */
@@ -2016,7 +2016,7 @@ let sceneAnchorReady6742=false;
 let sceneAnchorWarmup6742=[];
 let sceneAnchorLost6742=0;
 
-// V7.0.1 compatibility state (legacy reset code may clear these)
+// V7.0.2 compatibility state (legacy reset code may clear these)
 let displayAnchor6745=null, guideGroup6745=null;
 const ANCHOR_W6742=160, ANCHOR_H6742=120;
 const anchorCanvas6742=document.createElement('canvas');
@@ -2030,8 +2030,23 @@ function startLandscapeNavigationV674(comp){
     landscapeNavigationV674=true; landscapeNavCompV674=comp;
     landscapeLocked6744=false; sceneAnchor6742=null; sceneAnchorTemplate6742=null;
     sceneAnchorReady6742=false; sceneAnchorWarmup6742=[]; sceneAnchorLost6742=0; completed=false;
-    miniStatus.innerText='● 尋找主體'; miniComposition.innerText=compNameV701(comp);
-    messageEl.innerText='AI 正在鎖定畫面主視覺…';
+    miniStatus.innerText='● 雙框啟動'; miniComposition.innerText=compNameV701(comp);
+    messageEl.innerText='白框＝目前　綠框＝建議';
+
+    // V7.0.2：不等待 5 幀才顯示。按下智慧構圖後先立即建立第一個白框，
+    // 綠框則從一開始就固定在螢幕建議位置。
+    const gray=captureGray6742();
+    const m=sceneMetricsV673();
+    if(m && gray){
+        let x=(comp==='perspective'&&m.vpCluster>=3)?m.vpX:m.salX;
+        let y=(comp==='perspective'&&m.vpCluster>=3)?m.vpY:m.salY;
+        x=Math.max(18,Math.min(142,x)); y=Math.max(18,Math.min(102,y));
+        const tpl=makeTemplate6742(gray,x,y,10);
+        sceneAnchor6742={x,y};
+        if(tpl){ sceneAnchorTemplate6742=tpl; sceneAnchorReady6742=true; }
+    }
+    if(!sceneAnchor6742) sceneAnchor6742={x:80,y:60};
+    drawLandscapeNavigationV674(lowToScreen6742(sceneAnchor6742.x,sceneAnchor6742.y));
     requestAnimationFrame(landscapeNavigationLoopV674);
 }
 function landscapeTargetV674(){
@@ -2104,7 +2119,7 @@ function landscapeNavigationLoopV674(){
       drawLandscapeNavigationV674(sceneAnchor6742?lowToScreen6742(sceneAnchor6742.x,sceneAnchor6742.y):null);
       requestAnimationFrame(landscapeNavigationLoopV674);return;
     }
-    const found=trackTemplate6742(gray,sceneAnchor6742,sceneAnchorTemplate6742);
+    const found=sceneAnchorTemplate6742 ? trackTemplate6742(gray,sceneAnchor6742,sceneAnchorTemplate6742) : null;
     if(found){sceneAnchor6742={x:sceneAnchor6742.x*.68+found.x*.32,y:sceneAnchor6742.y*.68+found.y*.32};sceneAnchorLost6742=0;}else sceneAnchorLost6742++;
     const cur=lowToScreen6742(sceneAnchor6742.x,sceneAnchor6742.y),t=landscapeTargetV674();
     if(!cur){requestAnimationFrame(landscapeNavigationLoopV674);return;}
@@ -2305,7 +2320,7 @@ function portraitLoop(){
                 detection
             );
 
-            // V7.0.1：一般人像同時取得人物整體框，避免只看臉。
+            // V7.0.2：一般人像同時取得人物整體框，避免只看臉。
             if(personDetector){
                 try{
                     const pr=personDetector.detectForVideo(video,performance.now());
@@ -2743,7 +2758,7 @@ function installV67UI(){
             document.body.classList.remove("manual-composition");
             if(manualBtn) manualBtn.innerText="▾ 手動選擇構圖";
 
-            // V7.0.1：每按一次智慧構圖，都從目前畫面重新 AI 分析。
+            // V7.0.2：每按一次智慧構圖，都從目前畫面重新 AI 分析。
             landscapeNavigationV674=false;
             portraitNavigation=false;
             resetTracking();
@@ -3501,7 +3516,7 @@ function videoPointToScreen(
 
 
 /* =========================================================
-   V7.0.1 SMART PORTRAIT WEIGHT
+   V7.0.2 SMART PORTRAIT WEIGHT
    臉 + 人物整體重心 + 人物大小 + 左右留白
 ========================================================= */
 function updateSmartPortraitPerson(detection){
@@ -4186,7 +4201,7 @@ function drawPortraitNavigation(){
 
     let vertical="";
 
-    // V7.0.1：臉已到位但人物重心/大小/留白未到位時，不提早完成。
+    // V7.0.2：臉已到位但人物重心/大小/留白未到位時，不提早完成。
     if(goodX && goodY && smartMetrics){
         if(!sizeGood){
             messageEl.innerText=smartMetrics.heightRatio<.28 ? "⬆ 靠近人物一點" : "⬇ 離人物遠一點";
@@ -5622,6 +5637,9 @@ changeCamera;
 window.runComposition=
 runComposition;
 
+// V7.0.2：提供快捷按鈕保險入口，避免 Safari 上事件綁定失效。
+window.runAutoSmartCompositionV702=runAutoSmartComposition;
+
 
 /* =========================================================
    INIT
@@ -5646,6 +5664,27 @@ startCamera();
   <button class="v67QuickBtn" id="v671ManualBtn">▾ 手動選擇構圖</button>
   <button class="v67QuickBtn" id="v67CloseDrawer" style="width:100%;margin-top:10px">完成</button>
 </div>
+
+<script>
+(function(){
+  function bindV702(){
+    var b=document.getElementById('v67StartBtn');
+    if(!b || b.dataset.v702Bound==='1') return;
+    b.dataset.v702Bound='1';
+    b.addEventListener('click', function(){
+      // 原 module onclick 正常時不重複啟動；若沒有進入分析，50ms 後用保險入口啟動。
+      setTimeout(function(){
+        var st=document.getElementById('miniStatus');
+        var txt=st ? st.textContent : '';
+        if(!/分析中|雙框啟動|導航中|人物已辨識|AI 已選擇|構圖完成/.test(txt)){
+          if(typeof window.runAutoSmartCompositionV702==='function') window.runAutoSmartCompositionV702();
+        }
+      },50);
+    },{passive:true});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bindV702); else bindV702();
+})();
+</script>
 
 </body>
 </html>
