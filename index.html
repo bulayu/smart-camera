@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V7.0｜AI智慧構圖模板版</title>
+<title>構圖導航 V7.0.1｜相機啟動修正版</title>
 
 <style>
 
@@ -450,7 +450,7 @@ body.v7-template-ready #v7TemplateStrip{display:flex}
         </div>
 
         <div id="miniStatus">
-            V7.0
+            V7.0.1
         </div>
 
     </div>
@@ -460,7 +460,7 @@ body.v7-template-ready #v7TemplateStrip{display:flex}
     </div>
 
     <div id="version">
-        V7.0
+        V7.0.1
     </div>
 
 </div>
@@ -597,17 +597,35 @@ body.v7-template-ready #v7TemplateStrip{display:flex}
     </div>
 
     <div id="status">
-        V7.0｜AI智慧構圖模板版
+        V7.0.1｜相機啟動修正版
     </div>
 
 </div>
 
 
+<script>
+// V7.0.1 camera bootstrap: camera startup is independent from MediaPipe/module loading.
+(async function(){
+  const v=document.getElementById("video");
+  const msg=document.getElementById("message");
+  try{
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("getUserMedia unavailable");
+    const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
+    window.__v7BootStream=st;
+    if(v){v.srcObject=st; await v.play().catch(()=>{});}
+    if(msg) msg.innerText="📷 對準想拍攝的畫面";
+  }catch(e){
+    console.warn("V7.0.1 camera bootstrap",e);
+    if(msg) msg.innerText=(e && e.name==="NotAllowedError")?"❌ 請允許網站使用相機":"❌ 相機無法開啟｜請重新整理後再試";
+  }
+})();
+</script>
+
 <script type="module">
 
 /* =========================================================
 
-   構圖導航 V7.0｜AI智慧構圖模板版
+   構圖導航 V7.0.1｜相機啟動修正版
 
    V6.4 主要修改：
 
@@ -1203,16 +1221,24 @@ async function startCamera(){
         "📷 正在開啟相機...";
 
 
-        if(stream){
-
-            stream
-            .getTracks()
-            .forEach(
-                track=>track.stop()
-            );
-
+        // V7.0.1: first reuse the independently opened camera stream.
+        if(!stream && window.__v7BootStream){
+            stream=window.__v7BootStream;
+            window.__v7BootStream=null;
+            video.srcObject=stream;
+            await video.play().catch(()=>{});
+            resizeOverlay();
+            messageEl.innerText="📷 對準想拍攝的畫面";
+            return;
         }
 
+        if(stream){
+            stream.getTracks().forEach(track=>track.stop());
+        }
+
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+            throw new Error("getUserMedia unavailable");
+        }
 
         stream=
         await navigator.mediaDevices
