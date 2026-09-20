@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.7.1｜多人環境人像導航版</title>
+<title>構圖導航 V7.2｜多人環境人像導航版</title>
 
 <style>
 
@@ -438,7 +438,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
         </div>
 
         <div id="miniStatus">
-            V7.1
+            V6.6
         </div>
 
     </div>
@@ -585,7 +585,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="status">
-        V7.1｜V6.7.1底層雙框測試版
+        V7.2｜雙框獨立圖層版
     </div>
 
 </div>
@@ -761,17 +761,6 @@ let lockedTargetSide=null;
 */
 
 let targetReason="";
-
-/* =========================================================
-   V7.1 DUAL BOX TEST — built directly on V6.7.1
-   綠框：固定螢幕目標；白框：目前主體/目前畫面位置
-========================================================= */
-let v71DualActive=false;
-let v71Target={x:.67,y:.42,w:.25,h:.34};
-let v71Current={x:.50,y:.50,w:.25,h:.34};
-let v71LastTime=-1;
-let v71Busy=false;
-
 
 
 /* =========================================================
@@ -1464,7 +1453,6 @@ function selectMode(
     resetTracking();
 
     currentMode=mode;
-    v71DualActive=false;
 
 
     document
@@ -1780,26 +1768,13 @@ async function runComposition(){
         currentMode===
         "auto"
     ){
-        // V7.1：按下立即顯示雙框，不等待 AI 模型。
-        v71DualActive=true;
-        portraitNavigation=false;
-        resetTracking();
-        v71Current={x:.50,y:.50,w:.25,h:.34};
-        v71Target={x:.67,y:.42,w:.25,h:.34};
-        miniMode.innerText="✨ 自動";
-        miniComposition.innerText="雙框導航";
-        miniStatus.innerText="● 已啟動";
-        messageEl.innerText="白框＝目前位置｜綠框＝固定建議位置";
-        drawV71DualBoxes();
 
-        // 模型在背景啟動；不阻塞雙框顯示。
-        initFaceDetector().then(ok=>{
-            if(ok && v71DualActive){
-                miniStatus.innerText="● 追蹤中";
-                requestAnimationFrame(v71DualLoop);
-            }
-        });
+        messageEl.innerText=
+        "👉 V6.7 請先測試人像模式";
+
+
         return;
+
     }
 
 
@@ -1818,107 +1793,6 @@ async function runComposition(){
 
 }
 
-
-
-/* =========================================================
-   V7.1 DUAL BOX — 綠框固定 / 白框追蹤
-========================================================= */
-function drawV71DualBoxes(){
-    if(!v71DualActive) return;
-    clearOverlay();
-    const w=overlay.clientWidth, h=overlay.clientHeight;
-    const t={x:v71Target.x*w,y:v71Target.y*h,w:v71Target.w*w,h:v71Target.h*h};
-    const c={x:v71Current.x*w,y:v71Current.y*h,w:v71Current.w*w,h:v71Current.h*h};
-
-    ctx.save();
-    // 綠框固定在螢幕座標
-    ctx.strokeStyle="#2cff67"; ctx.lineWidth=4; ctx.setLineDash([10,7]);
-    ctx.strokeRect(t.x-t.w/2,t.y-t.h/2,t.w,t.h);
-    ctx.setLineDash([]);
-    ctx.fillStyle="#2cff67"; ctx.font="bold 13px Arial"; ctx.textAlign="center";
-    ctx.fillText("AI 建議位置",t.x,t.y-t.h/2-9);
-
-    // 白框只代表目前主體位置
-    ctx.strokeStyle="rgba(255,255,255,.98)"; ctx.lineWidth=4;
-    ctx.strokeRect(c.x-c.w/2,c.y-c.h/2,c.w,c.h);
-    ctx.fillStyle="#fff"; ctx.fillText("目前位置",c.x,c.y-c.h/2-9);
-
-    const dx=t.x-c.x, dy=t.y-c.y;
-    const inside=Math.abs(dx)<t.w*.24 && Math.abs(dy)<t.h*.22;
-    if(inside){
-        messageEl.innerText="✓ 構圖位置到位";
-        miniStatus.innerText="✓ 到位";
-    }else{
-        // 畫面主體要往目標移動；手機方向相反。
-        if(Math.abs(dx)>Math.abs(dy)) messageEl.innerText=dx>0 ? "← 手機向左" : "→ 手機向右";
-        else messageEl.innerText=dy>0 ? "↑ 手機稍微抬高" : "↓ 手機稍微降低";
-    }
-    ctx.restore();
-}
-
-function updateV71FromFace(detection){
-    if(!detection || !detection.boundingBox) return false;
-    const b=detection.boundingBox;
-    const p1=videoPointToScreen(b.originX,b.originY);
-    const p2=videoPointToScreen(b.originX+b.width,b.originY+b.height);
-    const w=overlay.clientWidth,h=overlay.clientHeight;
-    if(!w||!h) return false;
-    const nx=((p1.x+p2.x)/2)/w, ny=((p1.y+p2.y)/2)/h;
-    const nw=Math.max(.12,Math.abs(p2.x-p1.x)/w*2.0);
-    const nh=Math.max(.18,Math.abs(p2.y-p1.y)/h*2.8);
-    const a=.72;
-    v71Current.x=v71Current.x*a+nx*(1-a);
-    v71Current.y=v71Current.y*a+ny*(1-a);
-    v71Current.w=v71Current.w*a+Math.min(.55,nw)*(1-a);
-    v71Current.h=v71Current.h*a+Math.min(.72,nh)*(1-a);
-    return true;
-}
-
-function updateV71FromPerson(detection){
-    if(!detection || !detection.boundingBox) return false;
-    const b=detection.boundingBox;
-    const p1=videoPointToScreen(b.originX,b.originY);
-    const p2=videoPointToScreen(b.originX+b.width,b.originY+b.height);
-    const w=overlay.clientWidth,h=overlay.clientHeight;
-    if(!w||!h) return false;
-    const nx=((p1.x+p2.x)/2)/w, ny=((p1.y+p2.y)/2)/h;
-    const nw=Math.max(.12,Math.abs(p2.x-p1.x)/w);
-    const nh=Math.max(.18,Math.abs(p2.y-p1.y)/h);
-    const a=.70;
-    v71Current.x=v71Current.x*a+nx*(1-a);
-    v71Current.y=v71Current.y*a+ny*(1-a);
-    v71Current.w=v71Current.w*a+Math.min(.65,nw)*(1-a);
-    v71Current.h=v71Current.h*a+Math.min(.82,nh)*(1-a);
-    return true;
-}
-
-function v71DualLoop(){
-    if(!v71DualActive || currentMode!=="auto") return;
-    if(video.readyState<2 || video.currentTime===v71LastTime || v71Busy){
-        drawV71DualBoxes(); requestAnimationFrame(v71DualLoop); return;
-    }
-    v71LastTime=video.currentTime; v71Busy=true;
-    try{
-        let found=false;
-        if(personDetector){
-            try{
-                const r=personDetector.detectForVideo(video,performance.now());
-                const p=chooseMainPerson(r&&r.detections?r.detections:[]);
-                if(p) found=updateV71FromPerson(p);
-            }catch(e){}
-        }
-        if(!found && faceDetector){
-            try{
-                const r=faceDetector.detectForVideo(video,performance.now());
-                const f=(r&&r.detections&&r.detections.length)?chooseMainFace(r.detections):null;
-                if(f) found=updateV71FromFace(f);
-            }catch(e){}
-        }
-        miniStatus.innerText=found?"● 主體追蹤":"● 雙框已啟動";
-        drawV71DualBoxes();
-    }finally{ v71Busy=false; }
-    requestAnimationFrame(v71DualLoop);
-}
 
 /* =========================================================
    PORTRAIT LOOP
@@ -5305,7 +5179,7 @@ startCamera();
 
 <div id="v67QuickBar">
   <button class="v67QuickBtn" id="v67ModeBtn">⚙️ 模式</button>
-  <button class="v67QuickBtn" id="v67StartBtn">✨ 智慧構圖</button>
+  <button class="v67QuickBtn" id="v67StartBtn">▶ 開始</button>
   <button class="v67QuickBtn" id="v67CameraBtn">📷 後鏡</button>
   <button class="v67QuickBtn" id="v67ZoomBtn">1×</button>
 </div>
@@ -5314,6 +5188,37 @@ startCamera();
   <div id="v67ModeHost"></div>
   <button class="v67QuickBtn" id="v67CloseDrawer" style="width:100%;margin-top:10px">完成</button>
 </div>
+
+
+<style>
+#v72Overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:35}
+#v72Badge{position:absolute;left:50%;top:82px;transform:translateX(-50%);z-index:36;background:rgba(0,0,0,.62);color:#fff;border-radius:18px;padding:7px 12px;font:700 13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;pointer-events:none;display:none;white-space:nowrap}
+</style>
+<script>
+(()=>{
+'use strict';
+let active=false, tpl=null, pos={x:.5,y:.5}, lost=0, raf=0;
+const work=document.createElement('canvas'); work.width=160; work.height=120;
+const wx=work.getContext('2d',{willReadFrequently:true});
+const TW=160, TH=120, R=10;
+let overlay,ctx,badge,video,area;
+function fit(){ if(!overlay||!area)return; const r=area.getBoundingClientRect(),d=devicePixelRatio||1; overlay.width=Math.max(1,Math.round(r.width*d));overlay.height=Math.max(1,Math.round(r.height*d));overlay.style.width=r.width+'px';overlay.style.height=r.height+'px';ctx.setTransform(d,0,0,d,0,0);draw(); }
+function gray(){ if(!video||video.readyState<2)return null; wx.drawImage(video,0,0,TW,TH); const im=wx.getImageData(0,0,TW,TH).data,g=new Uint8Array(TW*TH); for(let i=0,j=0;i<im.length;i+=4,j++)g[j]=(im[i]*3+im[i+1]*6+im[i+2])>>3; return g; }
+function makeTpl(g,cx,cy){const a=new Uint8Array((R*2+1)*(R*2+1));let k=0;for(let y=-R;y<=R;y++)for(let x=-R;x<=R;x++)a[k++]=g[(cy+y)*TW+cx+x];return a;}
+function score(g,cx,cy){let k=0,sum=0;for(let y=-R;y<=R;y+=2)for(let x=-R;x<=R;x+=2){sum+=Math.abs(g[(cy+y)*TW+cx+x]-tpl[(y+R)*(R*2+1)+(x+R)]);k++;}return sum/k;}
+function track(g){let cx=Math.round(pos.x*TW),cy=Math.round(pos.y*TH),best=null;const range=18;for(let y=Math.max(R,cy-range);y<=Math.min(TH-R-1,cy+range);y+=2)for(let x=Math.max(R,cx-range);x<=Math.min(TW-R-1,cx+range);x+=2){const sc=score(g,x,y);if(!best||sc<best.s)best={x,y,s:sc};}if(best&&best.s<42){pos.x=.72*pos.x+.28*(best.x/TW);pos.y=.72*pos.y+.28*(best.y/TH);lost=0;}else lost++;}
+function rr(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);c.stroke();}
+function draw(){if(!ctx||!overlay)return;const w=overlay.clientWidth,h=overlay.clientHeight;ctx.clearRect(0,0,w,h);if(!active)return;const bw=Math.min(w*.34,190),bh=Math.min(h*.28,260);const gx=w*.68,gy=h*.48;ctx.save();ctx.lineWidth=4;ctx.font='700 16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';ctx.textAlign='center';ctx.strokeStyle='#25ff72';ctx.setLineDash([12,10]);rr(ctx,gx-bw/2,gy-bh/2,bw,bh,8);ctx.setLineDash([]);ctx.fillStyle='#25ff72';ctx.fillText('AI 建議位置',gx,gy-bh/2-12);const px=pos.x*w,py=pos.y*h;ctx.strokeStyle='#fff';ctx.lineWidth=4;rr(ctx,px-bw/2,py-bh/2,bw,bh,8);ctx.fillStyle='#fff';ctx.fillText(lost>10?'目前位置（追蹤暫失）':'目前位置',px,py-bh/2-12);const dx=gx-px,dy=gy-py;let t=[];if(Math.abs(dx)>w*.05)t.push(dx>0?'→':'←');if(Math.abs(dy)>h*.05)t.push(dy>0?'↓':'↑');badge.textContent=t.length?('白框往 '+t.join(' ')+ ' 對齊綠框'):'✓ 雙框已對齊';ctx.restore();}
+function loop(){if(active){const g=gray();if(g&&tpl)track(g);draw();}raf=requestAnimationFrame(loop);}
+function start(){active=true;lost=0;pos={x:.5,y:.52};badge.style.display='block';badge.textContent='雙框啟動｜綠框固定';const g=gray();if(g){let cx=Math.round(pos.x*TW),cy=Math.round(pos.y*TH);cx=Math.max(R,Math.min(TW-R-1,cx));cy=Math.max(R,Math.min(TH-R-1,cy));tpl=makeTpl(g,cx,cy);}else tpl=null;draw();}
+function init(){video=document.getElementById('video');area=document.getElementById('cameraArea');if(!video||!area)return;overlay=document.createElement('canvas');overlay.id='v72Overlay';badge=document.createElement('div');badge.id='v72Badge';area.style.position='relative';area.appendChild(overlay);area.appendChild(badge);ctx=overlay.getContext('2d');fit();addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,250));
+ const quick=document.getElementById('v67StartBtn'); if(quick){quick.onclick=(e)=>{e.preventDefault();e.stopPropagation();start();};quick.textContent='✨ 智慧構圖';}
+ const main=document.getElementById('mainButton'); if(main){main.removeAttribute('onclick');main.onclick=(e)=>{e.preventDefault();e.stopPropagation();start();};main.textContent='✨ 智慧構圖';}
+ const st=document.getElementById('status');if(st)st.textContent='V7.2｜雙框獨立圖層版';
+ loop();}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,0));else setTimeout(init,0);
+})();
+</script>
 
 </body>
 </html>
