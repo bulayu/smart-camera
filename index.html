@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V7.3｜AI雙框鎖定版</title>
+<title>構圖導航 V7.3.1｜AI綠框決策修正版</title>
 
 <style>
 
@@ -438,7 +438,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
         </div>
 
         <div id="miniStatus">
-            V6.6
+            V7.3.1
         </div>
 
     </div>
@@ -448,7 +448,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="version">
-        V6.7.1
+        V7.3.1
     </div>
 
 </div>
@@ -585,7 +585,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="status">
-        V7.3｜AI雙框鎖定版
+        V7.3.1｜AI綠框決策修正版
     </div>
 
 </div>
@@ -1496,7 +1496,7 @@ function selectMode(
 
 
         miniStatus.innerText=
-        "V6.4";
+        "V7.3.1";
 
 
         mainButton.innerText=
@@ -5198,6 +5198,7 @@ startCamera();
 (()=>{
 'use strict';
 let active=false, frozen=false, tracking=false, tpl=null, pos={x:.5,y:.52}, target={x:.5,y:.50}, lost=0;
+let analysisToken=0, decisionInfo={label:'尚未分析',xPct:50,energy:[0,0,0]};
 const work=document.createElement('canvas'); work.width=160; work.height=120;
 const wx=work.getContext('2d',{willReadFrequently:true});
 const TW=160, TH=120, R=11;
@@ -5206,18 +5207,64 @@ function fit(){if(!overlay||!area)return;const r=area.getBoundingClientRect(),d=
 function gray(){if(!video||video.readyState<2)return null;wx.drawImage(video,0,0,TW,TH);const im=wx.getImageData(0,0,TW,TH).data,g=new Uint8Array(TW*TH);for(let i=0,j=0;i<im.length;i+=4,j++)g[j]=(im[i]*3+im[i+1]*6+im[i+2])>>3;return g;}
 function makeTpl(g,cx,cy){const a=new Uint8Array((R*2+1)*(R*2+1));let k=0;for(let y=-R;y<=R;y++)for(let x=-R;x<=R;x++)a[k++]=g[(cy+y)*TW+cx+x];return a;}
 function score(g,cx,cy){let k=0,sum=0;for(let y=-R;y<=R;y+=2)for(let x=-R;x<=R;x+=2){sum+=Math.abs(g[(cy+y)*TW+cx+x]-tpl[(y+R)*(R*2+1)+(x+R)]);k++;}return sum/k;}
-function salient(g){let sx=0,sy=0,sw=0;for(let y=5;y<TH-5;y+=2){for(let x=5;x<TW-5;x+=2){const i=y*TW+x;const e=Math.abs(g[i+1]-g[i-1])+Math.abs(g[i+TW]-g[i-TW]);if(e>34){const center=1-Math.min(1,Math.hypot((x-TW/2)/(TW*.7),(y-TH*.52)/(TH*.75)))*.25;const w=e*center;sx+=x*w;sy+=y*w;sw+=w;}}}if(!sw)return{x:.5,y:.52};return{x:Math.max(.18,Math.min(.82,sx/sw/TW)),y:Math.max(.24,Math.min(.76,sy/sw/TH))};}
-function chooseTarget(p){let x=.5,name='中央構圖';if(p.x<.43){x=.34;name='左三分';}else if(p.x>.57){x=.66;name='右三分';}return{x,y:.50,name};}
-function acquire(g){const a=salient(g);pos={x:a.x,y:a.y};let cx=Math.round(pos.x*TW),cy=Math.round(pos.y*TH);cx=Math.max(R,Math.min(TW-R-1,cx));cy=Math.max(R,Math.min(TH-R-1,cy));tpl=makeTpl(g,cx,cy);target=chooseTarget(pos);tracking=true;lost=0;}
+function analyzeScene(g){
+  let sx=0,sy=0,sw=0; const E=[0,0,0];
+  for(let y=6;y<TH-6;y+=2){for(let x=6;x<TW-6;x+=2){
+    const i=y*TW+x;
+    const e=Math.abs(g[i+1]-g[i-1])+Math.abs(g[i+TW]-g[i-TW]);
+    if(e<30)continue;
+    // V7.3.1：不再偏袒畫面中央，讓左/中/右真正參與決策
+    const vertical=1-Math.min(.35,Math.abs(y-TH*.52)/(TH*.52)*.22);
+    const w=e*vertical;
+    sx+=x*w; sy+=y*w; sw+=w;
+    E[Math.min(2,Math.floor(x/(TW/3)))]+=w;
+  }}
+  if(!sw)return{x:.5,y:.52,E:[1,1,1]};
+  return{x:Math.max(.15,Math.min(.85,sx/sw/TW)),y:Math.max(.22,Math.min(.78,sy/sw/TH)),E};
+}
+function chooseTarget(a){
+  const E=a.E, total=E[0]+E[1]+E[2]||1;
+  const shares=E.map(v=>v/total), max=Math.max(...shares), min=Math.min(...shares);
+  let idx=shares.indexOf(max), x=.5, name='中央構圖';
+  // 中央只有在中央能量真的佔優，或三區非常接近時才成立
+  const balanced=(max-min)<.055;
+  if(!balanced && idx===0){x=.333;name='左三分';}
+  else if(!balanced && idx===2){x=.667;name='右三分';}
+  else if(idx===1 && shares[1] > Math.max(shares[0],shares[2])*1.10){x=.5;name='中央構圖';}
+  else if(a.x<.47){x=.333;name='左三分';}
+  else if(a.x>.53){x=.667;name='右三分';}
+  else {x=.5;name='中央構圖';}
+  decisionInfo={label:name,xPct:Math.round(a.x*100),energy:shares.map(v=>Math.round(v*100))};
+  return{x,y:.50,name};
+}
+function acquire(g){const a=analyzeScene(g);pos={x:a.x,y:a.y};let cx=Math.round(pos.x*TW),cy=Math.round(pos.y*TH);cx=Math.max(R,Math.min(TW-R-1,cx));cy=Math.max(R,Math.min(TH-R-1,cy));tpl=makeTpl(g,cx,cy);target=chooseTarget(a);tracking=true;lost=0;}
 function search(g,cx,cy,range,step){let best=null;for(let y=Math.max(R,cy-range);y<=Math.min(TH-R-1,cy+range);y+=step)for(let x=Math.max(R,cx-range);x<=Math.min(TW-R-1,cx+range);x+=step){const sc=score(g,x,y);if(!best||sc<best.s)best={x,y,s:sc};}return best;}
 function track(g){let cx=Math.round(pos.x*TW),cy=Math.round(pos.y*TH);let best=search(g,cx,cy,24,2);if((!best||best.s>=44)&&lost>=2)best=search(g,TW>>1,TH>>1,Math.max(TW,TH),3);if(best&&best.s<48){pos.x=.62*pos.x+.38*(best.x/TW);pos.y=.62*pos.y+.38*(best.y/TH);tracking=true;lost=0;}else{lost++;tracking=false;}}
 function rr(c,x,y,w,h,r){c.beginPath();if(c.roundRect)c.roundRect(x,y,w,h,r);else c.rect(x,y,w,h);c.stroke();}
 function inside(w,h){return tracking&&Math.abs(target.x-pos.x)<.065&&Math.abs(target.y-pos.y)<.055;}
 function freeze(){frozen=true;active=true;tracking=true;badge.textContent='✓ 構圖完成｜可以拍照';draw();}
-function draw(){if(!ctx||!overlay)return;const w=overlay.clientWidth,h=overlay.clientHeight;ctx.clearRect(0,0,w,h);if(!active)return;const bw=Math.min(w*.34,190),bh=Math.min(h*.28,260),gx=target.x*w,gy=target.y*h,px=pos.x*w,py=pos.y*h;ctx.save();ctx.lineWidth=4;ctx.font='700 16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';ctx.textAlign='center';ctx.strokeStyle='#25ff72';ctx.setLineDash([12,10]);rr(ctx,gx-bw/2,gy-bh/2,bw,bh,8);ctx.setLineDash([]);ctx.fillStyle='#25ff72';ctx.fillText('AI 建議位置｜'+target.name,gx,gy-bh/2-12);ctx.strokeStyle='#fff';rr(ctx,px-bw/2,py-bh/2,bw,bh,8);ctx.fillStyle='#fff';ctx.fillText(frozen?'目前位置｜已鎖定':(tracking?'目前位置':'目前位置｜重新搜尋中'),px,py-bh/2-12);if(!frozen){if(tracking){const dx=target.x-pos.x,dy=target.y-pos.y;let t=[];if(Math.abs(dx)>.05)t.push(dx>0?'→':'←');if(Math.abs(dy)>.045)t.push(dy>0?'↓':'↑');badge.textContent=t.length?('白框往 '+t.join(' ')+' 對齊綠框'):'✓ 對準中';}else badge.textContent=lost<12?'重新搜尋目前位置…':'追蹤暫失｜再按智慧構圖重新開始';}ctx.restore();}
+function draw(){if(!ctx||!overlay)return;const w=overlay.clientWidth,h=overlay.clientHeight;ctx.clearRect(0,0,w,h);if(!active)return;const bw=Math.min(w*.34,190),bh=Math.min(h*.28,260),gx=target.x*w,gy=target.y*h,px=pos.x*w,py=pos.y*h;ctx.save();ctx.lineWidth=4;ctx.font='700 16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';ctx.textAlign='center';ctx.strokeStyle='#25ff72';ctx.setLineDash([12,10]);rr(ctx,gx-bw/2,gy-bh/2,bw,bh,8);ctx.setLineDash([]);ctx.fillStyle='#25ff72';ctx.fillText('AI 建議位置｜'+target.name,gx,gy-bh/2-12);ctx.strokeStyle='#fff';rr(ctx,px-bw/2,py-bh/2,bw,bh,8);ctx.fillStyle='#fff';ctx.fillText(frozen?'目前位置｜已鎖定':(tracking?'目前位置':'目前位置｜重新搜尋中'),px,py-bh/2-12);if(!frozen){if(tracking){const dx=target.x-pos.x,dy=target.y-pos.y;let t=[];if(Math.abs(dx)>.05)t.push(dx>0?'→':'←');if(Math.abs(dy)>.045)t.push(dy>0?'↓':'↑');badge.textContent=t.length?('AI：'+decisionInfo.label+'｜主視覺 X='+decisionInfo.xPct+'%｜白框往 '+t.join(' ')):'AI：'+decisionInfo.label+'｜主視覺 X='+decisionInfo.xPct+'%｜✓ 對準中';}else badge.textContent=lost<12?'重新搜尋目前位置…':'追蹤暫失｜再按智慧構圖重新開始';}ctx.restore();}
 function loop(){if(active&&!frozen){const g=gray();if(g&&tpl){track(g);if(inside(overlay.clientWidth,overlay.clientHeight)){freeze();return;}draw();}}requestAnimationFrame(loop);}
-function start(){active=true;frozen=false;tracking=false;lost=0;tpl=null;badge.style.display='block';badge.textContent='AI 分析目前畫面…';const g=gray();if(g){acquire(g);badge.textContent='導航中｜'+target.name;}else{pos={x:.5,y:.52};target={x:.5,y:.50,name:'中央構圖'};}draw();}
-function init(){video=document.getElementById('video');area=document.getElementById('cameraArea');if(!video||!area)return;overlay=document.createElement('canvas');overlay.id='v73Overlay';badge=document.createElement('div');badge.id='v73Badge';area.style.position='relative';area.appendChild(overlay);area.appendChild(badge);ctx=overlay.getContext('2d');fit();addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,250));const quick=document.getElementById('v67StartBtn');if(quick){quick.onclick=(e)=>{e.preventDefault();e.stopPropagation();start();};quick.textContent='✨ 智慧構圖';}const main=document.getElementById('mainButton');if(main){main.removeAttribute('onclick');main.onclick=(e)=>{e.preventDefault();e.stopPropagation();start();};main.textContent='✨ 智慧構圖';}const st=document.getElementById('status');if(st)st.textContent='V7.3｜AI雙框鎖定版';loop();}
+function start(){
+  const token=++analysisToken;
+  active=false; frozen=false; tracking=false; lost=0; tpl=null;
+  if(ctx&&overlay)ctx.clearRect(0,0,overlay.clientWidth,overlay.clientHeight);
+  badge.style.display='block'; badge.textContent='AI 分析中…';
+  setTimeout(()=>{
+    if(token!==analysisToken)return;
+    const g=gray(); active=true;
+    if(g){
+      acquire(g);
+      badge.textContent='AI：'+decisionInfo.label+'｜主視覺 X='+decisionInfo.xPct+'%';
+    }else{
+      pos={x:.5,y:.52}; target={x:.5,y:.50,name:'中央構圖'};
+      decisionInfo={label:'中央構圖',xPct:50,energy:[0,0,0]};
+      tracking=false;
+    }
+    draw();
+  },140);
+}
+function init(){video=document.getElementById('video');area=document.getElementById('cameraArea');if(!video||!area)return;overlay=document.createElement('canvas');overlay.id='v73Overlay';badge=document.createElement('div');badge.id='v73Badge';area.style.position='relative';area.appendChild(overlay);area.appendChild(badge);ctx=overlay.getContext('2d');fit();addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,250));const quick=document.getElementById('v67StartBtn');if(quick){quick.onclick=(e)=>{e.preventDefault();e.stopPropagation();start();};quick.textContent='✨ 智慧構圖';}const main=document.getElementById('mainButton');if(main){main.removeAttribute('onclick');main.onclick=(e)=>{e.preventDefault();e.stopPropagation();start();};main.textContent='✨ 智慧構圖';}const st=document.getElementById('status');if(st)st.textContent='V7.3.1｜AI綠框決策修正版';loop();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,0));else setTimeout(init,0);
 })();
 </script>
