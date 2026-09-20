@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V6.7.4｜風景目標鎖定導航版</title>
+<title>構圖導航 V6.7.4.1｜螢幕座標硬鎖定版</title>
 
 <style>
 
@@ -409,6 +409,20 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
   body.v671-fullscreen #v67ModeDrawer{left:auto;width:min(430px,48vw);right:max(8px,env(safe-area-inset-right));top:8px;bottom:8px;max-height:none;}
 }
 
+
+/* V6.7.4.1：真正 DOM 螢幕座標硬鎖定目標，不參與 canvas 重繪 */
+#landscapeHardTargetV6741{
+  position:absolute; left:50%; top:42%; width:52px; height:52px;
+  transform:translate(-50%,-50%); z-index:18; pointer-events:none; display:none;
+  border:5px solid #00e676; border-radius:50%; box-sizing:border-box;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.45));
+}
+#landscapeHardTargetV6741::before,#landscapeHardTargetV6741::after{
+  content:""; position:absolute; background:#00e676; left:50%; top:50%; transform:translate(-50%,-50%);
+}
+#landscapeHardTargetV6741::before{width:72px;height:3px;}
+#landscapeHardTargetV6741::after{width:3px;height:72px;}
+
 </style>
 </head>
 
@@ -424,6 +438,8 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </video>
 
     <canvas id="overlay"></canvas>
+
+    <div id="landscapeHardTargetV6741" aria-hidden="true"></div>
 
     <div id="miniInfo">
 
@@ -589,7 +605,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="status">
-        V6.7.4｜風景目標鎖定導航版
+        V6.7.4.1｜螢幕座標硬鎖定版
     </div>
 
 </div>
@@ -599,7 +615,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
 
 /* =========================================================
 
-   構圖導航 V6.7.4｜風景目標鎖定導航版
+   構圖導航 V6.7.4.1｜螢幕座標硬鎖定版
 
    V6.4 主要修改：
 
@@ -1303,6 +1319,8 @@ async function changeCamera(mode){
 
 function resetTracking(){
 
+    landscapeNavigationV674=false;
+    hideLandscapeHardTargetV6741();
     trackedFace=null;
     trackedPerson=null;
     smartPortraitPerson=null;
@@ -1802,7 +1820,7 @@ async function runComposition(){
 
 
 /* =========================================================
-   V6.7.4 AUTO SMART COMPOSITION
+   V6.7.4.1 AUTO SMART COMPOSITION
    人物 + 風景全自動判斷
 ========================================================= */
 
@@ -1984,7 +2002,7 @@ async function runAutoSmartComposition(){
             drawComposition();
         }
     }catch(e){
-        console.warn("V6.7.4 auto smart error",e);
+        console.warn("V6.7.4.1 auto smart error",e);
         miniStatus.innerText="分析失敗";
         messageEl.innerText="⚠️ 請保持畫面穩定後再按一次智慧構圖";
     }finally{
@@ -1993,7 +2011,7 @@ async function runAutoSmartComposition(){
 }
 
 /* =========================================================
-   V6.7.4 LANDSCAPE TARGET LOCK NAVIGATION
+   V6.7.4.1 LANDSCAPE SCREEN HARD LOCK NAVIGATION
    綠圈 = 固定最佳構圖位置
    黃點 = 目前偵測到的消失點
 ========================================================= */
@@ -2003,8 +2021,18 @@ let landscapeStableFramesV674=0;
 let landscapeLastVpV674=null;
 let landscapeMissV674=0;
 
+function showLandscapeHardTargetV6741(){
+    const el=document.getElementById("landscapeHardTargetV6741");
+    if(el) el.style.display="block";
+}
+function hideLandscapeHardTargetV6741(){
+    const el=document.getElementById("landscapeHardTargetV6741");
+    if(el) el.style.display="none";
+}
+
 function startLandscapeNavigationV674(comp){
     landscapeNavigationV674=true;
+    showLandscapeHardTargetV6741();
     landscapeNavCompV674=comp;
     landscapeStableFramesV674=0;
     landscapeLastVpV674=null;
@@ -2015,9 +2043,15 @@ function startLandscapeNavigationV674(comp){
 }
 
 function landscapeTargetV674(){
-    const w=overlay.clientWidth, h=overlay.clientHeight;
-    // 單點透視與引導線：固定在畫面中央略偏上，手機移動時絕不跟著景物跑。
-    return {x:w*.50,y:h*.42};
+    // V6.7.4.1：導航數學直接讀取 DOM 固定靶心的螢幕位置。
+    // 綠圈不再由 canvas / 消失點 / 每幀分析結果決定。
+    const el=document.getElementById("landscapeHardTargetV6741");
+    const or=overlay.getBoundingClientRect();
+    if(el && el.style.display!=="none"){
+        const r=el.getBoundingClientRect();
+        return {x:(r.left+r.width/2)-or.left,y:(r.top+r.height/2)-or.top};
+    }
+    return {x:overlay.clientWidth*.50,y:overlay.clientHeight*.42};
 }
 
 function metricVpToScreenV674(m){
@@ -2050,17 +2084,8 @@ function drawLandscapeNavigationV674(cur){
         ctx.restore();
     }
 
-    // Fixed AI target. This must never move during one navigation session.
-    ctx.save();
-    ctx.strokeStyle="#00e676";
-    ctx.lineWidth=5;
-    ctx.beginPath(); ctx.arc(t.x,t.y,19,0,Math.PI*2); ctx.stroke();
-    ctx.lineWidth=2;
-    ctx.beginPath();
-    ctx.moveTo(t.x-27,t.y);ctx.lineTo(t.x+27,t.y);
-    ctx.moveTo(t.x,t.y-27);ctx.lineTo(t.x,t.y+27);
-    ctx.stroke();
-    ctx.restore();
+    // V6.7.4.1：綠色目標改由獨立 DOM 疊層顯示。
+    // Canvas 只畫會隨場景變化的黃色「目前消失點＋透視線」。
 }
 
 function landscapeNavigationLoopV674(){
