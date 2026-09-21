@@ -1,14 +1,61 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#000"><title>阿策構圖助手 V9.1</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}#app{position:fixed;inset:0}video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}canvas{display:none}.top{position:absolute;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;display:flex;justify-content:space-between;pointer-events:none}.tag{background:#0008;backdrop-filter:blur(8px);padding:7px 10px;border-radius:12px;font-size:13px}.brand{font-weight:800}#status{position:absolute;top:64px;left:50%;transform:translateX(-50%);max-width:88%;padding:8px 12px;border-radius:14px;background:#000a;backdrop-filter:blur(8px);font-size:14px;text-align:center;display:none}#result{position:absolute;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));padding:14px 15px;border-radius:18px;background:#000b;backdrop-filter:blur(12px);display:none}.title{font-size:20px;font-weight:800;margin-bottom:5px}.subject{font-size:14px;margin-bottom:6px}.reason{font-size:13px;line-height:1.45;opacity:.85}.confidence{font-size:12px;opacity:.6;margin-top:7px}.controls{position:absolute;left:0;right:0;bottom:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:9px;justify-content:center;background:linear-gradient(transparent,#000c)}button{border:0;border-radius:18px;min-height:48px;padding:0 18px;font-size:16px;font-weight:700;color:#fff;background:#333d}#smart{flex:1;max-width:240px;background:#fff;color:#111}#switch{width:112px}button:disabled{opacity:.45}
-</style></head><body><div id="app"><video id="video" autoplay muted playsinline></video><canvas id="capture"></canvas><div class="top"><div class="tag brand">阿策構圖助手</div><div class="tag">V9.1</div></div><div id="status"></div><div id="result"><div class="title" id="rt"></div><div class="subject" id="rs"></div><div class="reason" id="rr"></div><div class="confidence" id="rc"></div></div><div class="controls"><button id="switch">切換鏡頭</button><button id="smart">智慧構圖</button></div></div><script>
-const WORKER="https://smart-camera-v9.a813155.workers.dev/";
-const video=document.querySelector("#video"),canvas=document.querySelector("#capture"),ctx=canvas.getContext("2d",{alpha:false}),smart=document.querySelector("#smart"),sw=document.querySelector("#switch"),statusEl=document.querySelector("#status"),result=document.querySelector("#result");let stream=null,facing="environment",busy=false;
-function status(t,hold=false){statusEl.textContent=t;statusEl.style.display="block";if(!hold)setTimeout(()=>{if(statusEl.textContent===t)statusEl.style.display="none"},2200)}
-async function camera(){try{if(stream)stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:facing},width:{ideal:1920},height:{ideal:1080}}});video.srcObject=stream;await video.play();status("相機已就緒")}catch(e){status("無法開啟相機，請確認相機權限",true)}}
-function shot(){let w=video.videoWidth,h=video.videoHeight;if(!w||!h)throw Error("相機尚未就緒");let s=Math.min(1,1024/Math.max(w,h));canvas.width=Math.round(w*s);canvas.height=Math.round(h*s);if(facing==="user"){ctx.save();ctx.translate(canvas.width,0);ctx.scale(-1,1);ctx.drawImage(video,0,0,canvas.width,canvas.height);ctx.restore()}else ctx.drawImage(video,0,0,canvas.width,canvas.height);return canvas.toDataURL("image/jpeg",.72)}
-function cname(x){return({thirds:"三分構圖",center:"中央構圖",symmetry:"中央對稱",leading_lines:"引導線構圖",one_point_perspective:"單點透視",negative_space:"留白構圖",landscape_thirds:"風景三分構圖",keep_current:"目前構圖已合適",user_select:"請選擇主體"})[x]||"構圖建議"}
-function show(r){document.querySelector("#rt").textContent=cname(r.composition);document.querySelector("#rs").textContent=r.needs_user_select?"對準想拍的主體":"主體："+(r.subject||"未明確");document.querySelector("#rr").textContent=r.description||r.reason||"";let c=Number(r.confidence);document.querySelector("#rc").textContent=Number.isFinite(c)?"判斷信心 "+Math.round(c*100)+"%":"";result.style.display="block"}
-async function analyze(){if(busy)return;busy=true;smart.disabled=sw.disabled=true;result.style.display="none";status("正在取景…",true);try{let res=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:shot()})});let d=await res.json();if(!res.ok||!d.ok){let msg=d?.detail?.error?.message||d?.detail?.message||d?.error||("HTTP "+res.status);throw Error(msg)}statusEl.style.display="none";show(d.result||{})}catch(e){console.error(e);statusEl.style.display="none";document.querySelector("#rt").textContent="無法取得構圖建議";document.querySelector("#rs").textContent="";document.querySelector("#rr").textContent=String(e.message||e);document.querySelector("#rc").textContent="請確認 API 額度、Worker 設定與網路";result.style.display="block"}finally{busy=false;smart.disabled=sw.disabled=false}}
-smart.onclick=analyze;sw.onclick=async()=>{facing=facing==="environment"?"user":"environment";result.style.display="none";await camera()};
-(async()=>{if(!navigator.mediaDevices?.getUserMedia){status("請使用 HTTPS 開啟此頁面",true);return}await camera()})();
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#000">
+<title>阿策構圖助手 V9.2</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC",sans-serif}
+#app{position:fixed;inset:0}video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#111}
+canvas{display:none}.top{position:absolute;top:max(16px,env(safe-area-inset-top));left:18px;right:18px;display:flex;justify-content:space-between;pointer-events:none}
+.pill{padding:10px 15px;border-radius:18px;background:rgba(20,20,20,.76);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(12px);font-weight:800}
+#status{display:none;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(82vw,340px);padding:18px;border-radius:20px;background:rgba(18,18,18,.9);text-align:center;border:1px solid rgba(255,255,255,.15)}
+#status b{font-size:19px;display:block;margin-bottom:6px}#status small{color:#ccc;line-height:1.45}
+#card{display:none;position:absolute;left:18px;right:18px;bottom:calc(98px + env(safe-area-inset-bottom));padding:18px;border-radius:24px;background:rgba(18,18,18,.9);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(16px)}
+#title{font-size:21px;font-weight:900;margin-bottom:8px}#summary{font-size:16px;line-height:1.45}#detail{font-size:14px;line-height:1.5;color:#d5d5d5;margin-top:9px}
+#tech{font-size:12px;color:#aaa;margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.14)}
+.badge{display:inline-block;margin-right:7px;padding:5px 8px;border-radius:9px;background:rgba(81,229,139,.16);color:#51e58b;font-size:14px}
+.controls{position:absolute;left:18px;right:18px;bottom:max(18px,env(safe-area-inset-bottom));display:flex;gap:10px}
+button{border:0;border-radius:20px;padding:15px 18px;font-size:17px;font-weight:900}#flip{width:34%;color:#fff;background:rgba(35,35,35,.9);border:1px solid rgba(255,255,255,.16)}#smart{flex:1;background:#fff;color:#111}button:disabled{opacity:.55}
+</style>
+</head>
+<body><div id="app">
+<video id="video" playsinline autoplay muted></video><canvas id="shot"></canvas>
+<div class="top"><div class="pill">阿策構圖助手</div><div class="pill">V9.2</div></div>
+<div id="status"><b id="st">準備本機模型</b><small id="ss"></small></div>
+<div id="card"><div id="title"></div><div id="summary"></div><div id="detail"></div><div id="tech"></div></div>
+<div class="controls"><button id="flip">切換鏡頭</button><button id="smart">智慧構圖</button></div>
+</div>
+<script type="module">
+const MODEL="HuggingFaceTB/SmolVLM-256M-Instruct";
+const video=document.querySelector("#video"),canvas=document.querySelector("#shot"),flip=document.querySelector("#flip"),smart=document.querySelector("#smart");
+const status=document.querySelector("#status"),st=document.querySelector("#st"),ss=document.querySelector("#ss"),card=document.querySelector("#card");
+const title=document.querySelector("#title"),summary=document.querySelector("#summary"),detail=document.querySelector("#detail"),tech=document.querySelector("#tech");
+let facing="environment",stream=null,pipe=null,loading=null;
+function show(a,b=""){st.textContent=a;ss.textContent=b;status.style.display="block"} function hide(){status.style.display="none"}
+async function camera(){if(stream)stream.getTracks().forEach(x=>x.stop());try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:1280}},audio:false});video.srcObject=stream;await video.play()}catch(e){show("無法開啟相機","請確認 Safari 相機權限與 HTTPS。")}}
+flip.onclick=async()=>{facing=facing==="environment"?"user":"environment";card.style.display="none";await camera()};
+async function model(){
+ if(pipe)return pipe;if(loading)return loading;
+ loading=(async()=>{if(!("gpu" in navigator))throw new Error("目前瀏覽器沒有可用的 WebGPU。");
+ show("正在準備本機模型","第一次使用會下載模型；之後由瀏覽器快取。");smart.disabled=true;
+ const m=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1");m.env.allowLocalModels=false;
+ pipe=await m.pipeline("image-to-text",MODEL,{device:"webgpu",dtype:"q4"});smart.disabled=false;hide();return pipe
+ })().catch(e=>{loading=null;smart.disabled=false;throw e});return loading
+}
+function snap(){const w=video.videoWidth,h=video.videoHeight;if(!w||!h)throw new Error("相機尚未準備完成");const s=Math.min(1,640/Math.max(w,h));canvas.width=Math.round(w*s);canvas.height=Math.round(h*s);canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);return new Promise((r,j)=>canvas.toBlob(b=>b?r(b):j(new Error("無法擷取畫面")),"image/jpeg",.82))}
+function clean(x){return String(x||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim()}
+function decide(d){const t=d.toLowerCase(),p=/person|people|man|woman|boy|girl|child|human|standing|sitting|portrait/.test(t),g=/people|two people|group|family|couple/.test(t),r=/road|street|path|walkway|corridor|hallway|stair|stairs|tunnel/.test(t),n=/tree|forest|mountain|sea|ocean|lake|sky|landscape|park|garden/.test(t),b=/building|architecture|room|interior|house|window|door/.test(t);
+ if(p)return{a:g?"多人／群像":"人物主體",b:g?"群像三分構圖":"人物三分構圖",c:"人物是主要視覺重點，優先於背景線條。"};
+ if(r)return{a:"縱深空間",b:"引導線構圖",c:"畫面具有道路、走道、樓梯或明顯延伸結構。"};
+ if(n)return{a:"自然／戶外",b:"三分構圖",c:"以景物層次與天空／地景比例作為主要構圖依據。"};
+ if(b)return{a:"室內／建築",b:"中央或三分構圖",c:"先以空間主體與建築結構建立穩定畫面。"};
+ return{a:"主體不明確",b:"先選擇主體",c:"目前沒有足夠明確的攝影主體。"};
+}
+smart.onclick=async()=>{card.style.display="none";try{const p=await model();show("正在取景…","使用手機本機模型判讀，不呼叫付費 API。");const blob=await snap(),url=URL.createObjectURL(blob),t0=performance.now();let res;try{res=await p(url,{max_new_tokens:55})}finally{URL.revokeObjectURL(url)}
+ let txt=Array.isArray(res)&&res[0]?(res[0].generated_text||res[0].text||""):(res?.generated_text||res?.text||"");txt=clean(txt);const c=decide(txt),sec=((performance.now()-t0)/1000).toFixed(1);
+ title.innerHTML='<span class="badge">'+c.a+"</span>"+c.b;summary.textContent=c.c;detail.textContent=txt?"本機模型看到："+txt:"本機模型沒有產生可用描述。";tech.textContent="SmolVLM 256M｜本機推論 "+sec+" 秒｜付費 API：0 次";hide();card.style.display="block"
+ }catch(e){hide();title.textContent="本機模型無法啟動";summary.textContent=e?.message||String(e);detail.textContent="V9.2 是網頁端可行性實驗；若 iPhone Safari 的 WebGPU 或記憶體不足，正式 App 會改用原生本機推論。";tech.textContent="V9.2｜本機視覺模型實驗";card.style.display="block"}};
+camera();
 </script></body></html>
