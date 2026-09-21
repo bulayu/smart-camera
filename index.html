@@ -10,7 +10,7 @@ maximum-scale=1,
 user-scalable=no,
 viewport-fit=cover">
 
-<title>構圖導航 V8.0｜場景理解構圖引擎</title>
+<title>構圖導航 V8.1｜智慧構圖決策測試版</title>
 
 <style>
 
@@ -438,7 +438,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
         </div>
 
         <div id="miniStatus">
-            V8.0
+            V8.1
         </div>
 
     </div>
@@ -448,7 +448,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="version">
-        V8.0
+        V8.1
     </div>
 
 </div>
@@ -585,7 +585,7 @@ body.v671-fullscreen #v67ModeHost #status{display:none;}
     </div>
 
     <div id="status">
-        V8.0｜場景理解構圖引擎
+        V8.1｜智慧構圖決策測試版
     </div>
 
 </div>
@@ -1496,7 +1496,7 @@ function selectMode(
 
 
         miniStatus.innerText=
-        "V8.0";
+        "V8.1";
 
 
         mainButton.innerText=
@@ -5203,8 +5203,9 @@ startCamera();
 
 <style>
 #v8Overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:35}
-#v8Panel{position:absolute;left:50%;top:82px;transform:translateX(-50%);z-index:36;background:rgba(0,0,0,.72);color:#fff;border-radius:18px;padding:9px 14px;font:700 13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;pointer-events:none;display:none;white-space:nowrap;text-align:center}
-#v8Panel b{color:#38f37a}
+#v8Panel{position:absolute;left:50%;top:76px;transform:translateX(-50%);z-index:36;background:rgba(0,0,0,.68);color:#fff;border-radius:16px;padding:9px 14px;font:700 13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;pointer-events:none;display:none;white-space:nowrap;text-align:center;backdrop-filter:blur(8px)}
+#v8Panel b{color:#55ef86}
+#v81Badge{position:absolute;right:10px;top:10px;z-index:37;background:rgba(0,0,0,.48);color:#fff;border-radius:10px;padding:5px 8px;font:700 11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;pointer-events:none}
 </style>
 <script>
 (()=>{
@@ -5212,27 +5213,32 @@ startCamera();
 const W=192,H=144;
 const work=document.createElement('canvas'); work.width=W; work.height=H;
 const wc=work.getContext('2d',{willReadFrequently:true});
-let video,area,overlay,ctx,panel,token=0;
+let video,area,overlay,ctx,panel,token=0,badge;
 function fit(){if(!area||!overlay)return;const r=area.getBoundingClientRect(),d=devicePixelRatio||1;overlay.width=Math.round(r.width*d);overlay.height=Math.round(r.height*d);overlay.style.width=r.width+'px';overlay.style.height=r.height+'px';ctx.setTransform(d,0,0,d,0,0);}
 function frame(){if(!video||video.readyState<2)return null;wc.drawImage(video,0,0,W,H);const d=wc.getImageData(0,0,W,H).data,g=new Uint8Array(W*H);let sat=0,bright=0;for(let i=0,j=0;i<d.length;i+=4,j++){g[j]=(d[i]*3+d[i+1]*6+d[i+2])>>3;const mx=Math.max(d[i],d[i+1],d[i+2]),mn=Math.min(d[i],d[i+1],d[i+2]);sat+=mx-mn;bright+=g[j];}return{g,sat:sat/(W*H),bright:bright/(W*H)};}
-function features(f){const g=f.g;let edge=0,center=0,lower=0,vertical=0,horizontal=0,diagIn=0,diagOut=0;let sym=0,symN=0;
- for(let y=3;y<H-3;y+=2)for(let x=3;x<W-3;x+=2){const i=y*W+x,gx=g[i+1]-g[i-1],gy=g[i+W]-g[i-W],m=Math.abs(gx)+Math.abs(gy);if(m<34)continue;edge+=m;if(x>W*.28&&x<W*.72)center+=m;if(y>H*.48)lower+=m;if(Math.abs(gx)>Math.abs(gy)*1.5)vertical+=m;if(Math.abs(gy)>Math.abs(gx)*1.5)horizontal+=m;const toward=(x<W/2?1:-1);if(Math.sign(gx*gy)===toward)diagIn+=m;else diagOut+=m;}
+function features(f){const g=f.g;let edge=0,center=0,lower=0,vertical=0,horizontal=0,diagIn=0,diagOut=0,sym=0,symN=0,left=0,right=0;
+ for(let y=3;y<H-3;y+=2)for(let x=3;x<W-3;x+=2){const i=y*W+x,gx=g[i+1]-g[i-1],gy=g[i+W]-g[i-W],m=Math.abs(gx)+Math.abs(gy);if(m<34)continue;edge+=m;if(x>W*.28&&x<W*.72)center+=m;if(y>H*.48)lower+=m;if(x<W/2)left+=m;else right+=m;if(Math.abs(gx)>Math.abs(gy)*1.5)vertical+=m;if(Math.abs(gy)>Math.abs(gx)*1.5)horizontal+=m;const toward=(x<W/2?1:-1);if(Math.sign(gx*gy)===toward)diagIn+=m;else diagOut+=m;}
  for(let y=8;y<H-8;y+=4)for(let x=8;x<W/2-4;x+=4){sym+=Math.abs(g[y*W+x]-g[y*W+(W-1-x)]);symN++;}
- const e=edge||1;return{edgeDensity:edge/(W*H),center:center/e,lower:lower/e,vertical:vertical/e,horizontal:horizontal/e,converge:diagIn/(diagIn+diagOut+1),sym:1-Math.min(1,(sym/(symN||1))/75),sat:f.sat,bright:f.bright};}
-function classify(ft,people){
- if(people.length>=2)return{scene:'人物／多人',comp:'群組三分',why:'偵測到 '+people.length+' 位人物'};
- if(people.length===1)return{scene:'人物／單人',comp:'人物三分',why:'偵測到明確人物'};
- const depth=(ft.converge>.53&&ft.lower>.48)||(ft.center>.38&&ft.lower>.52&&ft.edgeDensity>16);
- const symmetry=ft.sym>.58&&ft.center>.38;
- if(depth)return{scene:'道路／走廊／縱深',comp:symmetry?'中央透視':'引導線',why:'畫面有向遠方延伸的結構'};
- if(symmetry)return{scene:'建築／對稱空間',comp:'中央對稱',why:'左右結構較對稱'};
- if(ft.edgeDensity>23&&ft.horizontal+ft.vertical>.58)return{scene:'室內／建築空間',comp:'三分＋水平垂直',why:'直線與結構元素較多'};
- if(ft.edgeDensity<13&&ft.sat>32)return{scene:'自然／開放風景',comp:'三分構圖',why:'大面積自然色塊與較少硬邊緣'};
- return{scene:'一般場景／物件',comp:'主體三分',why:'目前沒有高信心人物或縱深結構'};
+ const e=edge||1;return{edgeDensity:edge/(W*H),center:center/e,lower:lower/e,vertical:vertical/e,horizontal:horizontal/e,converge:diagIn/(diagIn+diagOut+1),sym:1-Math.min(1,(sym/(symN||1))/75),balance:1-Math.min(1,Math.abs(left-right)/e*2),sat:f.sat,bright:f.bright};}
+function decide(ft,people){
+ if(people.length>=2)return{scene:'多人／群組',comp:'群組構圖',why:'以人物群組作為主要視覺重心',target:[.50,.43],conf:.92};
+ if(people.length===1)return{scene:'單人人像',comp:'人物三分',why:'以人物作為主要視覺重心',target:[.36,.42],conf:.90};
+ const depthScore=Math.max((ft.converge-.48)*2.5,(ft.center-.30)*1.8+(ft.lower-.45)*1.4);
+ const symmetryScore=(ft.sym-.48)*1.8+(ft.balance-.55)*.8+(ft.center-.30)*.7;
+ const structureScore=(ft.edgeDensity-15)/18+(ft.horizontal+ft.vertical-.45)*1.1;
+ const openScore=(18-ft.edgeDensity)/16+(ft.sat-22)/55;
+ if(depthScore>.30){const central=symmetryScore>.28;return{scene:'縱深空間',comp:central?'中央透視':'引導線',why:central?'畫面具有縱深與左右平衡':'畫面有明顯延伸方向',target:[.50,.47],conf:Math.min(.94,.66+depthScore*.18)};}
+ if(symmetryScore>.38)return{scene:'對稱／建築結構',comp:'中央構圖',why:'左右結構具有較明顯平衡關係',target:[.50,.48],conf:Math.min(.90,.65+symmetryScore*.16)};
+ if(structureScore>.48)return{scene:'室內／建築空間',comp:'三分構圖',why:'畫面以水平與垂直結構為主',target:[.50,.45],conf:Math.min(.86,.62+structureScore*.12)};
+ if(openScore>.42)return{scene:'開放風景',comp:'三分構圖',why:'畫面較開闊，適合保留空間層次',target:[.50,.42],conf:Math.min(.84,.60+openScore*.13)};
+ return{scene:'主體不明確',comp:'保持目前取景',why:'目前沒有足夠明確的視覺主體或結構',target:null,conf:.52};
 }
-function drawPeople(people){ctx.clearRect(0,0,overlay.clientWidth,overlay.clientHeight);if(!people.length)return;const sx=overlay.clientWidth/(video.videoWidth||overlay.clientWidth),sy=overlay.clientHeight/(video.videoHeight||overlay.clientHeight);ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.setLineDash([8,6]);for(const p of people){const b=p.box;if(!b)continue;ctx.strokeRect(b.originX*sx,b.originY*sy,b.width*sx,b.height*sy);}ctx.restore();}
-async function analyze(){const my=++token;panel.style.display='block';panel.textContent='AI 場景理解中…';ctx.clearRect(0,0,overlay.clientWidth,overlay.clientHeight);await new Promise(r=>setTimeout(r,120));if(my!==token)return;const f=frame();if(!f){panel.textContent='鏡頭尚未就緒';return;}let people=[];try{people=window.__v8DetectPeople?.()||[]}catch(e){}const ft=features(f);const r=classify(ft,people);drawPeople(people);panel.innerHTML='<b>'+r.scene+'</b>｜推薦：'+r.comp+'<br><span style="font-weight:600;opacity:.85">'+r.why+'</span>';const msg=document.getElementById('message');if(msg)msg.innerText='V8 場景理解：'+r.scene+' → '+r.comp;}
-function init(){video=document.getElementById('video');area=document.getElementById('cameraArea');if(!video||!area)return;overlay=document.createElement('canvas');overlay.id='v8Overlay';panel=document.createElement('div');panel.id='v8Panel';area.style.position='relative';area.appendChild(overlay);area.appendChild(panel);ctx=overlay.getContext('2d');fit();addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,250));const q=document.getElementById('v67StartBtn');if(q){q.onclick=e=>{e.preventDefault();e.stopPropagation();analyze();};q.textContent='✨ 智慧構圖';}const m=document.getElementById('mainButton');if(m){m.removeAttribute('onclick');m.onclick=e=>{e.preventDefault();e.stopPropagation();analyze();};m.textContent='✨ 智慧構圖';}const st=document.getElementById('status');if(st)st.textContent='V8.0｜場景理解構圖引擎';}
+function screenPersonCenter(people){if(!people.length)return null;let x1=Infinity,y1=Infinity,x2=-Infinity,y2=-Infinity;for(const p of people){const b=p.box;if(!b)continue;x1=Math.min(x1,b.originX);y1=Math.min(y1,b.originY);x2=Math.max(x2,b.originX+b.width);y2=Math.max(y2,b.originY+b.height);}if(!isFinite(x1))return null;const vw=video.videoWidth||1,vh=video.videoHeight||1;return[(x1+x2)/2/vw,(y1+y2)/2/vh];}
+function drawMarker(nx,ny,color,label){const w=overlay.clientWidth,h=overlay.clientHeight;const size=Math.max(70,Math.min(90,Math.min(w,h)*.12));const x=nx*w,y=ny*h;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=3;ctx.setLineDash([]);ctx.strokeRect(x-size/2,y-size/2,size,size);ctx.fillStyle='rgba(0,0,0,.55)';ctx.font='700 11px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';ctx.textAlign='center';ctx.fillText(label,x,y-size/2-7);ctx.restore();}
+function drawDecision(r,people){ctx.clearRect(0,0,overlay.clientWidth,overlay.clientHeight);if(!r.target)return;const pc=screenPersonCenter(people);if(pc)drawMarker(pc[0],pc[1],'#fff','目前');drawMarker(r.target[0],r.target[1],'#4cff7a','建議');}
+async function analyze(){const my=++token;panel.style.display='block';panel.textContent='正在取景…';ctx.clearRect(0,0,overlay.clientWidth,overlay.clientHeight);await new Promise(r=>setTimeout(r,180));if(my!==token)return;const f=frame();if(!f){panel.textContent='鏡頭尚未就緒';return;}let people=[];try{people=window.__v8DetectPeople?.()||[]}catch(e){}const ft=features(f),r=decide(ft,people);drawDecision(r,people);if(r.target){panel.innerHTML='<b>'+r.comp+'</b><br><span style="font-weight:600;opacity:.88">'+r.scene+'｜'+r.why+'</span>';}else{panel.innerHTML='<b>保持目前取景</b><br><span style="font-weight:600;opacity:.88">'+r.why+'</span>';}
+ const msg=document.getElementById('message');if(msg)msg.innerText=r.target?(r.comp+'｜'+r.scene):'目前沒有明確調整必要';}
+function init(){video=document.getElementById('video');area=document.getElementById('cameraArea');if(!video||!area)return;overlay=document.createElement('canvas');overlay.id='v8Overlay';panel=document.createElement('div');panel.id='v8Panel';badge=document.createElement('div');badge.id='v81Badge';badge.textContent='V8.1';area.style.position='relative';area.appendChild(overlay);area.appendChild(panel);area.appendChild(badge);ctx=overlay.getContext('2d');fit();addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,250));const q=document.getElementById('v67StartBtn');if(q){q.onclick=e=>{e.preventDefault();e.stopPropagation();analyze();};q.textContent='智慧構圖';}const m=document.getElementById('mainButton');if(m){m.removeAttribute('onclick');m.onclick=e=>{e.preventDefault();e.stopPropagation();analyze();};m.textContent='智慧構圖';}const st=document.getElementById('status');if(st)st.textContent='V8.1｜智慧構圖決策測試版';}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,0));else setTimeout(init,0);
 })();
 </script>
