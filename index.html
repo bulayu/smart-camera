@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#000">
-<title>阿策構圖助手 V9.2</title>
+<title>阿策構圖助手 V9.3</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC",sans-serif}
 #app{position:fixed;inset:0}video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#111}
@@ -22,7 +22,7 @@ button{border:0;border-radius:20px;padding:15px 18px;font-size:17px;font-weight:
 </head>
 <body><div id="app">
 <video id="video" playsinline autoplay muted></video><canvas id="shot"></canvas>
-<div class="top"><div class="pill">阿策構圖助手</div><div class="pill">V9.2</div></div>
+<div class="top"><div class="pill">阿策構圖助手</div><div class="pill">V9.3</div></div>
 <div id="status"><b id="st">準備本機模型</b><small id="ss"></small></div>
 <div id="card"><div id="title"></div><div id="summary"></div><div id="detail"></div><div id="tech"></div></div>
 <div class="controls"><button id="flip">切換鏡頭</button><button id="smart">智慧構圖</button></div>
@@ -38,13 +38,17 @@ async function camera(){if(stream)stream.getTracks().forEach(x=>x.stop());try{st
 flip.onclick=async()=>{facing=facing==="environment"?"user":"environment";card.style.display="none";await camera()};
 async function model(){
  if(pipe)return pipe;if(loading)return loading;
- loading=(async()=>{if(!("gpu" in navigator))throw new Error("目前瀏覽器沒有可用的 WebGPU。");
- show("正在準備本機模型","第一次使用會下載模型；之後由瀏覽器快取。");smart.disabled=true;
+ loading=(async()=>{show("正在準備本機模型","第一次使用會下載模型；V9.3 使用 CPU/WASM，速度會比 GPU 慢，但優先測相容性。");smart.disabled=true;
  const m=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1");m.env.allowLocalModels=false;
- pipe=await m.pipeline("image-to-text",MODEL,{device:"webgpu",dtype:"q4"});smart.disabled=false;hide();return pipe
+ try{
+   pipe=await m.pipeline("image-to-text",MODEL,{device:"wasm",dtype:"q8"});
+ }catch(firstErr){
+   // Transformers.js defaults to CPU/WASM in browser; retry without explicit backend/dtype.
+   pipe=await m.pipeline("image-to-text",MODEL);
+ }smart.disabled=false;hide();return pipe
  })().catch(e=>{loading=null;smart.disabled=false;throw e});return loading
 }
-function snap(){const w=video.videoWidth,h=video.videoHeight;if(!w||!h)throw new Error("相機尚未準備完成");const s=Math.min(1,640/Math.max(w,h));canvas.width=Math.round(w*s);canvas.height=Math.round(h*s);canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);return new Promise((r,j)=>canvas.toBlob(b=>b?r(b):j(new Error("無法擷取畫面")),"image/jpeg",.82))}
+function snap(){const w=video.videoWidth,h=video.videoHeight;if(!w||!h)throw new Error("相機尚未準備完成");const s=Math.min(1,448/Math.max(w,h));canvas.width=Math.round(w*s);canvas.height=Math.round(h*s);canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);return new Promise((r,j)=>canvas.toBlob(b=>b?r(b):j(new Error("無法擷取畫面")),"image/jpeg",.82))}
 function clean(x){return String(x||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim()}
 function decide(d){const t=d.toLowerCase(),p=/person|people|man|woman|boy|girl|child|human|standing|sitting|portrait/.test(t),g=/people|two people|group|family|couple/.test(t),r=/road|street|path|walkway|corridor|hallway|stair|stairs|tunnel/.test(t),n=/tree|forest|mountain|sea|ocean|lake|sky|landscape|park|garden/.test(t),b=/building|architecture|room|interior|house|window|door/.test(t);
  if(p)return{a:g?"多人／群像":"人物主體",b:g?"群像三分構圖":"人物三分構圖",c:"人物是主要視覺重點，優先於背景線條。"};
@@ -53,9 +57,9 @@ function decide(d){const t=d.toLowerCase(),p=/person|people|man|woman|boy|girl|c
  if(b)return{a:"室內／建築",b:"中央或三分構圖",c:"先以空間主體與建築結構建立穩定畫面。"};
  return{a:"主體不明確",b:"先選擇主體",c:"目前沒有足夠明確的攝影主體。"};
 }
-smart.onclick=async()=>{card.style.display="none";try{const p=await model();show("正在取景…","使用手機本機模型判讀，不呼叫付費 API。");const blob=await snap(),url=URL.createObjectURL(blob),t0=performance.now();let res;try{res=await p(url,{max_new_tokens:55})}finally{URL.revokeObjectURL(url)}
+smart.onclick=async()=>{card.style.display="none";try{const p=await model();show("正在取景…","使用手機本機模型判讀；這版改用 CPU/WASM 相容模式。");const blob=await snap(),url=URL.createObjectURL(blob),t0=performance.now();let res;try{res=await p(url,{max_new_tokens:55})}finally{URL.revokeObjectURL(url)}
  let txt=Array.isArray(res)&&res[0]?(res[0].generated_text||res[0].text||""):(res?.generated_text||res?.text||"");txt=clean(txt);const c=decide(txt),sec=((performance.now()-t0)/1000).toFixed(1);
- title.innerHTML='<span class="badge">'+c.a+"</span>"+c.b;summary.textContent=c.c;detail.textContent=txt?"本機模型看到："+txt:"本機模型沒有產生可用描述。";tech.textContent="SmolVLM 256M｜本機推論 "+sec+" 秒｜付費 API：0 次";hide();card.style.display="block"
- }catch(e){hide();title.textContent="本機模型無法啟動";summary.textContent=e?.message||String(e);detail.textContent="V9.2 是網頁端可行性實驗；若 iPhone Safari 的 WebGPU 或記憶體不足，正式 App 會改用原生本機推論。";tech.textContent="V9.2｜本機視覺模型實驗";card.style.display="block"}};
+ title.innerHTML='<span class="badge">'+c.a+"</span>"+c.b;summary.textContent=c.c;detail.textContent=txt?"本機模型看到："+txt:"本機模型沒有產生可用描述。";tech.textContent="SmolVLM 256M｜CPU/WASM 本機推論 "+sec+" 秒｜付費 API：0 次";hide();card.style.display="block"
+ }catch(e){hide();title.textContent="本機模型無法啟動";summary.textContent=e?.message||String(e);detail.textContent="V9.3 是網頁端可行性實驗；若 iPhone Safari 的 WebGPU 或記憶體不足，正式 App 會改用原生本機推論。";tech.textContent="V9.3｜本機視覺模型實驗";card.style.display="block"}};
 camera();
 </script></body></html>
